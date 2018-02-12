@@ -1,6 +1,7 @@
 pragma solidity 0.4.19;
 
 import "zeppelin-solidity/contracts/lifecycle/Pausable.sol";
+import "zeppelin-solidity/contracts/token/ERC20/StandardToken.sol";
 import "./custom-zeppelin-solidity/FinalizableCrowdsale.sol";
 import "./TokenMold.sol";
 import "./Whitelist.sol";
@@ -12,9 +13,12 @@ import "./Whitelist.sol";
 
 contract TokenSale is FinalizableCrowdsale, Pausable {
     uint256 public totalTokensForCrowdsale;
+    // amount of raised money in STAR
+    uint256 public starRaised;
 
     // external contracts
     Whitelist public whitelist;
+    StandardToken public star;
 
     event TokenRateChanged(uint256 previousRate, uint256 newRate);
 
@@ -23,7 +27,8 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
      * @param _startTime The timestamp of the beginning of the crowdsale
      * @param _endTime Timestamp when the crowdsale will finish
      * @param _whitelist contract containing the whitelisted addresses
-     * @param _token ERC20 TokenMold contract address
+     * @param _starToken STAR token contract address
+     * @param _companyToken ERC20 TokenMold contract address
      * @param _rate The token rate per ETH
      * @param _wallet Multisig wallet that will hold the crowdsale funds.
      * @param _totalTokensForCrowdsale Cap for the token sale
@@ -33,7 +38,8 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
             uint256 _startTime,
             uint256 _endTime,
             address _whitelist,
-            address _token,
+            address _starToken,
+            address _companyToken,
             uint256 _rate,
             address _wallet,
             uint256 _totalTokensForCrowdsale
@@ -44,12 +50,14 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
     {
         require(
                 _whitelist != address(0) &&
-                _token != address(0) &&
+                _starToken != address(0) &&
+                _companyToken != address(0) &&
                 _totalTokensForCrowdsale != 0
         );
 
-        createTokenContract(_token);
+        createTokenContract(_companyToken);
         whitelist = Whitelist(_whitelist);
+        star = StandardToken(_starToken);
 
         totalTokensForCrowdsale = _totalTokensForCrowdsale;
         TokenMold(token).pause();
@@ -58,6 +66,13 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
     modifier whitelisted(address beneficiary) {
         require(whitelist.isWhitelisted(beneficiary));
         _;
+    }
+
+    /**
+     * @dev override fallback function. Does not accept payment in ether
+     */
+    function () external payable {
+        revert();
     }
 
     /**
@@ -72,30 +87,32 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
     }
 
     /**
-     * @dev payable function that allow token purchases
+     * @dev function that allow token purchases with STAR
      * @param beneficiary Address of the purchaser
      */
     function buyTokens(address beneficiary)
         public
         whenNotPaused
         whitelisted(beneficiary)
-        payable
     {
         require(beneficiary != address(0));
         require(validPurchase() && token.totalSupply() < totalTokensForCrowdsale);
 
-        uint256 weiAmount = msg.value;
+        // beneficiary must allow TokenSale address to transfer star tokens on its behalf
+        uint256 starAllocationToTokenSale = star.allowance(beneficiary, this);
+        require(starAllocationToTokenSale > 0);
 
         // calculate token amount to be created
-        uint256 tokens = weiAmount.mul(rate);
+        uint256 tokens = starAllocationToTokenSale.mul(rate);
 
         // update state
-        weiRaised = weiRaised.add(weiAmount);
+        starRaised = starRaised.add(starAllocationToTokenSale);
 
         token.mint(beneficiary, tokens);
-        TokenPurchase(msg.sender, beneficiary, weiAmount, tokens);
+        TokenPurchase(msg.sender, beneficiary, starAllocationToTokenSale, tokens);
 
-        forwardFunds();
+        // forward funds
+        star.transferFrom(beneficiary, wallet, starAllocationToTokenSale);
     }
 
     // overriding Crowdsale#hasEnded to add cap logic
