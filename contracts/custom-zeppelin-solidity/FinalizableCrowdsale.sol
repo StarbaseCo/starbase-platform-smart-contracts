@@ -1,4 +1,4 @@
-pragma solidity ^0.4.18;
+pragma solidity 0.4.19;
 
 import "zeppelin-solidity/contracts/math/SafeMath.sol";
 import "zeppelin-solidity/contracts/ownership/Ownable.sol";
@@ -25,13 +25,12 @@ contract FinalizableCrowdsale is Crowdsale, Ownable {
     require(!isFinalized && _newTokenOwner != address(0));
     require(hasEnded());
 
-    // change token owner
-    token.transferOwnership(_newTokenOwner);
-
     finalization();
     Finalized();
-
     isFinalized = true;
+
+    // change token owner
+    token.transferOwnership(_newTokenOwner);
   }
 
   /**

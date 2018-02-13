@@ -22,4 +22,9 @@ contract('TokenMold', () => {
         const decimals = await token.decimals();
         decimals.should.be.bignumber.equal(18);
     });
+
+    it('starts with token paused', async () => {
+        const paused = await token.paused();
+        paused.should.be.true;
+    });
 });

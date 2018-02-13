@@ -1,7 +1,6 @@
 pragma solidity 0.4.19;
 
 import "zeppelin-solidity/contracts/lifecycle/Pausable.sol";
-import "zeppelin-solidity/contracts/token/ERC20/StandardToken.sol";
 import "./custom-zeppelin-solidity/FinalizableCrowdsale.sol";
 import "./TokenMold.sol";
 import "./Whitelist.sol";
@@ -55,16 +54,23 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
                 _totalTokensForCrowdsale != 0
         );
 
-        createTokenContract(_companyToken);
+        token = createTokenContract(_companyToken);
         whitelist = Whitelist(_whitelist);
         star = StandardToken(_starToken);
 
         totalTokensForCrowdsale = _totalTokensForCrowdsale;
-        TokenMold(token).pause();
+
+        require(TokenMold(token).paused());
     }
 
     modifier whitelisted(address beneficiary) {
         require(whitelist.isWhitelisted(beneficiary));
+        _;
+    }
+
+    modifier crowdsaleIsTokenOwner() {
+        // token owner should be contract address
+        require(token.owner() == address(this));
         _;
     }
 
@@ -94,6 +100,7 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
         public
         whenNotPaused
         whitelisted(beneficiary)
+        crowdsaleIsTokenOwner
     {
         require(beneficiary != address(0));
         require(validPurchase() && token.totalSupply() < totalTokensForCrowdsale);
@@ -115,7 +122,13 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
         star.transferFrom(beneficiary, wallet, starAllocationToTokenSale);
     }
 
-    // overriding Crowdsale#hasEnded to add cap logic
+    // override Crowdsale#validPurchase
+    // @return true if the transaction can buy tokens
+    function validPurchase() internal view returns (bool) {
+      return now >= startTime && now <= endTime;
+    }
+
+    // override Crowdsale#hasEnded to add cap logic
     // @return true if crowdsale event has ended
     function hasEnded() public view returns (bool) {
         if (token.totalSupply() == totalTokensForCrowdsale) {
@@ -130,8 +143,7 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
      * @param _token Address of token contract
      */
     function createTokenContract(address _token) internal returns (MintableToken) {
-        token = TokenMold(_token);
-        return token;
+        return TokenMold(_token);
     }
 
     /**

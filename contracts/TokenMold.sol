@@ -17,5 +17,7 @@ contract TokenMold is PausableToken, MintableToken {
         name = _name;
         symbol = _symbol;
         decimals = _decimals;
+
+        pause();
     }
 }
