@@ -5,11 +5,11 @@ import "./custom-zeppelin-solidity/FinalizableCrowdsale.sol";
 import "./TokenMold.sol";
 import "./Whitelist.sol";
 
+
 /**
  * @title Token Sale contract - crowdsale of company tokens.
- * @author Gustavo Guimaraes - <gustavoguimaraes@gmail.com>
+ * @author Gustavo Guimaraes - <gustavo@starbase.co>
  */
-
 contract TokenSale is FinalizableCrowdsale, Pausable {
     uint256 public totalTokensForCrowdsale;
     // amount of raised money in STAR
@@ -99,7 +99,7 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
     }
 
     /**
-     * @dev function that allow token purchases with STAR
+     * @dev function that allows token purchases with STAR
      * @param beneficiary Address of the purchaser
      */
     function buyTokens(address beneficiary)
@@ -140,8 +140,10 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
         star.transferFrom(beneficiary, wallet, starAllocationToTokenSale);
     }
 
-    // override Crowdsale#validPurchase
-    // @return true if the transaction can buy tokens
+    /**
+     * @dev override Crowdsale#validPurchase
+     * @return true if the transaction can buy tokens
+     */
     function validPurchase() internal view returns (bool) {
       return now >= startTime && now <= endTime;
     }
