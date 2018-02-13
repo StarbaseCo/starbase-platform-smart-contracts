@@ -392,6 +392,37 @@ contract('TokenSale', ([owner, wallet, buyer, buyer2, user1]) => {
             walletBalance.should.be.bignumber.equal(1);
         });
 
+        it('only mints tokens up to crowdsale cap; saves the remainder info in contract', async () => {
+            crowdsale = await newCrowdsale(totalTokensForCrowdsale);
+            await whitelist.addToWhitelist([buyer]);
+            await token.transferOwnership(crowdsale.address);
+            await star.mint(buyer, 10e18);
+            await star.approve(crowdsale.address, 2, { from: buyer });
+
+            await timer(dayInSecs * 34);
+
+            await crowdsale.buyTokens(buyer, { from: buyer });
+
+            const remainderPurchaser = await crowdsale.remainderPurchaser();
+            remainderPurchaser.should.equal(buyer);
+
+            const remainder = await crowdsale.remainderStarAmount();
+            remainder.toNumber().should.be.equal(1);
+
+            let buyerBalance = await token.balanceOf(buyer);
+            buyerBalance.should.be.bignumber.equal(totalTokensForCrowdsale);
+
+            try {
+                await crowdsale.buyTokens(buyer, { from: buyer });
+                assert.fail();
+            } catch (error) {
+                ensuresException(error);
+            }
+
+            buyerBalance = await token.balanceOf(buyer);
+            buyerBalance.should.be.bignumber.equal(totalTokensForCrowdsale);
+        });
+
         it('ends crowdsale when all tokens are sold', async () => {
             crowdsale = await newCrowdsale(totalTokensForCrowdsale);
             await whitelist.addToWhitelist([buyer]);
