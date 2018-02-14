@@ -9,7 +9,7 @@
 
 ## Overview
 
-The Starbase platform's smart contract allow investors who hold STARs to participate in the crowdfunding events happening at the Starbase's web application. The smart contract receives STARs and exchanges it for the token offered during the the platform's sale event. There is also a whitelist smart contract where investors are able to be whitelisted prior and/or during the crowdsale.
+The Starbase platform's smart contracts allow investors who hold STARs to participate in the crowdfunding events happening at the Starbase's web application. The smart contract receives STARs and exchanges it for the token offered during the the platform's sale event. There is also a whitelist smart contract where investors are able to be whitelisted prior and/or during the crowdsale.
 
 ## Implementation Details
 
@@ -25,7 +25,7 @@ This contract is where the fundraising occurs. For it to work as expected, the o
 
 In order for investors to participate in the crowdsale using the TokenSale contract, they need firstly to approve the transfer of STARs from them to the TokenSale contract. For this, the investor must call the `approve` function from the STAR token contract thus passing the number of STAR tokens it approves to TokenSale so it manages STARs for them during the token purchase event.
 
-Afterwards, investor must trigger `BuyTokens` within TokenSale so the token purchase event goes through. Investor receives purchased tokens right away. However, it will not be able to trade them once token transfers are unpaused.
+Afterwards, investor must trigger `BuyTokens` within TokenSale so the token purchase event goes through. Investor then receives purchased tokens right away. However, she will not be able to trade these tokens because token transfers are paused. They need to be unpaused for the transfers to happen and this must be done most likely after the crowdsale by the token owner. Token ownership after the crowdsale must be moved from the TokenSale contract to another Ethereum address.
 
 In case there is a remainder amount of STAR left for the TokenSale contract to manage (this may happen if the last purchaser participating in the crowdsale sends more STARs than needed to finish the purchase of all left over tokens), then the remainder amount will be recorded on the public variable `remainderStarAmount`. The last purchaser must then call the function `decreaseApproval` in the STAR token contract so it removes the right for TokenSale to remove any of these remaining STARs.
 
