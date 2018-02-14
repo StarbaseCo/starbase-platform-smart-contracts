@@ -59,9 +59,9 @@ start_ganache_cli() {
 }
 
 if ganache_cli_running; then
-  echo "Using existing ganache_cli instance"
+  echo "Using existing ganache-cli instance"
 else
-  echo "Starting our own ganache_cli instance"
+  echo "Starting our own ganache-cli instance"
   start_ganache_cli
 fi
 
