@@ -3,9 +3,9 @@ const TokenMold = artifacts.require('./TokenMold.sol');
 const MintableToken = artifacts.require('./MintableToken.sol');
 const Whitelist = artifacts.require('./Whitelist.sol');
 
-const { should, ensuresException, getBlockNow } = require('./helpers/utils');
+const { should, ensuresException } = require('./helpers/utils');
+const { latestTime, duration, increaseTimeTo } = require('./helpers/timer');
 const expect = require('chai').expect;
-const timer = require('./helpers/timer');
 
 const BigNumber = web3.BigNumber;
 
@@ -13,7 +13,6 @@ contract('TokenSale', ([owner, wallet, buyer, buyer2, user1]) => {
     const rate = new BigNumber(10);
     const newRate = new BigNumber(20);
 
-    const dayInSecs = 86400;
     const value = new BigNumber(1);
 
     const totalTokensForCrowdsale = new BigNumber(20000000e18);
@@ -22,8 +21,8 @@ contract('TokenSale', ([owner, wallet, buyer, buyer2, user1]) => {
     let crowdsale, token, star, whitelist;
 
     const newCrowdsale = rate => {
-        startTime = getBlockNow() + 2; // crowdsale starts in 2 seconds
-        endTime = startTime + dayInSecs * 70; // 70 days
+        startTime = latestTime() + 2; // crowdsale starts in 2 seconds
+        endTime = startTime + duration.days(70); // 70 days
 
         return Whitelist.new()
             .then(whitelistRegistry => {
@@ -132,7 +131,7 @@ contract('TokenSale', ([owner, wallet, buyer, buyer2, user1]) => {
 
     describe('whitelist', () => {
         it('only allows owner to add to the whitelist', async () => {
-            await timer(dayInSecs);
+            await increaseTimeTo(latestTime() + duration.days(1));
 
             try {
                 await whitelist.addToWhitelist([buyer, buyer2], {
@@ -155,7 +154,7 @@ contract('TokenSale', ([owner, wallet, buyer, buyer2, user1]) => {
         });
 
         it('only allows owner to remove from the whitelist', async () => {
-            await timer(dayInSecs);
+            await increaseTimeTo(latestTime() + duration.days(1));
             await whitelist.addToWhitelist([buyer, buyer2], {
                 from: owner
             });
@@ -179,7 +178,7 @@ contract('TokenSale', ([owner, wallet, buyer, buyer2, user1]) => {
         });
 
         it('shows whitelist addresses', async () => {
-            await timer(dayInSecs);
+            await increaseTimeTo(latestTime() + duration.days(1));
             await whitelist.addToWhitelist([buyer, buyer2], {
                 from: owner
             });
@@ -196,7 +195,7 @@ contract('TokenSale', ([owner, wallet, buyer, buyer2, user1]) => {
         });
 
         it('has WhitelistUpdated event', async () => {
-            await timer(dayInSecs);
+            await increaseTimeTo(latestTime() + duration.days(1));
             const { logs } = await whitelist.addToWhitelist([buyer, buyer2], {
                 from: owner
             });
@@ -216,7 +215,7 @@ contract('TokenSale', ([owner, wallet, buyer, buyer2, user1]) => {
         });
 
         it('cannot buy with empty beneficiary address', async () => {
-            await timer(dayInSecs * 52);
+            await increaseTimeTo(latestTime() + duration.days(52));
 
             await star.approve(crowdsale.address, 5e18, { from: buyer });
 
@@ -232,7 +231,7 @@ contract('TokenSale', ([owner, wallet, buyer, buyer2, user1]) => {
         });
 
         it('allows ONLY whitelisted addresses to purchase tokens', async () => {
-            await timer(dayInSecs * 52);
+            await increaseTimeTo(latestTime() + duration.days(52));
 
             await star.approve(crowdsale.address, 5e18, { from: user1 });
             await star.approve(crowdsale.address, 5e18, { from: buyer });
@@ -255,7 +254,7 @@ contract('TokenSale', ([owner, wallet, buyer, buyer2, user1]) => {
         });
 
         it('allows ONLY addresses with STAR tokens to purchase tokens', async () => {
-            await timer(dayInSecs * 52);
+            await increaseTimeTo(latestTime() + duration.days(52));
 
             await star.approve(crowdsale.address, 5e18, { from: buyer });
 
@@ -277,7 +276,7 @@ contract('TokenSale', ([owner, wallet, buyer, buyer2, user1]) => {
         });
 
         it('cannot buy tokens by sending transaction to contract', async () => {
-            await timer(dayInSecs * 52);
+            await increaseTimeTo(latestTime() + duration.days(52));
 
             await star.approve(crowdsale.address, 5e18, { from: user1 });
             await star.approve(crowdsale.address, 5e18, { from: buyer });
@@ -300,7 +299,7 @@ contract('TokenSale', ([owner, wallet, buyer, buyer2, user1]) => {
         });
 
         it('does NOT buy tokens when crowdsale is paused', async () => {
-            await timer(dayInSecs * 52);
+            await increaseTimeTo(latestTime() + duration.days(52));
 
             await star.approve(crowdsale.address, 5e18, { from: user1 });
             await star.approve(crowdsale.address, 5e18, { from: buyer });
@@ -335,7 +334,7 @@ contract('TokenSale', ([owner, wallet, buyer, buyer2, user1]) => {
             await star.approve(crowdsale.address, 5e18, { from: user1 });
             await star.approve(crowdsale.address, 5e18, { from: buyer });
 
-            timer(dayInSecs * 52);
+            await increaseTimeTo(latestTime() + duration.days(52));
 
             try {
                 await crowdsale.buyTokens(buyer, {
@@ -360,7 +359,7 @@ contract('TokenSale', ([owner, wallet, buyer, buyer2, user1]) => {
         });
 
         it('updates STAR raised', async () => {
-            await timer(dayInSecs * 52);
+            await increaseTimeTo(latestTime() + duration.days(52));
 
             await star.approve(crowdsale.address, 8e18, { from: buyer });
 
@@ -381,7 +380,7 @@ contract('TokenSale', ([owner, wallet, buyer, buyer2, user1]) => {
             await star.mint(buyer, 10e18);
             await star.approve(crowdsale.address, 1, { from: buyer });
 
-            await timer(dayInSecs * 34);
+            await increaseTimeTo(latestTime() + duration.days(34));
 
             await crowdsale.buyTokens(buyer, { from: buyer });
 
@@ -399,7 +398,7 @@ contract('TokenSale', ([owner, wallet, buyer, buyer2, user1]) => {
             await star.mint(buyer, 10e18);
             await star.approve(crowdsale.address, 2, { from: buyer });
 
-            await timer(dayInSecs * 34);
+            await increaseTimeTo(latestTime() + duration.days(34));
 
             await crowdsale.buyTokens(buyer, { from: buyer });
 
@@ -430,7 +429,7 @@ contract('TokenSale', ([owner, wallet, buyer, buyer2, user1]) => {
             await star.mint(buyer, 10e18);
             await star.approve(crowdsale.address, 1, { from: buyer });
 
-            await timer(dayInSecs * 34);
+            await increaseTimeTo(latestTime() + duration.days(34));
 
             await crowdsale.buyTokens(buyer, { from: buyer });
 
@@ -446,12 +445,12 @@ contract('TokenSale', ([owner, wallet, buyer, buyer2, user1]) => {
 
             await star.mint(buyer, 10e18);
 
-            await timer(dayInSecs * 52);
+            await increaseTimeTo(latestTime() + duration.days(52));
 
             await star.approve(crowdsale.address, 5e18, { from: buyer });
             await crowdsale.buyTokens(buyer, { from: buyer });
 
-            await timer(dayInSecs * 20);
+            await increaseTimeTo(latestTime() + duration.days(20));
 
             await crowdsale.finalize(owner);
         });

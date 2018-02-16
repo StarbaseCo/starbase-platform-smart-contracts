@@ -1,30 +1,77 @@
-const sendAsync = (params) => new Promise((resolve, reject) => {
-  web3.currentProvider.sendAsync(params, function(err, res) {
-    if (err) {
-      reject(err)
-    } else {
-      resolve(res)
-    }
-  })
-})
+function increaseTime(duration) {
+    const id = Date.now();
 
-// Limited for use on the testrpc
-module.exports = (s, opts={}) => {
-  return sendAsync({
-    jsonrpc: '2.0',
-    method: 'evm_increaseTime',
-    params: [s],
-    id: new Date().getTime() // Id of the request; anything works, really
-  }).then(res => {
-    if (opts.mine) {
-      // mine a block to update latest block timestamp
-      return sendAsync({
-        jsonrpc: '2.0',
-        method: 'evm_mine',
-        id: new Date().getTime()
-      })
-    } else {
-      return Promise.resolve(res)
-    }
-  })
+    return new Promise((resolve, reject) => {
+        web3.currentProvider.sendAsync(
+            {
+                jsonrpc: '2.0',
+                method: 'evm_increaseTime',
+                params: [duration],
+                id: id
+            },
+            err1 => {
+                if (err1) return reject(err1);
+
+                web3.currentProvider.sendAsync(
+                    {
+                        jsonrpc: '2.0',
+                        method: 'evm_mine',
+                        id: id + 1
+                    },
+                    (err2, res) => {
+                        return err2 ? reject(err2) : resolve(res);
+                    }
+                );
+            }
+        );
+    });
 }
+
+const duration = {
+    seconds: function(val) {
+        return val;
+    },
+    minutes: function(val) {
+        return val * this.seconds(60);
+    },
+    hours: function(val) {
+        return val * this.minutes(60);
+    },
+    days: function(val) {
+        return val * this.hours(24);
+    },
+    weeks: function(val) {
+        return val * this.days(7);
+    },
+    years: function(val) {
+        return val * this.days(365);
+    }
+};
+
+function latestTime() {
+    return web3.eth.getBlock('latest').timestamp;
+}
+
+/**
+ * Beware that due to the need of calling two separate testrpc methods and rpc calls overhead
+ * it's hard to increase time precisely to a target point so design your test to tolerate
+ * small fluctuations from time to time.
+ *
+ * @param target time in seconds
+ */
+function increaseTimeTo(target) {
+    let now = latestTime();
+    if (target < now)
+        throw Error(
+            `Cannot increase current time(${now}) to a moment in the past(${target})`
+        );
+    let diff = target - now;
+    return increaseTime(diff);
+}
+
+module.exports = {
+    increaseTime,
+    duration,
+    latestTime,
+    increaseTimeTo
+};
