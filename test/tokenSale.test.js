@@ -13,12 +13,11 @@ contract('TokenSale', ([owner, wallet, buyer, buyer2, user1]) => {
     const rate = new BigNumber(10);
     const newRate = new BigNumber(20);
 
-    const value = new BigNumber(1);
-
-    const totalTokensForCrowdsale = new BigNumber(20000000e18);
+    const totalTokensForCrowdsale = new BigNumber(20000000);
 
     let startTime, endTime;
     let crowdsale, token, star, whitelist;
+    let crowdsaleTokensLeftover;
 
     const newCrowdsale = rate => {
         startTime = latestTime() + 2; // crowdsale starts in 2 seconds
@@ -79,8 +78,9 @@ contract('TokenSale', ([owner, wallet, buyer, buyer2, user1]) => {
 
     it('has a totalTokensForCrowdsale variable', async () => {
         const totalTokensForCrowdsaleFigure = await crowdsale.totalTokensForCrowdsale();
+
         totalTokensForCrowdsaleFigure.should.be.bignumber.equal(
-            totalTokensForCrowdsale
+            totalTokensForCrowdsale * 1e18
         );
     });
 
@@ -396,7 +396,7 @@ contract('TokenSale', ([owner, wallet, buyer, buyer2, user1]) => {
             await whitelist.addToWhitelist([buyer]);
             await token.transferOwnership(crowdsale.address);
             await star.mint(buyer, 10e18);
-            await star.approve(crowdsale.address, 2, { from: buyer });
+            await star.approve(crowdsale.address, 2e18, { from: buyer });
 
             await increaseTimeTo(latestTime() + duration.days(34));
 
@@ -406,10 +406,12 @@ contract('TokenSale', ([owner, wallet, buyer, buyer2, user1]) => {
             remainderPurchaser.should.equal(buyer);
 
             const remainder = await crowdsale.remainderStarAmount();
-            remainder.toNumber().should.be.equal(1);
+            remainder.toNumber().should.be.equal(1e18);
 
             let buyerBalance = await token.balanceOf(buyer);
-            buyerBalance.should.be.bignumber.equal(totalTokensForCrowdsale);
+            buyerBalance.should.be.bignumber.equal(
+                totalTokensForCrowdsale * 1e18
+            );
 
             try {
                 await crowdsale.buyTokens(buyer, { from: buyer });
@@ -419,7 +421,9 @@ contract('TokenSale', ([owner, wallet, buyer, buyer2, user1]) => {
             }
 
             buyerBalance = await token.balanceOf(buyer);
-            buyerBalance.should.be.bignumber.equal(totalTokensForCrowdsale);
+            buyerBalance.should.be.bignumber.equal(
+                totalTokensForCrowdsale * 1e18
+            );
         });
 
         it('ends crowdsale when all tokens are sold', async () => {
@@ -427,7 +431,7 @@ contract('TokenSale', ([owner, wallet, buyer, buyer2, user1]) => {
             await whitelist.addToWhitelist([buyer]);
             await token.transferOwnership(crowdsale.address);
             await star.mint(buyer, 10e18);
-            await star.approve(crowdsale.address, 1, { from: buyer });
+            await star.approve(crowdsale.address, 1e18, { from: buyer });
 
             await increaseTimeTo(latestTime() + duration.days(34));
 
@@ -440,14 +444,19 @@ contract('TokenSale', ([owner, wallet, buyer, buyer2, user1]) => {
 
     describe('crowdsale finalization', function() {
         beforeEach(async () => {
+            crowdsaleTokensLeftover = 10;
+
+            crowdsale = await newCrowdsale(
+                totalTokensForCrowdsale.sub(crowdsaleTokensLeftover)
+            );
             await whitelist.addToWhitelist([buyer]);
             await token.transferOwnership(crowdsale.address);
 
-            await star.mint(buyer, 10e18);
+            await star.mint(buyer, 1e18);
 
             await increaseTimeTo(latestTime() + duration.days(52));
 
-            await star.approve(crowdsale.address, 5e18, { from: buyer });
+            await star.approve(crowdsale.address, 1e18, { from: buyer });
             await crowdsale.buyTokens(buyer, { from: buyer });
 
             await increaseTimeTo(latestTime() + duration.days(20));
@@ -469,8 +478,9 @@ contract('TokenSale', ([owner, wallet, buyer, buyer2, user1]) => {
             const buyerBalance = await token.balanceOf(buyer);
 
             const walletTokenBalance = await token.balanceOf(wallet);
+
             walletTokenBalance.should.be.bignumber.equal(
-                totalTokensForCrowdsale.sub(buyerBalance)
+                crowdsaleTokensLeftover * 1e18
             );
         });
     });

@@ -64,7 +64,8 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
         whitelist = Whitelist(_whitelist);
         star = StandardToken(_starToken);
 
-        totalTokensForCrowdsale = _totalTokensForCrowdsale;
+        uint256 tokenDecimals = TokenMold(token).decimals();
+        totalTokensForCrowdsale = _totalTokensForCrowdsale.mul(10 ** tokenDecimals);
 
         require(TokenMold(token).paused());
     }
