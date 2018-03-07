@@ -11,7 +11,7 @@ import "./Whitelist.sol";
  * @author Gustavo Guimaraes - <gustavo@starbase.co>
  */
 contract TokenSale is FinalizableCrowdsale, Pausable {
-    uint256 public totalTokensForCrowdsale;
+    uint256 public crowdsaleCap;
     // amount of raised money in STAR
     uint256 public starRaised;
 
@@ -30,7 +30,7 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
      * @param _companyToken ERC20 TokenFactory contract address
      * @param _rate The token rate per ETH
      * @param _wallet Multisig wallet that will hold the crowdsale funds.
-     * @param _totalTokensForCrowdsale Cap for the token sale
+     * @param _crowdsaleCap Cap for the token sale
      */
     function TokenSale
         (
@@ -41,7 +41,7 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
             address _companyToken,
             uint256 _rate,
             address _wallet,
-            uint256 _totalTokensForCrowdsale
+            uint256 _crowdsaleCap
         )
         public
         FinalizableCrowdsale()
@@ -51,7 +51,7 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
                 _whitelist != address(0) &&
                 _starToken != address(0) &&
                 _companyToken != address(0) &&
-                _totalTokensForCrowdsale != 0
+                _crowdsaleCap != 0
         );
 
         token = createTokenContract(_companyToken);
@@ -59,7 +59,7 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
         star = StandardToken(_starToken);
 
         uint256 tokenDecimals = TokenFactory(token).decimals();
-        totalTokensForCrowdsale = _totalTokensForCrowdsale.mul(10 ** tokenDecimals);
+        crowdsaleCap = _crowdsaleCap.mul(10 ** tokenDecimals);
 
         require(TokenFactory(token).paused());
     }
@@ -104,7 +104,7 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
         crowdsaleIsTokenOwner
     {
         require(beneficiary != address(0));
-        require(validPurchase() && token.totalSupply() < totalTokensForCrowdsale);
+        require(validPurchase() && token.totalSupply() < crowdsaleCap);
 
         // beneficiary must allow TokenSale address to transfer star tokens on its behalf
         uint256 starAllocationToTokenSale = star.allowance(beneficiary, this);
@@ -114,8 +114,8 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
         uint256 tokens = starAllocationToTokenSale.mul(rate);
 
         //remainder logic
-        if (token.totalSupply().add(tokens) > totalTokensForCrowdsale) {
-            tokens = totalTokensForCrowdsale.sub(token.totalSupply());
+        if (token.totalSupply().add(tokens) > crowdsaleCap) {
+            tokens = crowdsaleCap.sub(token.totalSupply());
             uint256 actualStarAllocationToTokenSale = tokens.div(rate);
 
             starAllocationToTokenSale = actualStarAllocationToTokenSale;
@@ -131,22 +131,22 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
         star.transferFrom(beneficiary, wallet, starAllocationToTokenSale);
     }
 
+    // override Crowdsale#hasEnded to add cap logic
+    // @return true if crowdsale event has ended
+    function hasEnded() public view returns (bool) {
+        if (token.totalSupply() == crowdsaleCap) {
+            return true;
+        }
+
+        return super.hasEnded();
+    }
+
     /**
      * @dev override Crowdsale#validPurchase
      * @return true if the transaction can buy tokens
      */
     function validPurchase() internal view returns (bool) {
       return now >= startTime && now <= endTime;
-    }
-
-    // override Crowdsale#hasEnded to add cap logic
-    // @return true if crowdsale event has ended
-    function hasEnded() public view returns (bool) {
-        if (token.totalSupply() == totalTokensForCrowdsale) {
-            return true;
-        }
-
-        return super.hasEnded();
     }
 
     /**
@@ -161,8 +161,8 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
      * @dev finalizes crowdsale
      */
     function finalization() internal {
-        if (totalTokensForCrowdsale > token.totalSupply()) {
-            uint256 remainingTokens = totalTokensForCrowdsale.sub(token.totalSupply());
+        if (crowdsaleCap > token.totalSupply()) {
+            uint256 remainingTokens = crowdsaleCap.sub(token.totalSupply());
 
             token.mint(wallet, remainingTokens);
         }

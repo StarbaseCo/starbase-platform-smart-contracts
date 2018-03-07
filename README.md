@@ -39,6 +39,14 @@ Technically, the purchase flow happens as follows:
 
 3- if positive allowance, then crowdsale calculates the number of tokens to create and transfers these to user. Once token transfer is completed, it passes on STAR token from user to the Multisig wallet contract.
 
+## Gas consumption
+
+* `approve`
+  30512
+
+* `BuyTokens`
+  128547
+
 ## Development
 
 **Dependencies**

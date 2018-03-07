@@ -13,7 +13,7 @@ contract('TokenSale', ([owner, wallet, buyer, buyer2, user1]) => {
     const rate = new BigNumber(10);
     const newRate = new BigNumber(20);
 
-    const totalTokensForCrowdsale = new BigNumber(20000000);
+    const crowdsaleCap = new BigNumber(20000000); // 20M
 
     let startTime, endTime;
     let crowdsale, token, star, whitelist;
@@ -42,7 +42,7 @@ contract('TokenSale', ([owner, wallet, buyer, buyer2, user1]) => {
                     token.address,
                     rate,
                     wallet,
-                    totalTokensForCrowdsale
+                    crowdsaleCap
                 );
             });
     };
@@ -76,12 +76,10 @@ contract('TokenSale', ([owner, wallet, buyer, buyer2, user1]) => {
         walletAddress.should.equal(wallet);
     });
 
-    it('has a totalTokensForCrowdsale variable', async () => {
-        const totalTokensForCrowdsaleFigure = await crowdsale.totalTokensForCrowdsale();
+    it('has a crowdsaleCap variable', async () => {
+        const crowdsaleCapFigure = await crowdsale.crowdsaleCap();
 
-        totalTokensForCrowdsaleFigure.should.be.bignumber.equal(
-            totalTokensForCrowdsale * 1e18
-        );
+        crowdsaleCapFigure.should.be.bignumber.equal(crowdsaleCap * 1e18);
     });
 
     it('starts with token paused', async () => {
@@ -374,7 +372,7 @@ contract('TokenSale', ([owner, wallet, buyer, buyer2, user1]) => {
         });
 
         it('sends STAR raised to wallet', async () => {
-            crowdsale = await newCrowdsale(totalTokensForCrowdsale);
+            crowdsale = await newCrowdsale(crowdsaleCap);
             await whitelist.addToWhitelist([buyer]);
             await token.transferOwnership(crowdsale.address);
             await star.mint(buyer, 10e18);
@@ -385,14 +383,14 @@ contract('TokenSale', ([owner, wallet, buyer, buyer2, user1]) => {
             await crowdsale.buyTokens(buyer, { from: buyer });
 
             const buyerBalance = await token.balanceOf(buyer);
-            buyerBalance.should.be.bignumber.equal(totalTokensForCrowdsale);
+            buyerBalance.should.be.bignumber.equal(crowdsaleCap);
 
             const walletBalance = await star.balanceOf(wallet);
             walletBalance.should.be.bignumber.equal(1);
         });
 
         it('only mints tokens up to crowdsale cap', async () => {
-            crowdsale = await newCrowdsale(totalTokensForCrowdsale);
+            crowdsale = await newCrowdsale(crowdsaleCap);
             await whitelist.addToWhitelist([buyer]);
             await token.transferOwnership(crowdsale.address);
             await star.mint(buyer, 10e18);
@@ -403,9 +401,7 @@ contract('TokenSale', ([owner, wallet, buyer, buyer2, user1]) => {
             await crowdsale.buyTokens(buyer, { from: buyer });
 
             let buyerBalance = await token.balanceOf(buyer);
-            buyerBalance.should.be.bignumber.equal(
-                totalTokensForCrowdsale * 1e18
-            );
+            buyerBalance.should.be.bignumber.equal(crowdsaleCap * 1e18);
 
             try {
                 await crowdsale.buyTokens(buyer, { from: buyer });
@@ -415,13 +411,11 @@ contract('TokenSale', ([owner, wallet, buyer, buyer2, user1]) => {
             }
 
             buyerBalance = await token.balanceOf(buyer);
-            buyerBalance.should.be.bignumber.equal(
-                totalTokensForCrowdsale * 1e18
-            );
+            buyerBalance.should.be.bignumber.equal(crowdsaleCap * 1e18);
         });
 
         it('ends crowdsale when all tokens are sold', async () => {
-            crowdsale = await newCrowdsale(totalTokensForCrowdsale);
+            crowdsale = await newCrowdsale(crowdsaleCap);
             await whitelist.addToWhitelist([buyer]);
             await token.transferOwnership(crowdsale.address);
             await star.mint(buyer, 10e18);
@@ -441,7 +435,7 @@ contract('TokenSale', ([owner, wallet, buyer, buyer2, user1]) => {
             crowdsaleTokensLeftover = 10;
 
             crowdsale = await newCrowdsale(
-                totalTokensForCrowdsale.sub(crowdsaleTokensLeftover)
+                crowdsaleCap.sub(crowdsaleTokensLeftover)
             );
             await whitelist.addToWhitelist([buyer]);
             await token.transferOwnership(crowdsale.address);
