@@ -391,7 +391,7 @@ contract('TokenSale', ([owner, wallet, buyer, buyer2, user1]) => {
             walletBalance.should.be.bignumber.equal(1);
         });
 
-        it('only mints tokens up to crowdsale cap; saves the remainder info in contract', async () => {
+        it('only mints tokens up to crowdsale cap', async () => {
             crowdsale = await newCrowdsale(totalTokensForCrowdsale);
             await whitelist.addToWhitelist([buyer]);
             await token.transferOwnership(crowdsale.address);
@@ -401,12 +401,6 @@ contract('TokenSale', ([owner, wallet, buyer, buyer2, user1]) => {
             await increaseTimeTo(latestTime() + duration.days(34));
 
             await crowdsale.buyTokens(buyer, { from: buyer });
-
-            const remainderPurchaser = await crowdsale.remainderPurchaser();
-            remainderPurchaser.should.equal(buyer);
-
-            const remainder = await crowdsale.remainderStarAmount();
-            remainder.toNumber().should.be.equal(1e18);
 
             let buyerBalance = await token.balanceOf(buyer);
             buyerBalance.should.be.bignumber.equal(

@@ -15,12 +15,6 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
     // amount of raised money in STAR
     uint256 public starRaised;
 
-    // remainderPurchaser and remainderTokens info saved in the contract
-    // used for reference for contract owner to send refund if any to last purchaser after end of crowdsale
-    // return remaining STAR by allowing user to call decreaseApproval function in StandardToken
-    address public remainderPurchaser;
-    uint256 public remainderStarAmount;
-
     // external contracts
     Whitelist public whitelist;
     StandardToken public star;
@@ -123,10 +117,6 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
         if (token.totalSupply().add(tokens) > totalTokensForCrowdsale) {
             tokens = totalTokensForCrowdsale.sub(token.totalSupply());
             uint256 actualStarAllocationToTokenSale = tokens.div(rate);
-
-            // save info so as to refund purchaser after crowdsale's end
-            remainderPurchaser = beneficiary;
-            remainderStarAmount = starAllocationToTokenSale.sub(actualStarAllocationToTokenSale);
 
             starAllocationToTokenSale = actualStarAllocationToTokenSale;
         }
