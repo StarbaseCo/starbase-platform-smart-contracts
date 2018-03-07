@@ -1,4 +1,4 @@
-const TokenMold = artifacts.require('./TokenMold.sol');
+const TokenFactory = artifacts.require('./TokenFactory.sol');
 const TokenSale = artifacts.require('./TokenSale.sol');
 const StandardToken = artifacts.require('./StandardToken.sol');
 const Whitelist = artifacts.require('./Whitelist.sol');
@@ -21,7 +21,7 @@ module.exports = function(deployer, network, [_, wallet]) {
             return deployer.deploy(StandardToken);
         })
         .then(() => {
-            return deployer.deploy(TokenMold, name, symbol, decimals);
+            return deployer.deploy(TokenFactory, name, symbol, decimals);
         })
         .then(() => {
             return deployer.deploy(Whitelist);
@@ -33,7 +33,7 @@ module.exports = function(deployer, network, [_, wallet]) {
                 endTime,
                 Whitelist.address,
                 StandardToken.address,
-                TokenMold.address,
+                TokenFactory.address,
                 rate,
                 wallet,
                 totalTokensForCrowdsale
