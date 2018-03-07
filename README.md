@@ -30,7 +30,14 @@ In order for investors to participate in the crowdsale using the `TokenSale` con
 
 Afterwards, investor must trigger `BuyTokens` within TokenSale so the token purchase event goes through. Investor then receives purchased tokens right away. However, she will not be able to trade these tokens because token transfers are paused. They need to be unpaused for the transfers to happen and this must be done most likely after the crowdsale by the token owner. Token ownership after the crowdsale must be moved from the `TokenSale` contract to another Ethereum address, most likely the address of the project owner that is uses Starbase platform for its crowdfunding needs.
 
-In case there is a remainder amount of STAR left for the `TokenSale` contract to manage (this may happen if the last purchaser participating in the crowdsale sends more STARs than needed to finish the purchase of all left over tokens), then the remainder amount will be recorded on the public variable `remainderStarAmount`. The last purchaser must then call the function `decreaseApproval` in the STAR token contract so it removes the right for TokenSale to remove any of these remaining STARs.
+Purchase process:
+
+Technically, the purchase flow happens as follows:
+1- a user that possesses STAR token must approve the crowdsale contract to transfer STAR tokens on its behalf. This happens on the Starbase client app which connects to Metamask.
+
+2- client app calls the `buyTokens` function passing user address as `beneficiary`, contract checks whether user has given it allowance to spend STAR tokens on user's behalf.
+
+3- if positive allowance, then crowdsale calculates the number of tokens to create and transfers these to user. Once token transfer is completed, it passes on STAR token from user to the Multisig wallet contract.
 
 ## Development
 
