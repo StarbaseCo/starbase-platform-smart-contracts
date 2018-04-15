@@ -5,6 +5,7 @@
 * [Table of Contents](#table-of-contents)
 * [Overview](#overview)
 * [Implementation Details](#implementation-details)
+* [Gas Consumptions](#gas-consumption)
 * [Development](#development)
 
 ## Overview
