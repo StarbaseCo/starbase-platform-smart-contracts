@@ -1,4 +1,4 @@
-pragma solidity 0.4.19;
+pragma solidity 0.4.21;
 
 import "zeppelin-solidity/contracts/math/SafeMath.sol";
 import "zeppelin-solidity/contracts/token/ERC20/MintableToken.sol";
@@ -56,12 +56,6 @@ contract Crowdsale {
   // @return true if crowdsale event has ended
   function hasEnded() public view returns (bool) {
     return now > endTime;
-  }
-
-  // creates the token to be sold.
-  // override this method to have crowdsale of a specific mintable token.
-  function createTokenContract() internal returns (MintableToken) {
-    return new MintableToken();
   }
 
   // Override this method to have a way to add business logic to your crowdsale when buying
