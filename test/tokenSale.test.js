@@ -9,7 +9,7 @@ const expect = require('chai').expect;
 
 const BigNumber = web3.BigNumber;
 
-contract.skip('TokenSale', ([owner, wallet, buyer, buyer2, user1]) => {
+contract('TokenSale', ([owner, wallet, buyer, buyer2, user1]) => {
     const rate = new BigNumber(10);
     const newRate = new BigNumber(20);
 
