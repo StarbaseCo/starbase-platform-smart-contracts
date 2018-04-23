@@ -87,6 +87,12 @@ contract('TokenSale', ([owner, wallet, buyer, buyer2, user1]) => {
         paused.should.be.true;
     });
 
+    it('saves the initial token owner', async () => {
+        const tokenOwner = await token.owner();
+        const initialTokenOwner = await crowdsale.initialTokenOwner();
+        initialTokenOwner.should.be.equal(tokenOwner);
+    });
+
     describe('changing rate', () => {
         it('does NOT allows anyone to change rate other than the owner', async () => {
             try {
@@ -447,9 +453,9 @@ contract('TokenSale', ([owner, wallet, buyer, buyer2, user1]) => {
             await star.approve(crowdsale.address, 1e18, { from: buyer });
             await crowdsale.buyTokens(buyer, { from: buyer });
 
-            await increaseTimeTo(latestTime() + duration.days(20));
+            await increaseTimeTo(latestTime() + duration.days(30));
 
-            await crowdsale.finalize(owner);
+            await crowdsale.finalize();
         });
 
         it('shows that crowdsale is finalized', async function() {
@@ -458,8 +464,9 @@ contract('TokenSale', ([owner, wallet, buyer, buyer2, user1]) => {
         });
 
         it('returns token ownership to original owner', async function() {
+            const initialTokenOwner = await crowdsale.initialTokenOwner();
             const tokenOwner = await token.owner();
-            tokenOwner.should.be.equal(owner);
+            tokenOwner.should.be.equal(initialTokenOwner);
         });
 
         it('mints remaining crowdsale tokens to wallet', async function() {

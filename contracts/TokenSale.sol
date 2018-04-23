@@ -14,6 +14,7 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
     uint256 public crowdsaleCap;
     // amount of raised money in STAR
     uint256 public starRaised;
+    address public initialTokenOwner;
 
     // external contracts
     Whitelist public whitelist;
@@ -54,10 +55,11 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
                 _crowdsaleCap != 0
         );
 
-        token = createTokenContract(_companyToken);
+        token = TokenFactory(_companyToken);
         whitelist = Whitelist(_whitelist);
         star = StandardToken(_starToken);
 
+        initialTokenOwner = TokenFactory(token).owner();
         uint256 tokenDecimals = TokenFactory(token).decimals();
         crowdsaleCap = _crowdsaleCap.mul(10 ** tokenDecimals);
 
@@ -116,9 +118,8 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
         //remainder logic
         if (token.totalSupply().add(tokens) > crowdsaleCap) {
             tokens = crowdsaleCap.sub(token.totalSupply());
-            uint256 actualStarAllocationToTokenSale = tokens.div(rate);
 
-            starAllocationToTokenSale = actualStarAllocationToTokenSale;
+            starAllocationToTokenSale = tokens.div(rate);
         }
 
         // update state
@@ -150,14 +151,6 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
     }
 
     /**
-     * @dev Creates token contract. This is called on the constructor function of the Crowdsale contract
-     * @param _token Address of token contract
-     */
-    function createTokenContract(address _token) internal returns (MintableToken) {
-        return TokenFactory(_token);
-    }
-
-    /**
      * @dev finalizes crowdsale
      */
     function finalization() internal {
@@ -167,6 +160,7 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
             token.mint(wallet, remainingTokens);
         }
 
+        token.transferOwnership(initialTokenOwner);
         super.finalization();
     }
 }

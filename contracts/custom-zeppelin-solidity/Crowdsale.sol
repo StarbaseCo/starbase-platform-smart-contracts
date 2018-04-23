@@ -28,9 +28,6 @@ contract Crowdsale {
   // how many token units a buyer gets per wei
   uint256 public rate;
 
-  // amount of raised money in wei
-  uint256 public weiRaised;
-
   /**
    * event for token purchase logging
    * @param purchaser who paid for the tokens
@@ -57,23 +54,4 @@ contract Crowdsale {
   function hasEnded() public view returns (bool) {
     return now > endTime;
   }
-
-  // Override this method to have a way to add business logic to your crowdsale when buying
-  function getTokenAmount(uint256 weiAmount) internal view returns(uint256) {
-    return weiAmount.mul(rate);
-  }
-
-  // send ether to the fund collection wallet
-  // override to create custom fund forwarding mechanisms
-  function forwardFunds() internal {
-    wallet.transfer(msg.value);
-  }
-
-  // @return true if the transaction can buy tokens
-  function validPurchase() internal view returns (bool) {
-    bool withinPeriod = now >= startTime && now <= endTime;
-    bool nonZeroPurchase = msg.value != 0;
-    return withinPeriod && nonZeroPurchase;
-  }
-
 }
