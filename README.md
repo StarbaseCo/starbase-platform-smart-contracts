@@ -14,7 +14,7 @@ The Starbase platform's smart contracts allow investors who hold STARs to partic
 
 ## Implementation Details
 
-* TokenFactory.sol
+* CompanyToken.sol
 
 This contract creates a token with customized name, symbol and decimals. Upon its creation, the token transfer functionality is paused, that is to say no one is able to trade them. This is possible to be reverted only by the token contract owner - who is the Ethereum address that deployed the token mold contract.
 For this contract to work with `TokenSale.sol`, its ownership needs to be passed on to `TokenSale` contract instance that will manage the token sale.
@@ -25,7 +25,7 @@ It allows the addition and/or removal of addresses to the whitelist registry. Bo
 
 * TokenSale.sol
 
-This contract is where the fundraising occurs. For it to work as expected, the ownership from the deployed TokenFactory contract needs to be passed on to `TokenSale`. This is accomplished via the `transferOwnership` function found in the zeppelin-solidity's `Ownable.sol` contract.
+This contract is where the fundraising occurs. For it to work as expected, the ownership from the deployed CompanyToken contract needs to be passed on to `TokenSale`. This is accomplished via the `transferOwnership` function found in the zeppelin-solidity's `Ownable.sol` contract.
 
 In order for investors to participate in the crowdsale using the `TokenSale` contract, they need firstly to approve the transfer of STARs from them to the `TokenSale` contract. For this, the investor must call the `approve` function from the STAR token contract thus passing the number of STAR tokens it approves to `TokenSale` so it manages STARs for them during the token purchase event.
 

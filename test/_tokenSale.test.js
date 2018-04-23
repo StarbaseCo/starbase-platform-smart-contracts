@@ -1,5 +1,5 @@
 const TokenSale = artifacts.require('./TokenSale.sol');
-const TokenFactory = artifacts.require('./TokenFactory.sol');
+const CompanyToken = artifacts.require('./CompanyToken.sol');
 const MintableToken = artifacts.require('./MintableToken.sol');
 const Whitelist = artifacts.require('./Whitelist.sol');
 
@@ -30,10 +30,10 @@ contract('TokenSale', ([owner, wallet, buyer, buyer2, user1]) => {
             })
             .then(mintableToken => {
                 star = mintableToken;
-                return TokenFactory.new('Example Token', 'EXT', 18);
+                return CompanyToken.new('Example Token', 'EXT', 18);
             })
-            .then(TokenFactory => {
-                token = TokenFactory;
+            .then(CompanyToken => {
+                token = CompanyToken;
                 return TokenSale.new(
                     startTime,
                     endTime,

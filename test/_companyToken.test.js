@@ -1,11 +1,11 @@
 const { should } = require('./helpers/utils');
-const TokenFactory = artifacts.require('./TokenFactory.sol');
+const CompanyToken = artifacts.require('./CompanyToken.sol');
 
-contract('TokenFactory', () => {
+contract('CompanyToken', () => {
     let token;
 
     beforeEach(async () => {
-        token = await TokenFactory.deployed();
+        token = await CompanyToken.deployed();
     });
 
     it('has a name', async () => {

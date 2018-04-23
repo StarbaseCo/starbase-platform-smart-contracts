@@ -5,10 +5,10 @@ import "zeppelin-solidity/contracts/token/ERC20/PausableToken.sol";
 
 
 /**
- * @title TokenFactory contract - ERC20 compatible token contract with customized token parameters.
+ * @title CompanyToken contract - ERC20 compatible token contract with customized token parameters.
  * @author Gustavo Guimaraes - <gustavo@starbase.co>
  */
-contract TokenFactory is PausableToken, MintableToken {
+contract CompanyToken is PausableToken, MintableToken {
     string public name;
     string public symbol;
     uint8 public decimals;
@@ -19,7 +19,7 @@ contract TokenFactory is PausableToken, MintableToken {
      * @param _symbol Token symbol - up to 4 characters
      * @param _decimals Decimals for token
      */
-    function TokenFactory(string _name, string _symbol, uint8 _decimals) public {
+    function CompanyToken(string _name, string _symbol, uint8 _decimals) public {
         name = _name;
         symbol = _symbol;
         decimals = _decimals;

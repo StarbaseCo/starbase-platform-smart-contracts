@@ -2,7 +2,7 @@ pragma solidity 0.4.21;
 
 import "zeppelin-solidity/contracts/lifecycle/Pausable.sol";
 import "./custom-zeppelin-solidity/FinalizableCrowdsale.sol";
-import "./TokenFactory.sol";
+import "./CompanyToken.sol";
 import "./Whitelist.sol";
 
 
@@ -28,7 +28,7 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
      * @param _endTime Timestamp when the crowdsale will finish
      * @param _whitelist contract containing the whitelisted addresses
      * @param _starToken STAR token contract address
-     * @param _companyToken ERC20 TokenFactory contract address
+     * @param _companyToken ERC20 CompanyToken contract address
      * @param _rate The token rate per ETH
      * @param _wallet Multisig wallet that will hold the crowdsale funds.
      * @param _crowdsaleCap Cap for the token sale
@@ -55,15 +55,15 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
                 _crowdsaleCap != 0
         );
 
-        token = TokenFactory(_companyToken);
+        token = CompanyToken(_companyToken);
         whitelist = Whitelist(_whitelist);
         star = StandardToken(_starToken);
 
-        initialTokenOwner = TokenFactory(token).owner();
-        uint256 tokenDecimals = TokenFactory(token).decimals();
+        initialTokenOwner = CompanyToken(token).owner();
+        uint256 tokenDecimals = CompanyToken(token).decimals();
         crowdsaleCap = _crowdsaleCap.mul(10 ** tokenDecimals);
 
-        require(TokenFactory(token).paused());
+        require(CompanyToken(token).paused());
     }
 
     modifier whitelisted(address beneficiary) {
