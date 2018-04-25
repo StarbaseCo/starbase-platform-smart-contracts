@@ -1,16 +1,16 @@
-const StarTokenReturn = artifacts.require('StarTokenReturn.sol');
+const StarStakingWithTokenReturn = artifacts.require('StarStakingWithTokenReturn.sol');
 const TokenMock = artifacts.require('./mocks/Token.sol');
 
 const { should } = require('./helpers/utils');
 
-contract('StarTokenReturn', function([user, user2]) {
+contract('StarStakingWithTokenReturn', function([user, user2]) {
     let bank, token, returnToken, initialBalance;
 
     beforeEach(async () => {
         initialBalance = 10000;
         token = await TokenMock.new();
         returnToken = await TokenMock.new();
-        bank = await StarTokenReturn.new(token.address, returnToken.address, 2);
+        bank = await StarStakingWithTokenReturn.new(token.address, returnToken.address, 2);
 
         await token.mint(user, initialBalance);
         await returnToken.mint(bank.address, initialBalance * 2);

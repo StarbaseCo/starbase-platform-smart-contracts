@@ -2,7 +2,6 @@ pragma solidity 0.4.21;
 
 
 interface StarStakingInterface {
-
     event Staked(address indexed user, uint256 amount, uint256 total, bytes data);
     event Unstaked(address indexed user, uint256 amount, uint256 total, bytes data);
 

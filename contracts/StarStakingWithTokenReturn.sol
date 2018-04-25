@@ -3,14 +3,17 @@ pragma solidity 0.4.21;
 import "./StarStaking.sol";
 
 
-contract StarTokenReturn is StarStaking {
+contract StarStakingWithTokenReturn is StarStaking {
     ERC20 public returnToken;
     uint256 public rate;
 
-    /// @param _token Token that can be staked.
-    /// @param _returnToken Token that is given to user once he stakes.
-    /// @param _rate Rate of return tokens per token.
-    function StarTokenReturn
+    /**
+     * @dev contract that returns other token when staking STAR
+     * @param _token Token that can be staked.
+     * @param _returnToken Token that is given to user once he stakes.
+     * @param _rate Rate of return tokens per token.
+     */
+    function StarStakingWithTokenReturn
         (
             ERC20 _token,
             ERC20 _returnToken,
@@ -27,18 +30,22 @@ contract StarTokenReturn is StarStaking {
         rate = _rate;
     }
 
-    /// @notice Stakes a certain amount of tokens for another user.
-    /// @param user Address of the user to stake for.
-    /// @param amount Amount of tokens to stake.
-    /// @param data Data field used for signalling in more complex staking applications.
+    /**
+     * @dev Stakes a certain amount of tokens for another user.
+     * @param user Address of the user to stake for.
+     * @param amount Amount of tokens to stake.
+     * @param data Data field used for signalling in more complex staking applications.
+     */
     function stakeFor(address user, uint256 amount, bytes data) public {
         super.stakeFor(user, amount, data);
         require(returnToken.transfer(user, amount.mul(getRate())));
     }
 
-    /// @notice Unstakes a certain amount of tokens.
-    /// @param amount Amount of tokens to unstake.
-    /// @param data Data field used for signalling in more complex staking applications.
+    /**
+     * @dev Unstakes a certain amount of tokens.
+     * @param amount Amount of tokens to unstake.
+     * @param data Data field used for signalling in more complex staking applications.
+     */
     function unstake(uint256 amount, bytes data) public {
         super.unstake(amount, data);
 
@@ -48,8 +55,10 @@ contract StarTokenReturn is StarStaking {
         require(returnToken.transferFrom(msg.sender, address(this), returnAmount));
     }
 
-    /// @notice Returns conversion rate from token to returnToken. In function so it can be overridden.
-    /// @return conversion rate.
+    /**
+     * @dev Returns conversion rate from token to returnToken. In function so it can be overridden.
+     * @return conversion rate.
+     */
     function getRate() public view returns (uint256) {
         return rate;
     }
