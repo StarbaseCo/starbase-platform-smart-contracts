@@ -16,7 +16,7 @@ contract Crowdsale {
   using SafeMath for uint256;
 
   // The token being sold
-  MintableToken public token;
+  MintableToken public tokenOnSale;
 
   // start and end timestamps where investments are allowed (both inclusive)
   uint256 public startTime;

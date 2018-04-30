@@ -62,12 +62,12 @@ contract('TokenSale', ([owner, wallet, buyer, buyer2, user1]) => {
     });
 
     it('has a token contract', async () => {
-        const tokenContract = await crowdsale.token();
+        const tokenContract = await crowdsale.tokenOnSale();
         tokenContract.should.equal(token.address);
     });
 
     it('has a star contract', async () => {
-        const starContract = await crowdsale.star();
+        const starContract = await crowdsale.starToken();
         starContract.should.equal(star.address);
     });
 

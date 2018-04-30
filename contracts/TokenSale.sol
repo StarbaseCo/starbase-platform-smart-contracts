@@ -18,7 +18,7 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
 
     // external contracts
     Whitelist public whitelist;
-    StandardToken public star;
+    StandardToken public starToken;
 
     event TokenRateChanged(uint256 previousRate, uint256 newRate);
 
@@ -55,15 +55,15 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
                 _crowdsaleCap != 0
         );
 
-        token = CompanyToken(_companyToken);
+        tokenOnSale = CompanyToken(_companyToken);
         whitelist = Whitelist(_whitelist);
-        star = StandardToken(_starToken);
+        starToken = StandardToken(_starToken);
 
-        initialTokenOwner = CompanyToken(token).owner();
-        uint256 tokenDecimals = CompanyToken(token).decimals();
+        initialTokenOwner = CompanyToken(tokenOnSale).owner();
+        uint256 tokenDecimals = CompanyToken(tokenOnSale).decimals();
         crowdsaleCap = _crowdsaleCap.mul(10 ** tokenDecimals);
 
-        require(CompanyToken(token).paused());
+        require(CompanyToken(tokenOnSale).paused());
     }
 
     modifier whitelisted(address beneficiary) {
@@ -73,7 +73,7 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
 
     modifier crowdsaleIsTokenOwner() {
         // token owner should be contract address
-        require(token.owner() == address(this));
+        require(tokenOnSale.owner() == address(this));
         _;
     }
 
@@ -106,18 +106,18 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
         crowdsaleIsTokenOwner
     {
         require(beneficiary != address(0));
-        require(validPurchase() && token.totalSupply() < crowdsaleCap);
+        require(validPurchase() && tokenOnSale.totalSupply() < crowdsaleCap);
 
         // beneficiary must allow TokenSale address to transfer star tokens on its behalf
-        uint256 starAllocationToTokenSale = star.allowance(beneficiary, this);
+        uint256 starAllocationToTokenSale = starToken.allowance(beneficiary, this);
         require(starAllocationToTokenSale > 0);
 
         // calculate token amount to be created
         uint256 tokens = starAllocationToTokenSale.mul(rate);
 
         //remainder logic
-        if (token.totalSupply().add(tokens) > crowdsaleCap) {
-            tokens = crowdsaleCap.sub(token.totalSupply());
+        if (tokenOnSale.totalSupply().add(tokens) > crowdsaleCap) {
+            tokens = crowdsaleCap.sub(tokenOnSale.totalSupply());
 
             starAllocationToTokenSale = tokens.div(rate);
         }
@@ -125,17 +125,17 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
         // update state
         starRaised = starRaised.add(starAllocationToTokenSale);
 
-        token.mint(beneficiary, tokens);
+        tokenOnSale.mint(beneficiary, tokens);
         TokenPurchase(msg.sender, beneficiary, starAllocationToTokenSale, tokens);
 
         // forward funds
-        star.transferFrom(beneficiary, wallet, starAllocationToTokenSale);
+        starToken.transferFrom(beneficiary, wallet, starAllocationToTokenSale);
     }
 
     // override Crowdsale#hasEnded to add cap logic
     // @return true if crowdsale event has ended
     function hasEnded() public view returns (bool) {
-        if (token.totalSupply() == crowdsaleCap) {
+        if (tokenOnSale.totalSupply() == crowdsaleCap) {
             return true;
         }
 
@@ -154,13 +154,13 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
      * @dev finalizes crowdsale
      */
     function finalization() internal {
-        if (crowdsaleCap > token.totalSupply()) {
-            uint256 remainingTokens = crowdsaleCap.sub(token.totalSupply());
+        if (crowdsaleCap > tokenOnSale.totalSupply()) {
+            uint256 remainingTokens = crowdsaleCap.sub(tokenOnSale.totalSupply());
 
-            token.mint(wallet, remainingTokens);
+            tokenOnSale.mint(wallet, remainingTokens);
         }
 
-        token.transferOwnership(initialTokenOwner);
+        tokenOnSale.transferOwnership(initialTokenOwner);
         super.finalization();
     }
 }
