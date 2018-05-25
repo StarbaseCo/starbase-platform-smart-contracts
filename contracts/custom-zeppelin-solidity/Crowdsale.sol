@@ -1,4 +1,4 @@
-pragma solidity 0.4.21;
+pragma solidity 0.4.23;
 
 import "zeppelin-solidity/contracts/math/SafeMath.sol";
 import "zeppelin-solidity/contracts/token/ERC20/MintableToken.sol";
@@ -28,6 +28,8 @@ contract Crowdsale {
   // how many token units a buyer gets per wei
   uint256 public rate;
 
+  // amount of raised money in wei
+  uint256 public weiRaised;
   /**
    * event for token purchase logging
    * @param purchaser who paid for the tokens
@@ -53,5 +55,11 @@ contract Crowdsale {
   // @return true if crowdsale event has ended
   function hasEnded() public view returns (bool) {
     return now > endTime;
+  }
+
+  // send ether to the fund collection wallet
+  // override to create custom fund forwarding mechanisms
+  function forwardFunds() internal {
+    wallet.transfer(msg.value);
   }
 }

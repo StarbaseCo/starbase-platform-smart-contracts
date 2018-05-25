@@ -1,4 +1,5 @@
-pragma solidity 0.4.21;
+pragma solidity 0.4.23;
+pragma solidity 0.4.23;
 
 import "zeppelin-solidity/contracts/lifecycle/Pausable.sol";
 import "./custom-zeppelin-solidity/FinalizableCrowdsale.sol";
@@ -15,6 +16,7 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
     // amount of raised money in STAR
     uint256 public starRaised;
     address public initialTokenOwner;
+    bool public enableWei;
 
     // external contracts
     Whitelist public whitelist;
@@ -78,7 +80,7 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
     }
 
     /**
-     * @dev override fallback function. Does not accept payment in ether
+     * @dev override fallback function. cannot use it
      */
     function () external payable {
         revert();
@@ -96,11 +98,19 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
     }
 
     /**
+     * @dev enable sale to receive
+     */
+    function toggleEnableWei() external onlyOwner {
+        enableWei = !enableWei;
+    }
+
+    /**
      * @dev function that allows token purchases with STAR
      * @param beneficiary Address of the purchaser
      */
     function buyTokens(address beneficiary)
         public
+        payable
         whenNotPaused
         whitelisted(beneficiary)
         crowdsaleIsTokenOwner
@@ -108,34 +118,69 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
         require(beneficiary != address(0));
         require(validPurchase() && tokenOnSale.totalSupply() < crowdsaleCap);
 
+        if (enableWei && msg.value != 0) {
+            buyTokensWithWei(beneficiary);
+        }
+
         // beneficiary must allow TokenSale address to transfer star tokens on its behalf
         uint256 starAllocationToTokenSale = starToken.allowance(beneficiary, this);
-        require(starAllocationToTokenSale > 0);
+        if (starAllocationToTokenSale > 0) {
+            // calculate token amount to be created
+            uint256 tokens = starAllocationToTokenSale.mul(rate);
+
+            //remainder logic
+            if (tokenOnSale.totalSupply().add(tokens) > crowdsaleCap) {
+                tokens = crowdsaleCap.sub(tokenOnSale.totalSupply());
+
+                starAllocationToTokenSale = tokens.div(rate);
+            }
+
+            // update state
+            starRaised = starRaised.add(starAllocationToTokenSale);
+
+            tokenOnSale.mint(beneficiary, tokens);
+            TokenPurchase(msg.sender, beneficiary, starAllocationToTokenSale, tokens);
+
+            // forward funds
+            starToken.transferFrom(beneficiary, wallet, starAllocationToTokenSale);
+        }
+    }
+
+    /**
+     * @dev function that allows token purchases with Wei
+     * @param beneficiary Address of the purchaser
+     */
+    function buyTokensWithWei(address beneficiary)
+        internal
+    {
+        uint256 weiAmount = msg.value;
 
         // calculate token amount to be created
-        uint256 tokens = starAllocationToTokenSale.mul(rate);
+        uint256 tokens = weiAmount.mul(rate);
 
         //remainder logic
         if (tokenOnSale.totalSupply().add(tokens) > crowdsaleCap) {
             tokens = crowdsaleCap.sub(tokenOnSale.totalSupply());
+            weiAmount = tokens.div(rate);
 
-            starAllocationToTokenSale = tokens.div(rate);
+            // send remainder wei to sender
+            uint256 remainderAmount = msg.value.sub(weiAmount);
+            msg.sender.transfer(remainderAmount);
         }
 
         // update state
-        starRaised = starRaised.add(starAllocationToTokenSale);
+        weiRaised = weiRaised.add(weiAmount);
 
         tokenOnSale.mint(beneficiary, tokens);
-        TokenPurchase(msg.sender, beneficiary, starAllocationToTokenSale, tokens);
+        TokenPurchase(msg.sender, beneficiary, weiAmount, tokens);
 
-        // forward funds
-        starToken.transferFrom(beneficiary, wallet, starAllocationToTokenSale);
+        forwardFunds();
     }
 
     // override Crowdsale#hasEnded to add cap logic
     // @return true if crowdsale event has ended
     function hasEnded() public view returns (bool) {
-        if (tokenOnSale.totalSupply() == crowdsaleCap) {
+        if (tokenOnSale.totalSupply() >= crowdsaleCap) {
             return true;
         }
 
