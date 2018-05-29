@@ -13,10 +13,19 @@ contract Whitelist is Ownable {
     event WhitelistUpdated(uint256 timestamp, string operation, address indexed member);
 
     /**
-     * @dev add whitelist addresses
+    * @dev Adds single address to whitelist.
+    * @param _address Address to be added to the whitelist
+    */
+    function addToWhitelist(address _address) external onlyOwner {
+        allowedAddresses[_address] = true;
+        WhitelistUpdated(now, "Added", _address);
+    }
+
+    /**
+     * @dev add various whitelist addresses
      * @param _addresses Array of ethereum addresses
      */
-    function addToWhitelist(address[] _addresses) public onlyOwner {
+    function addManyToWhitelist(address[] _addresses) external onlyOwner {
         for (uint256 i = 0; i < _addresses.length; i++) {
             allowedAddresses[_addresses[i]] = true;
             WhitelistUpdated(now, "Added", _addresses[i]);
@@ -32,13 +41,5 @@ contract Whitelist is Ownable {
             allowedAddresses[_addresses[i]] = false;
             WhitelistUpdated(now, "Removed", _addresses[i]);
         }
-    }
-
-    /**
-     * @dev check for whitelisted address
-     * @param _address Ethereum addresses to check
-     */
-    function isWhitelisted(address _address) public view returns (bool) {
-        return allowedAddresses[_address];
     }
 }

@@ -68,8 +68,8 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
         require(CompanyToken(tokenOnSale).paused());
     }
 
-    modifier whitelisted(address beneficiary) {
-        require(whitelist.isWhitelisted(beneficiary));
+    modifier isWhitelisted(address beneficiary) {
+        require(whitelist.allowedAddresses(beneficiary));
         _;
     }
 
@@ -112,7 +112,7 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
         public
         payable
         whenNotPaused
-        whitelisted(beneficiary)
+        isWhitelisted(beneficiary)
         crowdsaleIsTokenOwner
     {
         require(beneficiary != address(0));

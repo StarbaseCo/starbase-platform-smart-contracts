@@ -165,7 +165,7 @@ contract('TokenSale', ([owner, wallet, buyer, buyer2, user1]) => {
             await increaseTimeTo(latestTime() + duration.days(1));
 
             try {
-                await whitelist.addToWhitelist([buyer, buyer2], {
+                await whitelist.addManyToWhitelist([buyer, buyer2], {
                     from: buyer
                 });
                 assert.fail();
@@ -173,20 +173,22 @@ contract('TokenSale', ([owner, wallet, buyer, buyer2, user1]) => {
                 ensuresException(e);
             }
 
-            let isBuyerWhitelisted = await whitelist.isWhitelisted.call(buyer);
+            let isBuyerWhitelisted = await whitelist.allowedAddresses.call(
+                buyer
+            );
             isBuyerWhitelisted.should.be.false;
 
-            await whitelist.addToWhitelist([buyer, buyer2], {
+            await whitelist.addManyToWhitelist([buyer, buyer2], {
                 from: owner
             });
 
-            isBuyerWhitelisted = await whitelist.isWhitelisted.call(buyer);
+            isBuyerWhitelisted = await whitelist.allowedAddresses.call(buyer);
             isBuyerWhitelisted.should.be.true;
         });
 
         it('only allows owner to remove from the whitelist', async () => {
             await increaseTimeTo(latestTime() + duration.days(1));
-            await whitelist.addToWhitelist([buyer, buyer2], {
+            await whitelist.addManyToWhitelist([buyer, buyer2], {
                 from: owner
             });
 
@@ -199,25 +201,27 @@ contract('TokenSale', ([owner, wallet, buyer, buyer2, user1]) => {
                 ensuresException(e);
             }
 
-            let isBuyerWhitelisted = await whitelist.isWhitelisted.call(buyer2);
+            let isBuyerWhitelisted = await whitelist.allowedAddresses.call(
+                buyer2
+            );
             isBuyerWhitelisted.should.be.true;
 
             await whitelist.removeFromWhitelist([buyer], { from: owner });
 
-            isBuyerWhitelisted = await whitelist.isWhitelisted.call(buyer);
+            isBuyerWhitelisted = await whitelist.allowedAddresses.call(buyer);
             isBuyerWhitelisted.should.be.false;
         });
 
         it('shows whitelist addresses', async () => {
             await increaseTimeTo(latestTime() + duration.days(1));
-            await whitelist.addToWhitelist([buyer, buyer2], {
+            await whitelist.addManyToWhitelist([buyer, buyer2], {
                 from: owner
             });
 
-            const isBuyerWhitelisted = await whitelist.isWhitelisted.call(
+            const isBuyerWhitelisted = await whitelist.allowedAddresses.call(
                 buyer
             );
-            const isBuyer2Whitelisted = await whitelist.isWhitelisted.call(
+            const isBuyer2Whitelisted = await whitelist.allowedAddresses.call(
                 buyer2
             );
 
@@ -227,9 +231,12 @@ contract('TokenSale', ([owner, wallet, buyer, buyer2, user1]) => {
 
         it('has WhitelistUpdated event', async () => {
             await increaseTimeTo(latestTime() + duration.days(1));
-            const { logs } = await whitelist.addToWhitelist([buyer, buyer2], {
-                from: owner
-            });
+            const { logs } = await whitelist.addManyToWhitelist(
+                [buyer, buyer2],
+                {
+                    from: owner
+                }
+            );
 
             const event = logs.find(e => e.event === 'WhitelistUpdated');
             expect(event).to.exist;
@@ -238,7 +245,7 @@ contract('TokenSale', ([owner, wallet, buyer, buyer2, user1]) => {
 
     describe('token purchases', () => {
         beforeEach('initialize contract', async () => {
-            await whitelist.addToWhitelist([buyer, buyer2]);
+            await whitelist.addManyToWhitelist([buyer, buyer2]);
             await token.transferOwnership(crowdsale.address);
 
             await star.mint(buyer, 10e18);
@@ -300,7 +307,7 @@ contract('TokenSale', ([owner, wallet, buyer, buyer2, user1]) => {
         it('cannot buy tokens by sending star transaction to contract', async () => {
             await increaseTimeTo(latestTime() + duration.days(52));
 
-            await whitelist.addToWhitelist([user1]);
+            await whitelist.addManyToWhitelist([user1]);
             await star.approve(crowdsale.address, 5e18, { from: user1 });
 
             try {
@@ -316,7 +323,7 @@ contract('TokenSale', ([owner, wallet, buyer, buyer2, user1]) => {
 
         it('cannot buy tokens by sending wei when enableWei is disabled', async () => {
             await increaseTimeTo(latestTime() + duration.days(22));
-            await whitelist.addToWhitelist([user1]);
+            await whitelist.addManyToWhitelist([user1]);
             await crowdsale.buyTokens(user1, { from: user1, value });
 
             const userBalance = await token.balanceOf(user1);
@@ -332,7 +339,7 @@ contract('TokenSale', ([owner, wallet, buyer, buyer2, user1]) => {
 
         it('buys tokens by sending wei when it is enabled', async () => {
             await increaseTimeTo(latestTime() + duration.days(52));
-            await whitelist.addToWhitelist([user1]);
+            await whitelist.addManyToWhitelist([user1]);
             await crowdsale.toggleEnableWei({ from: owner });
 
             await crowdsale.buyTokens(user1, { from: user1, value });
@@ -348,7 +355,7 @@ contract('TokenSale', ([owner, wallet, buyer, buyer2, user1]) => {
 
         it('updates wei raised', async () => {
             await increaseTimeTo(latestTime() + duration.days(52));
-            await whitelist.addToWhitelist([user1]);
+            await whitelist.addManyToWhitelist([user1]);
             await crowdsale.toggleEnableWei();
 
             await crowdsale.buyTokens(user1, { from: user1, value });
@@ -389,7 +396,7 @@ contract('TokenSale', ([owner, wallet, buyer, buyer2, user1]) => {
 
         it('does NOT allow purchase when token ownership does not currently belong to crowdsale contract', async () => {
             crowdsale = await newCrowdsale(rate);
-            await whitelist.addToWhitelist([buyer, user1]);
+            await whitelist.addManyToWhitelist([buyer, user1]);
 
             await star.mint(buyer, 10e18);
             await star.mint(user1, 10e18);
@@ -438,7 +445,7 @@ contract('TokenSale', ([owner, wallet, buyer, buyer2, user1]) => {
 
         it('sends STAR raised to wallet', async () => {
             crowdsale = await newCrowdsale(crowdsaleCap);
-            await whitelist.addToWhitelist([buyer]);
+            await whitelist.addManyToWhitelist([buyer]);
             await token.transferOwnership(crowdsale.address);
             await star.mint(buyer, 10e18);
             await star.approve(crowdsale.address, 1, { from: buyer });
@@ -456,7 +463,7 @@ contract('TokenSale', ([owner, wallet, buyer, buyer2, user1]) => {
 
         it('only mints tokens up to crowdsale cap when buying with wei and sends remaining wei back to the buyer', async () => {
             crowdsale = await newCrowdsale(crowdsaleCap);
-            await whitelist.addToWhitelist([buyer]);
+            await whitelist.addManyToWhitelist([buyer]);
             await token.transferOwnership(crowdsale.address);
 
             await increaseTimeTo(latestTime() + duration.days(52));
@@ -488,7 +495,7 @@ contract('TokenSale', ([owner, wallet, buyer, buyer2, user1]) => {
 
         it('only mints tokens up to crowdsale cap', async () => {
             crowdsale = await newCrowdsale(crowdsaleCap);
-            await whitelist.addToWhitelist([buyer]);
+            await whitelist.addManyToWhitelist([buyer]);
             await token.transferOwnership(crowdsale.address);
             await star.mint(buyer, 10e18);
             await star.approve(crowdsale.address, 2e18, { from: buyer });
@@ -513,7 +520,7 @@ contract('TokenSale', ([owner, wallet, buyer, buyer2, user1]) => {
 
         it('ends crowdsale when all tokens are sold', async () => {
             crowdsale = await newCrowdsale(crowdsaleCap);
-            await whitelist.addToWhitelist([buyer]);
+            await whitelist.addManyToWhitelist([buyer]);
             await token.transferOwnership(crowdsale.address);
             await star.mint(buyer, 10e18);
             await star.approve(crowdsale.address, 1e18, { from: buyer });
@@ -528,7 +535,7 @@ contract('TokenSale', ([owner, wallet, buyer, buyer2, user1]) => {
 
         it('ends crowdsale when all tokens are sold with wei', async () => {
             crowdsale = await newCrowdsale(crowdsaleCap);
-            await whitelist.addToWhitelist([buyer]);
+            await whitelist.addManyToWhitelist([buyer]);
             await token.transferOwnership(crowdsale.address);
 
             await increaseTimeTo(latestTime() + duration.days(54));
@@ -547,7 +554,7 @@ contract('TokenSale', ([owner, wallet, buyer, buyer2, user1]) => {
             crowdsale = await newCrowdsale(
                 crowdsaleCap.sub(crowdsaleTokensLeftover)
             );
-            await whitelist.addToWhitelist([buyer]);
+            await whitelist.addManyToWhitelist([buyer]);
             await token.transferOwnership(crowdsale.address);
 
             await star.mint(buyer, 1e18);
