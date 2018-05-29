@@ -297,7 +297,15 @@ contract('TokenSale', ([owner, wallet, buyer, buyer2, user1]) => {
 
             await star.approve(crowdsale.address, 5e18, { from: buyer });
 
-            await crowdsale.buyTokens(buyer, { from: owner, value });
+            try {
+                await crowdsale.buyTokens(buyer, { from: owner, value });
+                assert.fail();
+            } catch (e) {
+                ensuresException(e);
+            }
+
+            // purchase happens
+            await crowdsale.buyTokens(buyer, { from: owner });
 
             // only the STAR purchase
             const buyerBalance = await token.balanceOf(buyer);
@@ -324,7 +332,13 @@ contract('TokenSale', ([owner, wallet, buyer, buyer2, user1]) => {
         it('cannot buy tokens by sending wei when enableWei is disabled', async () => {
             await increaseTimeTo(latestTime() + duration.days(22));
             await whitelist.addManyToWhitelist([user1]);
-            await crowdsale.buyTokens(user1, { from: user1, value });
+
+            try {
+                await crowdsale.buyTokens(user1, { from: user1, value });
+                assert.fail();
+            } catch (e) {
+                ensuresException(e);
+            }
 
             const userBalance = await token.balanceOf(user1);
             userBalance.should.be.bignumber.equal(0);

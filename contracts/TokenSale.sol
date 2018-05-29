@@ -120,6 +120,8 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
 
         if (enableWei && msg.value != 0) {
             buyTokensWithWei(beneficiary);
+        } else if (!enableWei && msg.value != 0) {
+            revert();
         }
 
         // beneficiary must allow TokenSale address to transfer star tokens on its behalf
