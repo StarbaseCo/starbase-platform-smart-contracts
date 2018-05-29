@@ -12,6 +12,9 @@
 
 The Starbase platform's smart contracts allow investors who hold STARs to participate in the crowdfunding events happening at the Starbase's web application. The smart contract receives STARs and exchanges it for the token offered during the the platform's sale event. There is also a whitelist smart contract where investors are able to be whitelisted prior and/or during the crowdsale.
 
+* update May 2018
+  The token sale smart contract has been extended to accept `ETH` payments when the `enableWei` is set to true.
+
 ## Implementation Details
 
 * CompanyToken.sol
@@ -21,7 +24,7 @@ For this contract to work with `TokenSale.sol`, its ownership needs to be passed
 
 * Whitelist.sol
 
-It allows the addition and/or removal of addresses to the whitelist registry. Both addition and removal of addresses is done via passing an array of Ethereum addresses to `addToWhitelist` and `removeFromWhitelist` functions within the contract. Only the contract owner has the ability to trigger such actions.
+It allows the addition and/or removal of addresses to the whitelist registry. Both addition and removal of addresses is done via passing an array of Ethereum addresses to `addManyToWhitelist` and `removeFromWhitelist` functions within the contract. Only the contract owner has the ability to trigger such actions.
 
 * TokenSale.sol
 
@@ -31,9 +34,12 @@ In order for investors to participate in the crowdsale using the `TokenSale` con
 
 Afterwards, investor must trigger `BuyTokens` within TokenSale so the token purchase event goes through. Investor then receives purchased tokens right away. However, she will not be able to trade these tokens because token transfers are paused. They need to be unpaused for the transfers to happen and this must be done most likely after the crowdsale by the token owner. Token ownership after the crowdsale must be moved from the `TokenSale` contract to another Ethereum address, most likely the address of the project owner that is uses Starbase platform for its crowdfunding needs.
 
+* update May 2018
+  The token sale smart contract has been extended to accept `ETH` payments when the `enableWei` is set to true. If enableWei is trigerred and investor sends ether in the transaction then `buyTokens` will in turn call `buyTokensWithWei` which handles the ether purchase.
+
 Purchase process:
 
-Technically, the purchase flow happens as follows:
+Technically, the purchase flow happens as follows using STAR:
 1- a user that possesses STAR token must approve the crowdsale contract to transfer STAR tokens on its behalf. This happens on the Starbase client app which connects to Metamask.
 
 2- client app calls the `buyTokens` function passing user address as `beneficiary`, contract checks whether user has given it allowance to spend STAR tokens on user's behalf.
