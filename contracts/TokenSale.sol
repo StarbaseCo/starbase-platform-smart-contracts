@@ -15,6 +15,7 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
     uint256 public crowdsaleCap;
     // amount of raised money in STAR
     uint256 public starRaised;
+    uint256 public starRate;
     address public initialTokenOwner;
     bool public enableWei;
 
@@ -23,6 +24,7 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
     StandardToken public starToken;
 
     event TokenRateChanged(uint256 previousRate, uint256 newRate);
+    event TokenStarRateChanged(uint256 previousStarRate, uint256 newStarRate);
 
     /**
      * @dev Contract constructor function
@@ -32,6 +34,7 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
      * @param _starToken STAR token contract address
      * @param _companyToken ERC20 CompanyToken contract address
      * @param _rate The token rate per ETH
+     * @param _starRate The token rate per STAR
      * @param _wallet Multisig wallet that will hold the crowdsale funds.
      * @param _crowdsaleCap Cap for the token sale
      */
@@ -43,6 +46,7 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
             address _starToken,
             address _companyToken,
             uint256 _rate,
+            uint256 _starRate,
             address _wallet,
             uint256 _crowdsaleCap
         )
@@ -60,6 +64,7 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
         tokenOnSale = CompanyToken(_companyToken);
         whitelist = Whitelist(_whitelist);
         starToken = StandardToken(_starToken);
+        starRate = _starRate;
 
         initialTokenOwner = CompanyToken(tokenOnSale).owner();
         uint256 tokenDecimals = CompanyToken(tokenOnSale).decimals();
@@ -87,14 +92,25 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
     }
 
     /**
-     * @dev change crowdsale rate
-     * @param newRate Figure that corresponds to the new rate per token
+     * @dev change crowdsale ETH rate
+     * @param newRate Figure that corresponds to the new ETH rate per token
      */
     function setRate(uint256 newRate) external onlyOwner {
         require(newRate != 0);
 
         TokenRateChanged(rate, newRate);
         rate = newRate;
+    }
+
+    /**
+     * @dev change crowdsale STAR rate
+     * @param newStarRate Figure that corresponds to the new STAR rate per token
+     */
+    function setStarRate(uint256 newStarRate) external onlyOwner {
+        require(newStarRate != 0);
+
+        TokenStarRateChanged(starRate, newStarRate);
+        starRate = newStarRate;
     }
 
     /**
@@ -128,13 +144,13 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
         uint256 starAllocationToTokenSale = starToken.allowance(beneficiary, this);
         if (starAllocationToTokenSale > 0) {
             // calculate token amount to be created
-            uint256 tokens = starAllocationToTokenSale.mul(rate);
+            uint256 tokens = starAllocationToTokenSale.mul(starRate);
 
             //remainder logic
             if (tokenOnSale.totalSupply().add(tokens) > crowdsaleCap) {
                 tokens = crowdsaleCap.sub(tokenOnSale.totalSupply());
 
-                starAllocationToTokenSale = tokens.div(rate);
+                starAllocationToTokenSale = tokens.div(starRate);
             }
 
             // update state

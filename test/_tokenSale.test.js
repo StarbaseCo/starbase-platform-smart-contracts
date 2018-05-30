@@ -10,8 +10,10 @@ const expect = require('chai').expect;
 const BigNumber = web3.BigNumber;
 
 contract('TokenSale', ([owner, wallet, buyer, buyer2, user1]) => {
-    const rate = new BigNumber(10);
-    const newRate = new BigNumber(20);
+    const starRate = new BigNumber(10);
+    const newStarRate = new BigNumber(20);
+    const rate = new BigNumber(50);
+    const newRate = new BigNumber(60);
     const value = 1e18;
 
     const crowdsaleCap = new BigNumber(20000000); // 20M
@@ -20,7 +22,7 @@ contract('TokenSale', ([owner, wallet, buyer, buyer2, user1]) => {
     let crowdsale, token, star, whitelist;
     let crowdsaleTokensLeftover;
 
-    const newCrowdsale = rate => {
+    const newCrowdsale = (rate, starRate) => {
         startTime = latestTime() + 2; // crowdsale starts in 2 seconds
         endTime = startTime + duration.days(70); // 70 days
 
@@ -42,6 +44,7 @@ contract('TokenSale', ([owner, wallet, buyer, buyer2, user1]) => {
                     star.address,
                     token.address,
                     rate,
+                    starRate,
                     wallet,
                     crowdsaleCap
                 );
@@ -49,12 +52,17 @@ contract('TokenSale', ([owner, wallet, buyer, buyer2, user1]) => {
     };
 
     beforeEach('initialize contract', async () => {
-        crowdsale = await newCrowdsale(rate);
+        crowdsale = await newCrowdsale(rate, starRate);
     });
 
     it('has a normal crowdsale rate', async () => {
         const crowdsaleRate = await crowdsale.rate();
         crowdsaleRate.toNumber().should.equal(rate.toNumber());
+    });
+
+    it('has a normal crowdsale starRate', async () => {
+        const crowdsaleStarRate = await crowdsale.starRate();
+        crowdsaleStarRate.toNumber().should.equal(starRate.toNumber());
     });
 
     it('has a whitelist contract', async () => {
@@ -131,6 +139,46 @@ contract('TokenSale', ([owner, wallet, buyer, buyer2, user1]) => {
 
             const rate = await crowdsale.rate();
             rate.should.be.bignumber.equal(newRate);
+        });
+    });
+
+    describe('changing starRate', () => {
+        it('does NOT allows anyone to change starRate other than the owner', async () => {
+            try {
+                await crowdsale.setStarRate(newStarRate, { from: buyer });
+                assert.fail();
+            } catch (e) {
+                ensuresException(e);
+            }
+
+            const starRate = await crowdsale.starRate();
+            starRate.should.be.bignumber.equal(starRate);
+        });
+
+        it('cannot set a starRate that is zero', async () => {
+            const zeroStarRate = new BigNumber(0);
+
+            try {
+                await crowdsale.setStarRate(zeroStarRate, { from: owner });
+                assert.fail();
+            } catch (e) {
+                ensuresException(e);
+            }
+
+            const starRate = await crowdsale.starRate();
+            starRate.should.be.bignumber.equal(starRate);
+        });
+
+        it('allows owner to change starRate', async () => {
+            const { logs } = await crowdsale.setStarRate(newStarRate, {
+                from: owner
+            });
+
+            const event = logs.find(e => e.event === 'TokenStarRateChanged');
+            should.exist(event);
+
+            const starRate = await crowdsale.starRate();
+            starRate.should.be.bignumber.equal(newStarRate);
         });
     });
 
@@ -348,7 +396,7 @@ contract('TokenSale', ([owner, wallet, buyer, buyer2, user1]) => {
             await crowdsale.buyTokens(user1, { from: user1, value });
 
             const buyerBalance = await token.balanceOf(user1);
-            buyerBalance.should.be.bignumber.equal(10e18);
+            buyerBalance.should.be.bignumber.equal(50e18);
         });
 
         it('buys tokens by sending wei when it is enabled', async () => {
@@ -359,12 +407,12 @@ contract('TokenSale', ([owner, wallet, buyer, buyer2, user1]) => {
             await crowdsale.buyTokens(user1, { from: user1, value });
 
             const userBalance = await token.balanceOf(user1);
-            userBalance.should.be.bignumber.equal(10e18);
+            userBalance.should.be.bignumber.equal(50e18);
 
             await crowdsale.buyTokens(user1, { from: user1, value });
 
             const buyerBalance = await token.balanceOf(user1);
-            buyerBalance.should.be.bignumber.equal(20e18);
+            buyerBalance.should.be.bignumber.equal(100e18);
         });
 
         it('updates wei raised', async () => {
@@ -409,7 +457,7 @@ contract('TokenSale', ([owner, wallet, buyer, buyer2, user1]) => {
         });
 
         it('does NOT allow purchase when token ownership does not currently belong to crowdsale contract', async () => {
-            crowdsale = await newCrowdsale(rate);
+            crowdsale = await newCrowdsale(rate, starRate);
             await whitelist.addManyToWhitelist([buyer, user1]);
 
             await star.mint(buyer, 10e18);
@@ -458,7 +506,7 @@ contract('TokenSale', ([owner, wallet, buyer, buyer2, user1]) => {
         });
 
         it('sends STAR raised to wallet', async () => {
-            crowdsale = await newCrowdsale(crowdsaleCap);
+            crowdsale = await newCrowdsale(crowdsaleCap, crowdsaleCap);
             await whitelist.addManyToWhitelist([buyer]);
             await token.transferOwnership(crowdsale.address);
             await star.mint(buyer, 10e18);
@@ -476,7 +524,7 @@ contract('TokenSale', ([owner, wallet, buyer, buyer2, user1]) => {
         });
 
         it('only mints tokens up to crowdsale cap when buying with wei and sends remaining wei back to the buyer', async () => {
-            crowdsale = await newCrowdsale(crowdsaleCap);
+            crowdsale = await newCrowdsale(crowdsaleCap, crowdsaleCap);
             await whitelist.addManyToWhitelist([buyer]);
             await token.transferOwnership(crowdsale.address);
 
@@ -508,7 +556,7 @@ contract('TokenSale', ([owner, wallet, buyer, buyer2, user1]) => {
         });
 
         it('only mints tokens up to crowdsale cap', async () => {
-            crowdsale = await newCrowdsale(crowdsaleCap);
+            crowdsale = await newCrowdsale(crowdsaleCap, crowdsaleCap);
             await whitelist.addManyToWhitelist([buyer]);
             await token.transferOwnership(crowdsale.address);
             await star.mint(buyer, 10e18);
@@ -533,7 +581,7 @@ contract('TokenSale', ([owner, wallet, buyer, buyer2, user1]) => {
         });
 
         it('ends crowdsale when all tokens are sold', async () => {
-            crowdsale = await newCrowdsale(crowdsaleCap);
+            crowdsale = await newCrowdsale(crowdsaleCap, crowdsaleCap);
             await whitelist.addManyToWhitelist([buyer]);
             await token.transferOwnership(crowdsale.address);
             await star.mint(buyer, 10e18);
@@ -548,7 +596,7 @@ contract('TokenSale', ([owner, wallet, buyer, buyer2, user1]) => {
         });
 
         it('ends crowdsale when all tokens are sold with wei', async () => {
-            crowdsale = await newCrowdsale(crowdsaleCap);
+            crowdsale = await newCrowdsale(crowdsaleCap, crowdsaleCap);
             await whitelist.addManyToWhitelist([buyer]);
             await token.transferOwnership(crowdsale.address);
 
@@ -566,6 +614,7 @@ contract('TokenSale', ([owner, wallet, buyer, buyer2, user1]) => {
             crowdsaleTokensLeftover = 10;
 
             crowdsale = await newCrowdsale(
+                crowdsaleCap.sub(crowdsaleTokensLeftover),
                 crowdsaleCap.sub(crowdsaleTokensLeftover)
             );
             await whitelist.addManyToWhitelist([buyer]);

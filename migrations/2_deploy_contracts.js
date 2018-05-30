@@ -13,6 +13,7 @@ const dayInSecs = 86400;
 const startTime = web3.eth.getBlock('latest').timestamp + 20; // twenty secs in the future
 const endTime = startTime + dayInSecs * 60; // 60 days
 const rate = new BigNumber(10);
+const starRate = new BigNumber(20);
 const crowdsaleCap = new BigNumber(20000000); // 20M
 
 module.exports = function(deployer, network, [_, wallet]) {
@@ -35,6 +36,7 @@ module.exports = function(deployer, network, [_, wallet]) {
                 StandardToken.address,
                 CompanyToken.address,
                 rate,
+                starRate,
                 wallet,
                 crowdsaleCap
             );
