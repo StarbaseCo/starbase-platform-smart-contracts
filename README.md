@@ -5,6 +5,7 @@
 * [Table of Contents](#table-of-contents)
 * [Overview](#overview)
 * [Implementation Details](#implementation-details)
+* [Deployment](#deployment)
 * [Gas Consumptions](#gas-consumption)
 * [Development](#development)
 
@@ -35,7 +36,7 @@ In order for investors to participate in the crowdsale using the `TokenSale` con
 Afterwards, investor must trigger `BuyTokens` within TokenSale so the token purchase event goes through. Investor then receives purchased tokens right away. However, she will not be able to trade these tokens because token transfers are paused. They need to be unpaused for the transfers to happen and this must be done most likely after the crowdsale by the token owner. Token ownership after the crowdsale must be moved from the `TokenSale` contract to another Ethereum address, most likely the address of the project owner that is uses Starbase platform for its crowdfunding needs.
 
 * update May 2018
-  The token sale smart contract has been extended to accept `ETH` payments when the `enableWei` is set to true. If enableWei is trigerred and investor sends ether in the transaction then `buyTokens` will in turn call `buyTokensWithWei` which handles the ether purchase.
+  The token sale smart contract has been extended to accept `ETH` payments when the `enableWei` is set to true. This is done by calling the `toggleEnableWei` by the `TokenSale` contract owner. If `enableWei` is triggered and investor sends ether in the transaction by calling `buyTokens`, the function will automatically call the contract internal function `buyTokensWithWei` which handles the purchase with wei/ether.
 
 Purchase process:
 
@@ -45,6 +46,36 @@ Technically, the purchase flow happens as follows using STAR:
 2- client app calls the `buyTokens` function passing user address as `beneficiary`, contract checks whether user has given it allowance to spend STAR tokens on user's behalf.
 
 3- if positive allowance, then crowdsale calculates the number of tokens to create and transfers these to user. Once token transfer is completed, it passes on STAR token from user to the Multisig wallet contract.
+
+## Deployment
+
+If you are deploying these contracts with truffle then just follow the [truffle documentation on deployment](http://truffleframework.com/docs/). You will most likely alter the code in `migrations/2_deploy_contracts.js` to fit your needs. The code already there is a good guidance.
+
+Deployment with Remix is different, you need to have metamask installed and have the entire contract code at hand. To get the entire contract code use a tool such as [truffle-flattener](https://github.com/alcuadrado/truffle-flattener) to concatenate all smart contract code files into one. Then go to Remix paster the entire code there and deploy the contracts according to Remix's UI.
+
+### Whitelist
+
+To deploy the Whitelist smart contract it is fairly straightforward. It has no parameters.
+
+### Company Token
+
+Three parameters are necessary to pass upon contract deployment: `string _name, string _symbol, uint8 _decimals`. Note: new token standard in Ethereum are moving to have decimals as always `18`. Something to bear in mind and tell Starbase clients in case they want a different figure for the parameters `decimals` in their token.
+
+### Token Sale
+
+It is the more complex of the crowdsale contracts to deploy. It has a number of mandatory parameters. One example are as follows:
+
+```
+_startTime = 1496204377  // time in unix timestamp
+_endTime  = 1590898777  // time in unix timestamp
+_whitelist = "0xc99e045afdeb86ba44c153cf4498a3fada0bc6d6" // contract of a deployed whitelist contract
+_starToken = "0xd70A7A39EFB10cfE34FD79Ea8c06BdB1974C8828" // Starbase STAR token contract
+_companyToken =  "0xaee875686Ec9C7A29B29f4Cd48a55bdF816eb00c"  // the EC20 token deployed by the company and who has mint capability
+_rate = 100 // rate in ETH/company tokens. Here is if investor sends 1 ETH she receives 100 company tokens in return
+_starRate = 2 // rate STAR/company tokens. Here is upon sending of 1 STAR, investor receives 2 company tokens in return
+_wallet = "0xB01B468423Da913afD743c13f17B01c2cF26b3e8" // address where funds collets in the token sale will go to
+_crowdsaleCap = 1000  // cap for the number of tokens to be minted. Here it is only 1000 tokens that will be sold in the token sale
+```
 
 ## Gas consumption
 

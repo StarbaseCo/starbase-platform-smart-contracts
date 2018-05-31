@@ -40,5 +40,10 @@ module.exports = function(deployer, network, [_, wallet]) {
                 wallet,
                 crowdsaleCap
             );
+        })
+        .then(() => {
+            return CompanyToken.deployed().then(instance =>
+                instance.transferOwnership(TokenSale.address)
+            );
         });
 };
