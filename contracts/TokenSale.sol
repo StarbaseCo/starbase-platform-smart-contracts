@@ -24,6 +24,7 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
 
     event TokenRateChanged(uint256 previousRate, uint256 newRate);
     event TokenStarRateChanged(uint256 previousStarRate, uint256 newStarRate);
+    event TokenPurchaseWithStar(address indexed purchaser, address indexed beneficiary, uint256 value, uint256 amount);
 
     /**
      * @dev Contract constructor function
@@ -98,7 +99,7 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
     function setRate(uint256 newRate) external onlyOwner {
         require(newRate != 0);
 
-        TokenRateChanged(rate, newRate);
+        emit TokenRateChanged(rate, newRate);
         rate = newRate;
     }
 
@@ -109,7 +110,7 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
     function setStarRate(uint256 newStarRate) external onlyOwner {
         require(newStarRate != 0);
 
-        TokenStarRateChanged(starRate, newStarRate);
+        emit TokenStarRateChanged(starRate, newStarRate);
         starRate = newStarRate;
     }
 
@@ -157,7 +158,7 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
             starRaised = starRaised.add(starAllocationToTokenSale);
 
             tokenOnSale.mint(beneficiary, tokens);
-            TokenPurchase(msg.sender, beneficiary, starAllocationToTokenSale, tokens);
+            emit TokenPurchaseWithStar(msg.sender, beneficiary, starAllocationToTokenSale, tokens);
 
             // forward funds
             starToken.transferFrom(beneficiary, wallet, starAllocationToTokenSale);
@@ -189,7 +190,7 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
         weiRaised = weiRaised.add(weiAmount);
 
         tokenOnSale.mint(beneficiary, tokens);
-        TokenPurchase(msg.sender, beneficiary, weiAmount, tokens);
+        emit TokenPurchase(msg.sender, beneficiary, weiAmount, tokens);
 
         forwardFunds();
         if (weiRefund > 0) {

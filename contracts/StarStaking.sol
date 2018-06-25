@@ -50,7 +50,7 @@ contract StarStaking is StarStakingInterface, Lockable {
 
         require(token.transferFrom(msg.sender, address(this), amount));
 
-        Staked(user, amount, totalStakedFor(user), data);
+        emit Staked(user, amount, totalStakedFor(user), data);
     }
 
     /**
@@ -65,7 +65,7 @@ contract StarStaking is StarStakingInterface, Lockable {
         updateCheckpointAtNow(stakeHistory, amount, true);
 
         require(token.transfer(msg.sender, amount));
-        Unstaked(msg.sender, amount, totalStakedFor(msg.sender), data);
+        emit Unstaked(msg.sender, amount, totalStakedFor(msg.sender), data);
     }
 
     /**

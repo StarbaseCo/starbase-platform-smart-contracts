@@ -18,7 +18,7 @@ contract Whitelist is Ownable {
     */
     function addToWhitelist(address _address) external onlyOwner {
         allowedAddresses[_address] = true;
-        WhitelistUpdated(now, "Added", _address);
+        emit WhitelistUpdated(now, "Added", _address);
     }
 
     /**
@@ -28,7 +28,7 @@ contract Whitelist is Ownable {
     function addManyToWhitelist(address[] _addresses) external onlyOwner {
         for (uint256 i = 0; i < _addresses.length; i++) {
             allowedAddresses[_addresses[i]] = true;
-            WhitelistUpdated(now, "Added", _addresses[i]);
+            emit WhitelistUpdated(now, "Added", _addresses[i]);
         }
     }
 
@@ -39,7 +39,7 @@ contract Whitelist is Ownable {
     function removeManyFromWhitelist(address[] _addresses) public onlyOwner {
         for (uint256 i = 0; i < _addresses.length; i++) {
             allowedAddresses[_addresses[i]] = false;
-            WhitelistUpdated(now, "Removed", _addresses[i]);
+            emit WhitelistUpdated(now, "Removed", _addresses[i]);
         }
     }
 }
