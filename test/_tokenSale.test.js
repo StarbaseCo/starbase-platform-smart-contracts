@@ -55,6 +55,24 @@ contract('TokenSale', ([owner, wallet, buyer, buyer2, user1]) => {
         crowdsale = await newCrowdsale(rate, starRate);
     });
 
+    afterEach(
+        'check for invariant: total token supply <= total token cap',
+        async () => {
+            expect(await token.totalSupply()).to.be.bignumber.most(
+                await crowdsale.crowdsaleCap()
+            );
+        }
+    );
+
+    it('deployment fails if STAR rate is zero', async () => {
+        try {
+            await newCrowdsale(rate, 0);
+            assert.fail();
+        } catch (error) {
+            ensuresException(error);
+        }
+    });
+
     it('has a normal crowdsale rate', async () => {
         const crowdsaleRate = await crowdsale.rate();
         crowdsaleRate.toNumber().should.equal(rate.toNumber());
@@ -288,6 +306,21 @@ contract('TokenSale', ([owner, wallet, buyer, buyer2, user1]) => {
 
             const event = logs.find(e => e.event === 'WhitelistUpdated');
             expect(event).to.exist;
+        });
+
+        it('has WhitelistUpdated event upon removal', async () => {
+            await whitelist.addToWhitelist([buyer]);
+
+            let tx = await whitelist.removeManyFromWhitelist([buyer], {
+                from: owner
+            });
+            let entry = tx.logs.find(
+                entry => entry.event === 'WhitelistUpdated'
+            );
+
+            expect(entry).to.exist;
+            expect(entry.args.operation).to.be.equal('Removed');
+            expect(entry.args.member).to.be.bignumber.equal(buyer);
         });
     });
 
@@ -523,7 +556,7 @@ contract('TokenSale', ([owner, wallet, buyer, buyer2, user1]) => {
             walletBalance.should.be.bignumber.equal(1);
         });
 
-        it('only mints tokens up to crowdsale cap when buying with wei and sends remaining wei back to the buyer', async () => {
+        it('mints tokens up to crowdsale cap when buying with wei and sends remaining wei back to the buyer', async () => {
             crowdsale = await newCrowdsale(crowdsaleCap, crowdsaleCap);
             await whitelist.addManyToWhitelist([buyer]);
             await token.transferOwnership(crowdsale.address);
@@ -553,6 +586,22 @@ contract('TokenSale', ([owner, wallet, buyer, buyer2, user1]) => {
             } catch (e) {
                 ensuresException(e);
             }
+        });
+
+        it('transfers received wei to wallet', async () => {
+            let walletBalanceBefore = await web3.eth.getBalance(wallet);
+
+            await increaseTimeTo(latestTime() + duration.days(52));
+            await whitelist.addManyToWhitelist([user1]);
+            await crowdsale.toggleEnableWei();
+
+            await crowdsale.buyTokens(user1, { from: user1, value });
+
+            let walletBalanceAfter = await web3.eth.getBalance(wallet);
+
+            expect(walletBalanceAfter).to.be.bignumber.least(
+                walletBalanceBefore.plus(value)
+            );
         });
 
         it('only mints tokens up to crowdsale cap', async () => {
