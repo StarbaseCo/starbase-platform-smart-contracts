@@ -57,6 +57,7 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
         require(
                 _whitelist != address(0) &&
                 _starToken != address(0) &&
+                _starRate != 0 &&
                 _companyToken != address(0) &&
                 _crowdsaleCap != 0
         );
@@ -172,6 +173,7 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
         internal
     {
         uint256 weiAmount = msg.value;
+        uint256 weiRefund = 0;
 
         // calculate token amount to be created
         uint256 tokens = weiAmount.mul(rate);
@@ -181,9 +183,7 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
             tokens = crowdsaleCap.sub(tokenOnSale.totalSupply());
             weiAmount = tokens.div(rate);
 
-            // send remainder wei to sender
-            uint256 remainderAmount = msg.value.sub(weiAmount);
-            msg.sender.transfer(remainderAmount);
+            weiRefund = msg.value.sub(weiAmount);
         }
 
         // update state
@@ -193,6 +193,9 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
         TokenPurchase(msg.sender, beneficiary, weiAmount, tokens);
 
         forwardFunds();
+        if (weiRefund > 0) {
+            msg.sender.transfer(weiRefund);
+        }
     }
 
     // override Crowdsale#hasEnded to add cap logic
