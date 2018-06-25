@@ -134,10 +134,10 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
         require(beneficiary != address(0));
         require(validPurchase() && tokenOnSale.totalSupply() < crowdsaleCap);
 
-        if (enableWei && msg.value != 0) {
+        if (!enableWei) {
+            require(msg.value == 0);
+        } else if (msg.value > 0) {
             buyTokensWithWei(beneficiary);
-        } else if (!enableWei && msg.value != 0) {
-            revert();
         }
 
         // beneficiary must allow TokenSale address to transfer star tokens on its behalf
