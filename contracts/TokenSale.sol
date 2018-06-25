@@ -1,5 +1,4 @@
 pragma solidity 0.4.23;
-pragma solidity 0.4.23;
 
 import "zeppelin-solidity/contracts/lifecycle/Pausable.sol";
 import "./custom-zeppelin-solidity/FinalizableCrowdsale.sol";
