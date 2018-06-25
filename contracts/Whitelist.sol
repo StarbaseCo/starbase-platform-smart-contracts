@@ -36,7 +36,7 @@ contract Whitelist is Ownable {
      * @dev remove whitelist addresses
      * @param _addresses Array of ethereum addresses
      */
-    function removeFromWhitelist(address[] _addresses) public onlyOwner {
+    function removeManyFromWhitelist(address[] _addresses) public onlyOwner {
         for (uint256 i = 0; i < _addresses.length; i++) {
             allowedAddresses[_addresses[i]] = false;
             WhitelistUpdated(now, "Removed", _addresses[i]);

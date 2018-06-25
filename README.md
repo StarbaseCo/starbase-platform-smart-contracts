@@ -25,7 +25,7 @@ For this contract to work with `TokenSale.sol`, its ownership needs to be passed
 
 * Whitelist.sol
 
-It allows the addition and/or removal of addresses to the whitelist registry. Both addition and removal of addresses is done via passing an array of Ethereum addresses to `addManyToWhitelist` and `removeFromWhitelist` functions within the contract. Only the contract owner has the ability to trigger such actions.
+It allows the addition and/or removal of addresses to the whitelist registry. Both addition and removal of addresses is done via passing an array of Ethereum addresses to `addManyToWhitelist` and `removeManyFromWhitelist` functions within the contract. Only the contract owner has the ability to trigger such actions.
 
 * TokenSale.sol
 

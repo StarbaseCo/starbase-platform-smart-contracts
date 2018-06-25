@@ -241,7 +241,7 @@ contract('TokenSale', ([owner, wallet, buyer, buyer2, user1]) => {
             });
 
             try {
-                await whitelist.removeFromWhitelist([buyer], {
+                await whitelist.removeManyFromWhitelist([buyer], {
                     from: buyer2
                 });
                 assert.fail();
@@ -254,7 +254,7 @@ contract('TokenSale', ([owner, wallet, buyer, buyer2, user1]) => {
             );
             isBuyerWhitelisted.should.be.true;
 
-            await whitelist.removeFromWhitelist([buyer], { from: owner });
+            await whitelist.removeManyFromWhitelist([buyer], { from: owner });
 
             isBuyerWhitelisted = await whitelist.allowedAddresses.call(buyer);
             isBuyerWhitelisted.should.be.false;
