@@ -566,7 +566,7 @@ contract('TokenSale', ([owner, wallet, buyer, buyer2, user1]) => {
             const buyerWeiBalanceBeforePurchase = web3.eth.getBalance(buyer);
 
             await crowdsale.toggleEnableWei();
-            await crowdsale.buyTokens(buyer, { from: buyer, value });
+            await crowdsale.buyTokens(buyer, { from: buyer, value: value * 3 });
 
             const buyerBalance = await token.balanceOf(buyer);
             buyerBalance.should.be.bignumber.equal(crowdsaleCap.mul(1e18));

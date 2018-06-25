@@ -192,7 +192,7 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
         tokenOnSale.mint(beneficiary, tokens);
         emit TokenPurchase(msg.sender, beneficiary, weiAmount, tokens);
 
-        forwardFunds();
+        wallet.transfer(weiAmount);
         if (weiRefund > 0) {
             msg.sender.transfer(weiRefund);
         }
