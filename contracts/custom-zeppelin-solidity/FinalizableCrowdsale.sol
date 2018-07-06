@@ -26,7 +26,7 @@ contract FinalizableCrowdsale is Crowdsale, Ownable {
     require(hasEnded());
 
     finalization();
-    Finalized();
+    emit Finalized();
 
     isFinalized = true;
   }

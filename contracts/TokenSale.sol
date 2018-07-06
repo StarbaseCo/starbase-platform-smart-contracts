@@ -38,8 +38,7 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
      * @param _wallet Multisig wallet that will hold the crowdsale funds.
      * @param _crowdsaleCap Cap for the token sale
      */
-    function TokenSale
-        (
+    constructor(
             uint256 _startTime,
             uint256 _endTime,
             address _whitelist,

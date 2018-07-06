@@ -19,7 +19,7 @@ contract CompanyToken is PausableToken, MintableToken {
      * @param _symbol Token symbol - up to 4 characters
      * @param _decimals Decimals for token
      */
-    function CompanyToken(string _name, string _symbol, uint8 _decimals) public {
+    constructor(string _name, string _symbol, uint8 _decimals) public {
         name = _name;
         symbol = _symbol;
         decimals = _decimals;
