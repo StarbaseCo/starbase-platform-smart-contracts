@@ -1,33 +1,44 @@
-const StarStakingWithTokenReturn = artifacts.require('StarStakingWithTokenReturn.sol');
-const TokenMock = artifacts.require('./mocks/Token.sol');
+const StarStakingWithTokenReturn = artifacts.require(
+    'StarStakingWithTokenReturn.sol'
+);
+const MintableToken = artifacts.require('MintableToken.sol');
 
 const { should } = require('./helpers/utils');
 
 contract('StarStakingWithTokenReturn', function([user, user2]) {
-    let bank, token, returnToken, initialBalance;
+    let stakingContract, token, returnToken, initialBalance;
 
     beforeEach(async () => {
         initialBalance = 10000;
-        token = await TokenMock.new();
-        returnToken = await TokenMock.new();
-        bank = await StarStakingWithTokenReturn.new(token.address, returnToken.address, 2);
+        token = await MintableToken.new();
+        returnToken = await MintableToken.new();
+        stakingContract = await StarStakingWithTokenReturn.new(
+            token.address,
+            returnToken.address,
+            2
+        );
 
         await token.mint(user, initialBalance);
-        await returnToken.mint(bank.address, initialBalance * 2);
+        await token.approve(stakingContract.address, initialBalance, {
+            from: user
+        });
+        await returnToken.mint(stakingContract.address, initialBalance * 2);
     });
 
-    it('transfers tokens to bank when staked', async () => {
-        await bank.stake(initialBalance, '0x0');
+    it('transfers tokens to stakingContract when staked', async () => {
+        await stakingContract.stake(initialBalance);
 
         const userBalance = await token.balanceOf.call(user);
-        const bankBalance = await token.balanceOf.call(bank.address);
+        const stakingContractBalance = await token.balanceOf.call(
+            stakingContract.address
+        );
 
         userBalance.should.be.bignumber.equal(0);
-        bankBalance.should.be.bignumber.equal(initialBalance);
+        stakingContractBalance.should.be.bignumber.equal(initialBalance);
 
         const returnUserBalance = await returnToken.balanceOf.call(user);
         const returnBankBalance = await returnToken.balanceOf.call(
-            bank.address
+            stakingContract.address
         );
 
         returnUserBalance.should.be.bignumber.equal(initialBalance * 2);
@@ -35,17 +46,19 @@ contract('StarStakingWithTokenReturn', function([user, user2]) {
     });
 
     it('transfers tokens to user when staking for someone else', async () => {
-        await bank.stakeFor(user2, initialBalance, '0x0', { from: user });
+        await stakingContract.stakeFor(user2, initialBalance, { from: user });
 
         const user2Balance = await token.balanceOf.call(user2);
-        const bankBalance = await token.balanceOf.call(bank.address);
+        const stakingContractBalance = await token.balanceOf.call(
+            stakingContract.address
+        );
 
         user2Balance.should.be.bignumber.equal(0);
-        bankBalance.should.be.bignumber.equal(initialBalance);
+        stakingContractBalance.should.be.bignumber.equal(initialBalance);
 
         const returnUser2Balance = await returnToken.balanceOf.call(user2);
         const returnBankBalance = await returnToken.balanceOf.call(
-            bank.address
+            stakingContract.address
         );
 
         returnUser2Balance.should.be.bignumber.equal(initialBalance * 2);
@@ -53,25 +66,32 @@ contract('StarStakingWithTokenReturn', function([user, user2]) {
     });
 
     it('allows user to unstake tokens', async () => {
-        await bank.stake(initialBalance, '0x0');
+        await stakingContract.stake(initialBalance);
 
-        let userTotalStaked = await bank.totalStakedFor.call(user);
+        let userTotalStaked = await stakingContract.totalStakedFor.call(user);
         userTotalStaked.should.be.bignumber.equal(initialBalance);
 
         let returnUserBalance = await returnToken.balanceOf.call(user);
-        let returnBankBalance = await returnToken.balanceOf.call(bank.address);
+        let returnBankBalance = await returnToken.balanceOf.call(
+            stakingContract.address
+        );
 
         returnUserBalance.should.be.bignumber.equal(initialBalance * 2);
         returnBankBalance.should.be.bignumber.equal(0);
 
         let amount = initialBalance / 2;
-        await bank.unstake(amount, '0x0');
+        await returnToken.approve(stakingContract.address, amount, {
+            from: user
+        });
+        await stakingContract.unstake(amount);
 
-        userTotalStaked = await bank.totalStakedFor.call(user);
+        userTotalStaked = await stakingContract.totalStakedFor.call(user);
         userTotalStaked.should.be.bignumber.equal(amount);
 
         returnUserBalance = await returnToken.balanceOf.call(user);
-        returnBankBalance = await returnToken.balanceOf.call(bank.address);
+        returnBankBalance = await returnToken.balanceOf.call(
+            stakingContract.address
+        );
 
         returnUserBalance.should.be.bignumber.equal(
             initialBalance * 2 - amount / 2

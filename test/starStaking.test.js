@@ -1,50 +1,61 @@
 const StarStaking = artifacts.require('StarStaking.sol');
-const TokenMock = artifacts.require('./mocks/Token.sol');
+const MintableToken = artifacts.require('MintableToken.sol');
 
 const { should } = require('./helpers/utils');
 const { increaseTimeTo, latestTime } = require('./helpers/timer');
 
 contract('StarStaking', function([user, user2]) {
-    let bank, token, initialBalance;
+    let stakingContract, token, initialBalance;
 
     beforeEach(async () => {
         initialBalance = 10000;
-        token = await TokenMock.new();
-        bank = await StarStaking.new(token.address);
+        token = await MintableToken.new();
+        stakingContract = await StarStaking.new(token.address);
 
         await token.mint(user, initialBalance);
+        await token.approve(stakingContract.address, initialBalance, {
+            from: user
+        });
     });
 
-    it('transfers tokens to bank when staked', async () => {
-        await bank.stake(initialBalance, '0x0');
+    it('transfers tokens to stakingContract when staked', async () => {
+        await stakingContract.stake(initialBalance);
         const userBalance = await token.balanceOf.call(user);
-        const bankBalance = await token.balanceOf.call(bank.address);
+        const stakingContractBalance = await token.balanceOf.call(
+            stakingContract.address
+        );
 
         userBalance.should.be.bignumber.equal(0);
-        bankBalance.should.be.bignumber.equal(initialBalance);
+        stakingContractBalance.should.be.bignumber.equal(initialBalance);
     });
 
     it('allows user to unstake tokens', async () => {
-        await bank.stake(initialBalance, '0x0');
+        await stakingContract.stake(initialBalance);
 
-        const userTotalStaked = await bank.totalStakedFor.call(user);
+        const userTotalStaked = await stakingContract.totalStakedFor.call(user);
         userTotalStaked.should.be.bignumber.equal(initialBalance);
 
-        await bank.unstake(initialBalance / 2, '0x0');
+        await stakingContract.unstake(initialBalance / 2);
 
-        const userNewTotalStake = await bank.totalStakedFor.call(user);
+        const userNewTotalStake = await stakingContract.totalStakedFor.call(
+            user
+        );
         userNewTotalStake.should.be.bignumber.equal(initialBalance / 2);
     });
 
     it('allows user to stake for other person', async () => {
-        await bank.stakeFor(user2, initialBalance, '0x0', { from: user });
+        await stakingContract.stakeFor(user2, initialBalance, { from: user });
 
-        const user2TotalStaked = await bank.totalStakedFor.call(user2);
+        const user2TotalStaked = await stakingContract.totalStakedFor.call(
+            user2
+        );
         user2TotalStaked.should.be.bignumber.equal(initialBalance);
 
-        await bank.unstake(initialBalance / 2, '0x0', { from: user2 });
+        await stakingContract.unstake(initialBalance / 2, { from: user2 });
 
-        const user2NewTotalStake = await bank.totalStakedFor.call(user2);
+        const user2NewTotalStake = await stakingContract.totalStakedFor.call(
+            user2
+        );
         user2NewTotalStake.should.be.bignumber.equal(initialBalance / 2);
     });
 
@@ -53,22 +64,24 @@ contract('StarStaking', function([user, user2]) {
         let secondBlock;
 
         beforeEach(async () => {
-            let result = await bank.stake(initialBalance / 2, '0x0');
+            let result = await stakingContract.stake(initialBalance / 2);
             firstBlock = result['receipt']['blockNumber'];
 
             await increaseTimeTo(latestTime() + 5);
 
-            result = await bank.stake(initialBalance / 2, '0x0');
+            result = await stakingContract.stake(initialBalance / 2);
             secondBlock = result['receipt']['blockNumber'];
         });
 
         it('returns full staked value when calling totalStaked', async () => {
-            const userTotalStaked = await bank.totalStakedFor.call(user);
+            const userTotalStaked = await stakingContract.totalStakedFor.call(
+                user
+            );
             userTotalStaked.should.be.bignumber.equal(initialBalance);
         });
 
         it('returns correct amount staked at block', async () => {
-            const userTotalStakedAtBlock = await bank.totalStakedForAt.call(
+            const userTotalStakedAtBlock = await stakingContract.totalStakedForAt.call(
                 user,
                 firstBlock
             );
@@ -78,13 +91,14 @@ contract('StarStaking', function([user, user2]) {
         });
 
         it('returns correct block when calling lastStaked', async () => {
-            const userLastStaked = await bank.lastStakedFor.call(user);
+            const userLastStaked = await stakingContract.lastStakedFor.call(
+                user
+            );
             userLastStaked.should.be.bignumber.equal(secondBlock);
-            // assert.equal(await bank.lastStakedFor.call(user), secondBlock);
         });
 
         it('returns correct amount staked at block in future', async () => {
-            const userTotalStakedAtBlock = await bank.totalStakedForAt.call(
+            const userTotalStakedAtBlock = await stakingContract.totalStakedForAt.call(
                 user,
                 secondBlock * 2
             );
@@ -93,14 +107,16 @@ contract('StarStaking', function([user, user2]) {
     });
 
     it('returns correct total amount staked', async () => {
-        await bank.stake(initialBalance / 2, '0x0', { from: user });
-        let result = await bank.stake(initialBalance / 2, '0x0', {
+        await stakingContract.stake(initialBalance / 2, { from: user });
+        let result = await stakingContract.stake(initialBalance / 2, {
             from: user
         });
 
         let block = result['receipt']['blockNumber'];
 
-        const userTotalStakedAt = await bank.totalStakedAt.call(block * 2);
+        const userTotalStakedAt = await stakingContract.totalStakedAt.call(
+            block * 2
+        );
         userTotalStakedAt.should.be.bignumber.equal(initialBalance);
     });
 });

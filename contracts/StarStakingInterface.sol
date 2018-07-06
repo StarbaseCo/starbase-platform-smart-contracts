@@ -1,13 +1,13 @@
 pragma solidity 0.4.23;
 
 
-interface StarStakingInterface {
-    event Staked(address indexed user, uint256 amount, uint256 total, bytes data);
-    event Unstaked(address indexed user, uint256 amount, uint256 total, bytes data);
+contract StarStakingInterface {
+    event Staked(address indexed user, uint256 amount, uint256 total);
+    event Unstaked(address indexed user, uint256 amount, uint256 total);
 
-    function stake(uint256 amount, bytes data) public;
-    function stakeFor(address user, uint256 amount, bytes data) public;
-    function unstake(uint256 amount, bytes data) public;
+    function stake(uint256 amount) public;
+    function stakeFor(address user, uint256 amount) public;
+    function unstake(uint256 amount) public;
     function totalStakedFor(address addr) public view returns (uint256);
     function totalStaked() public view returns (uint256);
     function token() public view returns (address);

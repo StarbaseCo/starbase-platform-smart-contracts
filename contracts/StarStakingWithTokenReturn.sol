@@ -13,8 +13,7 @@ contract StarStakingWithTokenReturn is StarStaking {
      * @param _returnToken Token that is given to user once he stakes.
      * @param _rate Rate of return tokens per token.
      */
-    function StarStakingWithTokenReturn
-        (
+    constructor(
             ERC20 _token,
             ERC20 _returnToken,
             uint256 _rate
@@ -34,20 +33,18 @@ contract StarStakingWithTokenReturn is StarStaking {
      * @dev Stakes a certain amount of tokens for another user.
      * @param user Address of the user to stake for.
      * @param amount Amount of tokens to stake.
-     * @param data Data field used for signalling in more complex staking applications.
      */
-    function stakeFor(address user, uint256 amount, bytes data) public {
-        super.stakeFor(user, amount, data);
+    function stakeFor(address user, uint256 amount) public {
+        super.stakeFor(user, amount);
         require(returnToken.transfer(user, amount.mul(getRate())));
     }
 
     /**
      * @dev Unstakes a certain amount of tokens.
      * @param amount Amount of tokens to unstake.
-     * @param data Data field used for signalling in more complex staking applications.
      */
-    function unstake(uint256 amount, bytes data) public {
-        super.unstake(amount, data);
+    function unstake(uint256 amount) public {
+        super.unstake(amount);
 
         uint256 returnAmount = amount.div(getRate());
         require(returnAmount.mul(getRate()) == amount);

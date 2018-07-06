@@ -24,7 +24,7 @@ contract StarStaking is StarStakingInterface, Lockable {
     /**
      * @param _token Token that can be staked.
      */
-    function StarStaking(ERC20 _token) public {
+    constructor(ERC20 _token) public {
         require(address(_token) != 0x0);
         token = _token;
     }
@@ -32,40 +32,37 @@ contract StarStaking is StarStakingInterface, Lockable {
     /**
      * @dev Stakes a certain amount of tokens.
      * @param amount Amount of tokens to stake.
-     * @param data Data field used for signalling in more complex staking applications.
      */
-    function stake(uint256 amount, bytes data) public {
-        stakeFor(msg.sender, amount, data);
+    function stake(uint256 amount) public {
+        stakeFor(msg.sender, amount);
     }
 
     /**
      * @dev Stakes a certain amount of tokens for another user.
      * @param user Address of the user to stake for.
      * @param amount Amount of tokens to stake.
-     * @param data Data field used for signalling in more complex staking applications.
      */
-    function stakeFor(address user, uint256 amount, bytes data) public onlyWhenUnlocked {
+    function stakeFor(address user, uint256 amount) public onlyWhenUnlocked {
         updateCheckpointAtNow(stakesFor[user], amount, false);
         updateCheckpointAtNow(stakeHistory, amount, false);
 
         require(token.transferFrom(msg.sender, address(this), amount));
 
-        emit Staked(user, amount, totalStakedFor(user), data);
+        emit Staked(user, amount, totalStakedFor(user));
     }
 
     /**
      * @dev Unstakes a certain amount of tokens.
      * @param amount Amount of tokens to unstake.
-     * @param data Data field used for signalling in more complex staking applications.
      */
-    function unstake(uint256 amount, bytes data) public {
+    function unstake(uint256 amount) public {
         require(totalStakedFor(msg.sender) >= amount);
 
         updateCheckpointAtNow(stakesFor[msg.sender], amount, true);
         updateCheckpointAtNow(stakeHistory, amount, true);
 
         require(token.transfer(msg.sender, amount));
-        emit Unstaked(msg.sender, amount, totalStakedFor(msg.sender), data);
+        emit Unstaked(msg.sender, amount, totalStakedFor(msg.sender));
     }
 
     /**
