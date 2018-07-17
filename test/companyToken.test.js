@@ -5,7 +5,7 @@ contract('CompanyToken', () => {
     let token;
 
     beforeEach(async () => {
-        token = await CompanyToken.deployed(); // token deployed from the migrations file
+        token = await CompanyToken.new('Example Token', 'ETK', 18);
     });
 
     it('has a name', async () => {
