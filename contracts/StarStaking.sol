@@ -21,12 +21,27 @@ contract StarStaking is StarStakingInterface, Lockable {
 
     mapping (address => Checkpoint[]) public stakesFor;
 
+    uint256 public startTime;
+    uint256 public endTime;
+
+    modifier whenStakingOpen {
+        require(now >= startTime);
+        require(now <= endTime);
+
+        _;
+    }
+
     /**
      * @param _token Token that can be staked.
      */
-    constructor(ERC20 _token) public {
+    constructor(ERC20 _token, uint256 _startTime, uint256 _endTime) public {
         require(address(_token) != 0x0);
+        require(_startTime < _endTime);
+        require(_startTime > now);
+
         token = _token;
+        startTime = _startTime;
+        endTime = _endTime;
     }
 
     /**
