@@ -7,7 +7,6 @@ contract StarStakingInterface {
 
     function stake(uint256 amount) public;
     function stakeFor(address user, uint256 amount) public;
-    function unstake(uint256 amount) public;
     function totalStakedFor(address addr) public view returns (uint256);
     function totalStaked() public view returns (uint256);
     function token() public view returns (address);

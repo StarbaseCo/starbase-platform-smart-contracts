@@ -52,20 +52,6 @@ contract StarStaking is StarStakingInterface, Lockable {
     }
 
     /**
-     * @dev Unstakes a certain amount of tokens.
-     * @param amount Amount of tokens to unstake.
-     */
-    function unstake(uint256 amount) public {
-        require(totalStakedFor(msg.sender) >= amount);
-
-        updateCheckpointAtNow(stakesFor[msg.sender], amount, true);
-        updateCheckpointAtNow(stakeHistory, amount, true);
-
-        require(token.transfer(msg.sender, amount));
-        emit Unstaked(msg.sender, amount, totalStakedFor(msg.sender));
-    }
-
-    /**
      * @dev Returns total tokens staked for address.
      * @param addr Address to check.
      * @return amount of tokens staked.

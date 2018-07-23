@@ -40,19 +40,6 @@ contract StarStakingWithTokenReturn is StarStaking {
     }
 
     /**
-     * @dev Unstakes a certain amount of tokens.
-     * @param amount Amount of tokens to unstake.
-     */
-    function unstake(uint256 amount) public {
-        super.unstake(amount);
-
-        uint256 returnAmount = amount.div(getRate());
-        require(returnAmount.mul(getRate()) == amount);
-
-        require(returnToken.transferFrom(msg.sender, address(this), returnAmount));
-    }
-
-    /**
      * @dev Returns conversion rate from token to returnToken. In function so it can be overridden.
      * @return conversion rate.
      */
