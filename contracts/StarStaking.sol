@@ -1,4 +1,4 @@
-pragma solidity 0.4.23;
+pragma solidity 0.4.24;
 
 import "zeppelin-solidity/contracts/ownership/Ownable.sol";
 import "zeppelin-solidity/contracts/token/ERC20/ERC20.sol";
@@ -6,27 +6,20 @@ import "zeppelin-solidity/contracts/math/SafeMath.sol";
 import "./Lockable.sol";
 import "./StarStakingInterface.sol";
 
-
 contract StarStaking is StarStakingInterface, Lockable {
     using SafeMath for uint256;
 
-    struct Checkpoint {
-        uint256 at;
-        uint256 amount;
-    }
-
     ERC20 public token;
 
-    Checkpoint[] public stakeHistory;
-
-    mapping (address => Checkpoint[]) public stakesFor;
+    mapping (address => uint256) public totalStakingPointsFor;
+    mapping (address => uint256) public totalStakedFor;
 
     uint256 public startTime;
-    uint256 public endTime;
+    uint256 public closingTime;
 
     modifier whenStakingOpen {
         require(now >= startTime);
-        require(now <= endTime);
+        require(now < closingTime);
 
         _;
     }
@@ -34,14 +27,14 @@ contract StarStaking is StarStakingInterface, Lockable {
     /**
      * @param _token Token that can be staked.
      */
-    constructor(ERC20 _token, uint256 _startTime, uint256 _endTime) public {
+    constructor(ERC20 _token, uint256 _startTime, uint256 _closingTime) public {
         require(address(_token) != 0x0);
-        require(_startTime < _endTime);
+        require(_startTime < _closingTime);
         require(_startTime > now);
 
         token = _token;
         startTime = _startTime;
-        endTime = _endTime;
+        closingTime = _closingTime;
     }
 
     /**
@@ -57,36 +50,10 @@ contract StarStaking is StarStakingInterface, Lockable {
      * @param user Address of the user to stake for.
      * @param amount Amount of tokens to stake.
      */
-    function stakeFor(address user, uint256 amount) public onlyWhenUnlocked {
-        updateCheckpointAtNow(stakesFor[user], amount, false);
-        updateCheckpointAtNow(stakeHistory, amount, false);
+    function stakeFor(address user, uint256 amount) public onlyWhenUnlocked whenStakingOpen {
+        addStakingPoints(user, amount);
 
         require(token.transferFrom(msg.sender, address(this), amount));
-
-        emit Staked(user, amount, totalStakedFor(user));
-    }
-
-    /**
-     * @dev Returns total tokens staked for address.
-     * @param addr Address to check.
-     * @return amount of tokens staked.
-     */
-    function totalStakedFor(address addr) public view returns (uint256) {
-        Checkpoint[] storage stakes = stakesFor[addr];
-
-        if (stakes.length == 0) {
-            return 0;
-        }
-
-        return stakes[stakes.length-1].amount;
-    }
-
-    /**
-     * @dev Returns total tokens staked.
-     * @return amount of tokens staked.
-     */
-    function totalStaked() public view returns (uint256) {
-        return totalStakedAt(block.number);
     }
 
     /**
@@ -105,82 +72,13 @@ contract StarStaking is StarStakingInterface, Lockable {
         return token;
     }
 
-    /**
-     * @dev Returns last block address staked at.
-     * @param addr Address to check.
-     * @return block number of last stake.
-     */
-    function lastStakedFor(address addr) public view returns (uint256) {
-        Checkpoint[] storage stakes = stakesFor[addr];
+    function addStakingPoints(address user, uint256 amount) internal {
+        uint256 timeUntilEnd = closingTime.sub(now);
+        uint256 addedStakingPoints = timeUntilEnd.mul(amount);
 
-        if (stakes.length == 0) {
-            return 0;
-        }
+        totalStakingPointsFor[user] = totalStakingPointsFor[user].add(addedStakingPoints);
+        totalStakedFor[user] = totalStakedFor[user].add(amount);
 
-        return stakes[stakes.length-1].at;
-    }
-
-    /**
-     * @dev Returns total amount of tokens staked at block for address.
-     * @param addr Address to check.
-     * @param blockNumber Block number to check.
-     * @return amount of tokens staked.
-     */
-    function totalStakedForAt(address addr, uint256 blockNumber) public view returns (uint256) {
-        return stakedAt(stakesFor[addr], blockNumber);
-    }
-
-    /**
-     * @dev Returns the total tokens staked at block.
-     * @param blockNumber Block number to check.
-     * @return amount of tokens staked.
-     */
-    function totalStakedAt(uint256 blockNumber) public view returns (uint256) {
-        return stakedAt(stakeHistory, blockNumber);
-    }
-
-    function updateCheckpointAtNow(Checkpoint[] storage history, uint256 amount, bool isUnstake) internal {
-        uint256 length = history.length;
-        if (length == 0) {
-            history.push(Checkpoint({at: block.number, amount: amount}));
-            return;
-        }
-
-        if (history[length-1].at < block.number) {
-            history.push(Checkpoint({at: block.number, amount: history[length-1].amount}));
-        }
-
-        Checkpoint storage checkpoint = history[length];
-
-        if (isUnstake) {
-            checkpoint.amount = checkpoint.amount.sub(amount);
-        } else {
-            checkpoint.amount = checkpoint.amount.add(amount);
-        }
-    }
-
-    function stakedAt(Checkpoint[] storage history, uint256 blockNumber) internal view returns (uint256) {
-        uint256 length = history.length;
-
-        if (length == 0 || blockNumber < history[0].at) {
-            return 0;
-        }
-
-        if (blockNumber >= history[length-1].at) {
-            return history[length-1].amount;
-        }
-
-        uint min = 0;
-        uint max = length-1;
-        while (max > min) {
-            uint mid = (max + min + 1) / 2;
-            if (history[mid].at <= blockNumber) {
-                min = mid;
-            } else {
-                max = mid-1;
-            }
-        }
-
-        return history[min].amount;
+        emit Staked(user, amount, addedStakingPoints);
     }
 }
