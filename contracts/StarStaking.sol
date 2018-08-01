@@ -57,14 +57,6 @@ contract StarStaking is StarStakingInterface, Lockable {
     }
 
     /**
-     * @dev Returns if history related functions are implemented.
-     * @return Bool whether history is implemented.
-     */
-    function supportsHistory() public pure returns (bool) {
-        return true;
-    }
-
-    /**
      * @dev Returns the token address.
      * @return Address of token.
      */
