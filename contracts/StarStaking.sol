@@ -56,14 +56,6 @@ contract StarStaking is StarStakingInterface, Lockable {
         require(token.transferFrom(msg.sender, address(this), amount));
     }
 
-    /**
-     * @dev Returns the token address.
-     * @return Address of token.
-     */
-    function token() public view returns (address) {
-        return token;
-    }
-
     function addStakingPoints(address user, uint256 amount) internal {
         uint256 timeUntilEnd = closingTime.sub(now);
         uint256 addedStakingPoints = timeUntilEnd.mul(amount);
