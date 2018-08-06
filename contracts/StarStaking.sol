@@ -75,4 +75,10 @@ contract StarStaking is StarStakingInterface, Lockable {
 
         emit Staked(user, amount, addedStakingPoints);
     }
+
+    // TODO: Remove for production
+    function fakeInsert(address user, uint256 amount, address referenceNode) public {
+        addStakingPoints(user, amount);
+        topRanks.insert(referenceNode, user, NEXT);
+    }
 }
