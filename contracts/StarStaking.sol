@@ -1,18 +1,27 @@
 pragma solidity 0.4.24;
 
-import "zeppelin-solidity/contracts/ownership/Ownable.sol";
-import "zeppelin-solidity/contracts/token/ERC20/ERC20.sol";
-import "zeppelin-solidity/contracts/math/SafeMath.sol";
+import "../node_modules/zeppelin-solidity/contracts/ownership/Ownable.sol";
+import "../node_modules/zeppelin-solidity/contracts/token/ERC20/ERC20.sol";
+import "../node_modules/zeppelin-solidity/contracts/math/SafeMath.sol";
 import "./Lockable.sol";
+import "./LinkedListLib.sol";
 import "./StarStakingInterface.sol";
 
 contract StarStaking is StarStakingInterface, Lockable {
     using SafeMath for uint256;
+    using LinkedListLib for LinkedListLib.LinkedList;
+
+    address constant HEAD = 0;
+    bool constant PREV = false;
+    bool constant NEXT = true;
 
     ERC20 public token;
 
     mapping (address => uint256) public totalStakingPointsFor;
     mapping (address => uint256) public totalStakedFor;
+
+    LinkedListLib.LinkedList topRanks;
+    uint256 topRanksCount;
 
     uint256 public startTime;
     uint256 public closingTime;
@@ -35,6 +44,7 @@ contract StarStaking is StarStakingInterface, Lockable {
         token = _token;
         startTime = _startTime;
         closingTime = _closingTime;
+        topRanksCount = 0;
     }
 
     /**
