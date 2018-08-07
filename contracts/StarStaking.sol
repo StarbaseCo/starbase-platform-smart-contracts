@@ -1,8 +1,8 @@
 pragma solidity 0.4.24;
 
-import "../node_modules/zeppelin-solidity/contracts/ownership/Ownable.sol";
-import "../node_modules/zeppelin-solidity/contracts/token/ERC20/ERC20.sol";
-import "../node_modules/zeppelin-solidity/contracts/math/SafeMath.sol";
+import "zeppelin-solidity/contracts/ownership/Ownable.sol";
+import "zeppelin-solidity/contracts/token/ERC20/ERC20.sol";
+import "zeppelin-solidity/contracts/math/SafeMath.sol";
 import "./Lockable.sol";
 import "./LinkedListLib.sol";
 import "./StarStakingInterface.sol";
@@ -11,7 +11,7 @@ contract StarStaking is StarStakingInterface, Lockable {
     using SafeMath for uint256;
     using LinkedListLib for LinkedListLib.LinkedList;
 
-    address constant HEAD = 0;
+    address constant HEAD = 0x0;
     bool constant PREV = false;
     bool constant NEXT = true;
 
@@ -21,7 +21,7 @@ contract StarStaking is StarStakingInterface, Lockable {
     mapping (address => uint256) public totalStakedFor;
 
     LinkedListLib.LinkedList topRanks;
-    uint256 topRanksCount;
+    uint256 public topRanksCount;
 
     uint256 public startTime;
     uint256 public closingTime;
@@ -80,5 +80,44 @@ contract StarStaking is StarStakingInterface, Lockable {
     function fakeInsert(address user, uint256 amount, address referenceNode) public {
         addStakingPoints(user, amount);
         topRanks.insert(referenceNode, user, NEXT);
+
+        topRanksCount++;
+    }
+
+    /**
+     * @dev Returns the previous or next top rank node.
+     * @param referenceNode Address of the reference.
+     * @param amount Direction from the reference..
+     */
+    function getTopRank(address referenceNode, bool direction) public view returns (address) {
+        return topRanks.list[referenceNode][direction];
+    }
+
+    /**
+     * @dev Returns a flat list of 3-tuples (address, stakingPoints, totalStaked).
+     * @param user Address of the user to stake for.
+     * @param amount Amount of tokens to stake.
+     */
+    function getTopRanksTuples() public view returns (uint256[]) {
+        uint256 tripleRanksCount = topRanksCount * 3;
+        uint256[] memory topRanksList = new uint256[](tripleRanksCount);
+
+        address referenceNode = HEAD;
+        uint256 x = 0;
+
+        while(x < tripleRanksCount) {
+            referenceNode = getTopRank(referenceNode, NEXT);
+
+            topRanksList[x] = uint256(referenceNode);
+            x++;
+
+            topRanksList[x] = totalStakingPointsFor[referenceNode];
+            x++;
+
+            topRanksList[x] = totalStakedFor[referenceNode];
+            x++;
+        }
+
+        return topRanksList;
     }
 }
