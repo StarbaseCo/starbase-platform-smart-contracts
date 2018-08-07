@@ -1,3 +1,4 @@
+/*
 const CompanyToken = artifacts.require('./CompanyToken.sol');
 const TokenSale = artifacts.require('./TokenSale.sol');
 const StandardToken = artifacts.require('./StandardToken.sol');
@@ -15,8 +16,10 @@ const endTime = startTime + dayInSecs * 60; // 60 days
 const rate = new BigNumber(10);
 const starRate = new BigNumber(20);
 const crowdsaleCap = new BigNumber(20000000); // 20M
+*/
 
 module.exports = function(deployer, network, [_, wallet]) {
+    /*
     return deployer
         .then(() => {
             return deployer.deploy(StandardToken);
@@ -46,4 +49,5 @@ module.exports = function(deployer, network, [_, wallet]) {
                 instance.transferOwnership(TokenSale.address)
             );
         });
+    */
 };

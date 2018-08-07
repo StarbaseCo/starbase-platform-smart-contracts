@@ -25,8 +25,9 @@
         "eslint-plugin-mocha": "^4.11.0",
         "eslint-plugin-promise": "^3.6.0",
         "eslint-plugin-standard": "^2.3.1",
+        "truffle": "^4.1.13",
         "truffle-contract": "^3.0.0",
-        "truffle": "^4.1.13"
+        "truffle-hdwallet-provider": "0.0.6"
     },
     "dependencies": {
         "chai": "^4.1.2",

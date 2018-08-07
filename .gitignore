@@ -1,6 +1,3 @@
-build/
-node_modules/
-yarn-error.log
-package-lock.json
-
-.specifications
+.env
+build
+node_modules
