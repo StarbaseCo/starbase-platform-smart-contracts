@@ -2,7 +2,6 @@ pragma solidity 0.4.24;
 
 import "zeppelin-solidity/contracts/ownership/Ownable.sol";
 
-
 contract Lockable is Ownable {
 
     bool public locked;
