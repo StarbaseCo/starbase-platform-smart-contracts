@@ -2,32 +2,32 @@
 
 ## Table of Contents
 
-* [Table of Contents](#table-of-contents)
-* [Overview](#overview)
-* [Implementation Details](#implementation-details)
-* [Deployment](#deployment)
-* [Gas Consumptions](#gas-consumption)
-* [Development](#development)
+-   [Table of Contents](#table-of-contents)
+-   [Overview](#overview)
+-   [Implementation Details](#implementation-details)
+-   [Deployment](#deployment)
+-   [Gas Consumptions](#gas-consumption)
+-   [Development](#development)
 
 ## Overview
 
 The Starbase platform's smart contracts allow investors who hold STARs to participate in the crowdfunding events happening at the Starbase's web application. The smart contract receives STARs and exchanges it for the token offered during the the platform's sale event. There is also a whitelist smart contract where investors are able to be whitelisted prior and/or during the crowdsale.
 
-* update May 2018
-  The token sale smart contract has been extended to accept `ETH` payments when the `enableWei` is set to true.
+-   update May 2018
+    The token sale smart contract has been extended to accept `ETH` payments when the `enableWei` is set to true.
 
 ## Implementation Details
 
-* CompanyToken.sol
+-   CompanyToken.sol
 
 This contract creates a token with customized name, symbol and decimals. Upon its creation, the token transfer functionality is paused, that is to say no one is able to trade them. This is possible to be reverted only by the token contract owner - who is the Ethereum address that deployed the token mold contract.
 For this contract to work with `TokenSale.sol`, its ownership needs to be passed on to `TokenSale` contract instance that will manage the token sale.
 
-* Whitelist.sol
+-   Whitelist.sol
 
 It allows the addition and/or removal of addresses to the whitelist registry. Both addition and removal of addresses is done via passing an array of Ethereum addresses to `addManyToWhitelist` and `removeManyFromWhitelist` functions within the contract. Only the contract owner has the ability to trigger such actions.
 
-* TokenSale.sol
+-   TokenSale.sol
 
 This contract is where the fundraising occurs. For it to work as expected, the ownership from the deployed CompanyToken contract needs to be passed on to `TokenSale`. This is accomplished via the `transferOwnership` function found in the zeppelin-solidity's `Ownable.sol` contract.
 
@@ -35,8 +35,8 @@ In order for investors to participate in the crowdsale using the `TokenSale` con
 
 Afterwards, investor must trigger `BuyTokens` within TokenSale so the token purchase event goes through. Investor then receives purchased tokens right away. However, she will not be able to trade these tokens because token transfers are paused. They need to be unpaused for the transfers to happen and this must be done most likely after the crowdsale by the token owner. Token ownership after the crowdsale must be moved from the `TokenSale` contract to another Ethereum address, most likely the address of the project owner that is uses Starbase platform for its crowdfunding needs.
 
-* update May 2018
-  The token sale smart contract has been extended to accept `ETH` payments when the `enableWei` is set to true. This is done by calling the `toggleEnableWei` by the `TokenSale` contract owner. If `enableWei` is triggered and investor sends ether in the transaction by calling `buyTokens`, the function will automatically call the contract internal function `buyTokensWithWei` which handles the purchase with wei/ether.
+-   update May 2018
+    The token sale smart contract has been extended to accept `ETH` payments when the `enableWei` is set to true. This is done by calling the `toggleEnableWei` by the `TokenSale` contract owner. If `enableWei` is triggered and investor sends ether in the transaction by calling `buyTokens`, the function will automatically call the contract internal function `buyTokensWithWei` which handles the purchase with wei/ether.
 
 Purchase process:
 
@@ -79,36 +79,36 @@ _crowdsaleCap = 1000  // cap for the number of tokens to be minted. Here it is o
 
 ## Gas consumption
 
-* `approve`
-  30512
+-   `approve`
+    30512
 
-* `BuyTokens`
-  128547
+-   `BuyTokens`
+    128547
 
 ## Development
 
 **Dependencies**
 
-* `node@8.5.x`
-* `truffle@^4.0.x`
-* `ganache-cli@^6.0.x`
-* `zeppelin-solidity@1.6.X`
+-   `node@8.5.x`
+-   `truffle@^4.0.x`
+-   `ganache-cli@^6.0.x`
+-   `zeppelin-solidity@1.6.X`
 
 ## Setting Up
 
-* Clone this repository.
+-   Clone this repository.
 
-* Install all [system dependencies](#development).
+-   Install all [system dependencies](#development).
 
-  * `cd truffle && npm install`
+    -   `cd truffle && npm install`
 
-* Compile contract code
+-   Compile contract code
 
-  * `node_modules/.bin/truffle compile`
+    -   `node_modules/.bin/truffle compile`
 
 ## Running Tests
 
-* `bash run_test.sh`
+-   `bash run_test.sh`
 
 ## License and Warranty
 

@@ -30,15 +30,14 @@ contract Crowdsale {
 
   // amount of raised money in wei
   uint256 public weiRaised;
-  /**
-   * event for token purchase logging
-   * @param purchaser who paid for the tokens
-   * @param beneficiary who got the tokens
-   * @param value weis paid for purchase
-   * @param amount amount of tokens purchased
-   */
-  event TokenPurchase(address indexed purchaser, address indexed beneficiary, uint256 value, uint256 amount);
 
+
+   // event for token purchase logging
+   // purchaser who paid for the tokens
+   // beneficiary who got the tokens
+   // value weis paid for purchase
+   // amount amount of tokens purchased
+  event TokenPurchase(address indexed purchaser, address indexed beneficiary, uint256 value, uint256 amount);
 
   constructor(uint256 _startTime, uint256 _endTime, uint256 _rate, address _wallet) public {
     require(_startTime >= now);
