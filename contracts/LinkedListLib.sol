@@ -1,9 +1,9 @@
-pragma solidity ^0.4.18;
+pragma solidity 0.4.24;
 
 /**
  * @title LinkedListLib
  * @author Darryl Morris (o0ragman0o) and Modular.network
- * 
+ *
  * This utility library was forked from https://github.com/o0ragman0o/LibCLL
  * into the Modular-Network ethereum-libraries repo at https://github.com/Modular-Network/ethereum-libraries
  * It has been updated to add additional functionality and be more compatible with solidity 0.4.18
@@ -13,7 +13,7 @@ pragma solidity ^0.4.18;
  * Copyright (c) 2017 Modular Inc.
  * The MIT License (MIT)
  * https://github.com/Modular-Network/ethereum-libraries/blob/master/LICENSE
- * 
+ *
  * The LinkedListLib provides functionality for implementing data indexing using
  * a circlular linked list
  *
@@ -41,7 +41,7 @@ library LinkedListLib {
     address constant HEAD = 0;
     bool constant PREV = false;
     bool constant NEXT = true;
-    
+
     struct LinkedList{
         mapping (address => mapping (bool => address)) list;
     }
@@ -63,7 +63,7 @@ library LinkedListLib {
     /// @dev returns true if the node exists
     /// @param self stored linked list from contract
     /// @param _node a node to search for
-    function nodeExists(LinkedList storage self, address _node) 
+    function nodeExists(LinkedList storage self, address _node)
         internal
         view returns (bool)
     {
@@ -77,7 +77,7 @@ library LinkedListLib {
             return true;
         }
     }
-    
+
     /// @dev Returns the number of elements in the list
     /// @param self stored linked list from contract
     function sizeOf(LinkedList storage self) internal view returns (uint256 numElements) {
@@ -117,7 +117,7 @@ library LinkedListLib {
             return (true,self.list[_node][_direction]);
         }
     }
-    
+
     /// @dev Can be used before `insert` to build an ordered list
     /// @param self stored linked list from contract
     /// @param _node an existing node to search from, e.g. HEAD.
@@ -160,7 +160,7 @@ library LinkedListLib {
             return false;
         }
     }
-    
+
     /// @dev removes an entry from the linked list
     /// @param self stored linked list from contract
     /// @param _node node to remove from the list
@@ -179,7 +179,7 @@ library LinkedListLib {
     function push(LinkedList storage self, address _node, bool _direction) internal  {
         insert(self, HEAD, _node, _direction);
     }
-    
+
     /// @dev pops the first entry from the linked list
     /// @param self stored linked list from contract
     /// @param _direction pop from the head (NEXT) or the tail (PREV)
