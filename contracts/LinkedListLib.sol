@@ -124,6 +124,8 @@ library LinkedListLib {
     /// @param _value value to seek
     /// @param _direction direction to seek in
     //  @return next first node beyond '_node' in direction `_direction`
+
+    // TODO change to reflect _value as totalStakingPoints[_value]
     function getSortedSpot(LinkedList storage self, address _node, address _value, bool _direction)
         internal view returns (address)
     {
@@ -172,7 +174,7 @@ library LinkedListLib {
         return _node;
     }
 
-    /// @dev pushes an enrty to the head of the linked list
+    /// @dev pushes an entry to the head of the linked list
     /// @param self stored linked list from contract
     /// @param _node new entry to push to the head
     /// @param _direction push to the head (NEXT) or tail (PREV)
