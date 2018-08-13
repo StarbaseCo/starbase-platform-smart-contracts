@@ -27,7 +27,7 @@ async function sizeShouldBe(linkedList, expectedSize) {
     size.should.be.bignumber.equal(new BigNumber(size), `The size of the linked list should be ${expectedSize}!`);
 }
 
-contract.only('LinkedListMock', () => {
+contract('LinkedListMock', () => {
     beforeEach(async function() {
         this.linkedList = await LinkedListMock.new();
     });
