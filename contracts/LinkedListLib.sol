@@ -37,8 +37,8 @@ pragma solidity 0.4.24;
 
 library LinkedListLib {
 
-    address constant NULL = 0;
-    address constant HEAD = 0;
+    address constant NULL = 0x0;
+    address constant HEAD = 0x0;
     bool constant PREV = false;
     bool constant NEXT = true;
 
