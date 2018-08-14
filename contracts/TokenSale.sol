@@ -1,7 +1,7 @@
 pragma solidity 0.4.24;
 
-import "zeppelin-solidity/contracts/lifecycle/Pausable.sol";
-import "./custom-zeppelin-solidity/FinalizableCrowdsale.sol";
+import "./lib/Pausable.sol";
+import "./lib/FinalizableCrowdsale.sol";
 import "./CompanyToken.sol";
 import "./Whitelist.sol";
 

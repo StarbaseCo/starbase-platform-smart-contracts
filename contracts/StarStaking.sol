@@ -1,8 +1,8 @@
 pragma solidity 0.4.24;
 
-import "zeppelin-solidity/contracts/ownership/Ownable.sol";
-import "zeppelin-solidity/contracts/token/ERC20/ERC20.sol";
-import "zeppelin-solidity/contracts/math/SafeMath.sol";
+import "./lib/Ownable.sol";
+import "./lib/SafeMath.sol";
+import "./lib/ERC20.sol";
 import "./Lockable.sol";
 import "./LinkedListLib.sol";
 import "./StarStakingInterface.sol";
