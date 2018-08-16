@@ -39,11 +39,12 @@ contract Crowdsale {
    // amount amount of tokens purchased
   event TokenPurchase(address indexed purchaser, address indexed beneficiary, uint256 value, uint256 amount);
 
-  constructor(uint256 _startTime, uint256 _endTime, uint256 _rate, address _wallet) public {
-    require(_startTime >= now);
-    require(_endTime >= _startTime);
-    require(_rate > 0);
-    require(_wallet != address(0));
+  function initCrowdsale(uint256 _startTime, uint256 _endTime, uint256 _rate, address _wallet) public {
+    require(startTime == 0 && endTime == 0 && rate == 0 && wallet == address(0), "Ensure global variables are empty when initializing crowdsale");
+    require(_startTime >= now, "_starTime is more than current time");
+    require(_endTime >= _startTime, "_endTime must be more than _startTime");
+    require(_rate > 0, "rate is greater than zero");
+    require(_wallet != address(0), "_wallet params must not be empty");
 
     startTime = _startTime;
     endTime = _endTime;
