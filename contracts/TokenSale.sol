@@ -55,10 +55,12 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
         require(
             whitelist == address(0) &&
             starToken == address(0) &&
+            rate == 0 &&
             starRate == 0 &&
             tokenOnSale == address(0) &&
             crowdsaleCap == 0 &&
             _whitelist != address(0) &&
+            _rate != 0 &&
             _starToken != address(0) &&
             _starRate != 0 &&
             _companyToken != address(0) &&
@@ -76,7 +78,7 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
         uint256 tokenDecimals = CompanyToken(tokenOnSale).decimals();
         crowdsaleCap = _crowdsaleCap.mul(10 ** tokenDecimals);
 
-        require(CompanyToken(tokenOnSale).paused());
+        require(CompanyToken(tokenOnSale).paused(), "Company token must be paused upon initialization");
     }
 
     modifier isWhitelisted(address beneficiary) {
