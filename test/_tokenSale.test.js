@@ -23,7 +23,7 @@ contract("TokenSale", ([owner, wallet, buyer, buyer2, user1, fakeWallet]) => {
   let crowdsaleTokensLeftover;
 
   const newCrowdsale = (rate, starRate) => {
-    startTime = latestTime() + 2; // crowdsale starts in 2 seconds
+    startTime = latestTime() + 5; // crowdsale starts in 2 seconds
     endTime = startTime + duration.days(70); // 70 days
 
     return Whitelist.new()

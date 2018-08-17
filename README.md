@@ -108,7 +108,16 @@ _crowdsaleCap = 1000  // cap for the number of tokens to be minted. Here it is o
 
 ## Running Tests
 
--   `bash run_test.sh`
+-   `npm test`
+
+## Test Coverage
+
+To see current test coverage open `coverage/index.html` in a browser.
+
+To generate test coverage, type:
+
+-   `npm run cov`
+
 
 ## License and Warranty
 

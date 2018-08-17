@@ -3,14 +3,16 @@ const { latestTime, duration } = require("./helpers/timer");
 const TokenSaleCloneFactory = artifacts.require("./TokenSaleCloneFactory.sol");
 const TokenSale = artifacts.require("./TokenSale.sol");
 const CompanyToken = artifacts.require("./CompanyToken.sol");
+const StandardToken = artifacts.require("./StandardToken.sol");
 
 const BigNumber = web3.BigNumber;
 
 contract(
   "TokenSaleCloneFactory",
-  ([owner, wallet, otherAddress, starToken, whitelist]) => {
+  ([owner, wallet, otherAddress, whitelist]) => {
     let tokenSaleCloneFactory,
       tokenSale,
+      starToken,
       newTokenSale,
       companyToken,
       startTime,
@@ -22,10 +24,12 @@ contract(
     beforeEach(async () => {
       startTime = latestTime() + 20; // crowdsale starts in 20 seconds
       endTime = startTime + duration.days(70); // 70 days
+
+      starToken = await StandardToken.new();
       tokenSale = await TokenSale.new();
       tokenSaleCloneFactory = await TokenSaleCloneFactory.new(
         tokenSale.address,
-        starToken
+        starToken.address
       );
       companyToken = await CompanyToken.new("Example Token", "EXT", 18);
     });
