@@ -32,8 +32,7 @@ contract TokenSaleCloneFactory is Ownable, CloneFactory {
 
    /**
     * @dev Have the option of updating the TokenSale contract for cloning
-    * @param _libraryAddress Address for new contract. Note that superBouncers will be set
-    * in the _libraryAddress deployment
+    * @param _libraryAddress Address for new contract
     */
     function setLibraryAddress(address _libraryAddress) external onlyOwner {
         require(_libraryAddress != address(0), "params _libraryAddress should not be empty");

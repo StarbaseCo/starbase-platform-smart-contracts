@@ -6,7 +6,7 @@ const CompanyToken = artifacts.require("./CompanyToken.sol");
 
 const BigNumber = web3.BigNumber;
 
-contract.only(
+contract(
   "TokenSaleCloneFactory",
   ([owner, wallet, otherAddress, starToken, whitelist]) => {
     let tokenSaleCloneFactory,

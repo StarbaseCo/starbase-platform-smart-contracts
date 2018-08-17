@@ -9,7 +9,7 @@ const expect = require("chai").expect;
 
 const BigNumber = web3.BigNumber;
 
-contract("TokenSale", ([owner, wallet, buyer, buyer2, user1]) => {
+contract("TokenSale", ([owner, wallet, buyer, buyer2, user1, fakeWallet]) => {
   const starRate = new BigNumber(10);
   const newStarRate = new BigNumber(20);
   const rate = new BigNumber(50);
@@ -123,6 +123,30 @@ contract("TokenSale", ([owner, wallet, buyer, buyer2, user1]) => {
     const tokenOwner = await token.owner();
     const initialTokenOwner = await crowdsale.initialTokenOwner();
     initialTokenOwner.should.be.equal(tokenOwner);
+  });
+
+  it("cannot call init again once initial values are set", async () => {
+    // attempt to override initial values should throw exceptions
+    try {
+      await crowdsale.init(
+        latestTime() + 2,
+        endTime,
+        whitelist.address,
+        star.address,
+        token.address,
+        rate,
+        starRate,
+        fakeWallet,
+        crowdsaleCap
+      );
+      assert.fail();
+    } catch (error) {
+      ensuresException(error);
+    }
+
+    const crowdsaleWallet = await crowdsale.wallet();
+    // fakeWallet did not override wallet
+    crowdsaleWallet.should.be.bignumber.equal(wallet);
   });
 
   describe("changing rate", () => {
