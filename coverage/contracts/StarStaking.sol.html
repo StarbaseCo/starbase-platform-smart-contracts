@@ -1,0 +1,434 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <title>Code coverage report for contracts/StarStaking.sol</title>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="../prettify.css" />
+    <link rel="stylesheet" href="../base.css" />
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style type='text/css'>
+        .coverage-summary .sorter {
+            background-image: url(../sort-arrow-sprite.png);
+        }
+    </style>
+</head>
+<body>
+<div class='wrapper'>
+  <div class='pad1'>
+    <h1>
+      <a href="../index.html">all files</a> / <a href="index.html">contracts/</a> StarStaking.sol
+    </h1>
+    <div class='clearfix'>
+      <div class='fl pad1y space-right2'>
+        <span class="strong">58.62% </span>
+        <span class="quiet">Statements</span>
+        <span class='fraction'>17/29</span>
+      </div>
+      <div class='fl pad1y space-right2'>
+        <span class="strong">50% </span>
+        <span class="quiet">Branches</span>
+        <span class='fraction'>6/12</span>
+      </div>
+      <div class='fl pad1y space-right2'>
+        <span class="strong">62.5% </span>
+        <span class="quiet">Functions</span>
+        <span class='fraction'>5/8</span>
+      </div>
+      <div class='fl pad1y space-right2'>
+        <span class="strong">51.43% </span>
+        <span class="quiet">Lines</span>
+        <span class='fraction'>18/35</span>
+      </div>
+    </div>
+  </div>
+  <div class='status-line medium'></div>
+<pre><table class="coverage">
+<tr><td class="line-count quiet">1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124</td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">32×</span>
+<span class="cline-any cline-yes">32×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">32×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">32×</span>
+<span class="cline-any cline-yes">32×</span>
+<span class="cline-any cline-yes">32×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">32×</span>
+<span class="cline-any cline-yes">32×</span>
+<span class="cline-any cline-yes">32×</span>
+<span class="cline-any cline-yes">32×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">31×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">32×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">32×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">32×</span>
+<span class="cline-any cline-yes">32×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">32×</span>
+<span class="cline-any cline-yes">32×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">32×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">pragma solidity 0.4.24;
+&nbsp;
+import "./lib/Ownable.sol";
+import "./lib/SafeMath.sol";
+import "./lib/ERC20.sol";
+import "./Lockable.sol";
+import "./LinkedListLib.sol";
+import "./StarStakingInterface.sol";
+&nbsp;
+contract StarStaking is StarStakingInterface, Lockable {
+    using SafeMath for uint256;
+    using LinkedListLib for LinkedListLib.LinkedList;
+&nbsp;
+    address constant HEAD = 0x0;
+    bool constant PREV = false;
+    bool constant NEXT = true;
+&nbsp;
+    ERC20 public token;
+&nbsp;
+    mapping (address =&gt; uint256) public totalStakingPointsFor;
+    mapping (address =&gt; uint256) public totalStakedFor;
+&nbsp;
+    LinkedListLib.LinkedList topRanks;
+    uint256 public topRanksCount;
+&nbsp;
+    uint256 public startTime;
+    uint256 public closingTime;
+&nbsp;
+    modifier whenStakingOpen {
+        <span class="missing-if-branch" title="else path not taken" >E</span>require(now &gt;= startTime);
+        <span class="missing-if-branch" title="else path not taken" >E</span>require(now &lt; closingTime);
+&nbsp;
+        _;
+    }
+&nbsp;
+    /**
+     * @param _token Token that can be staked.
+     * @param _startTime Timestamp for the beginning of the staking event
+     * @param _closingTime Timestamp of the end of staking event
+     */
+    constructor(ERC20 _token, uint256 _startTime, uint256 _closingTime) public {
+        <span class="missing-if-branch" title="else path not taken" >E</span>require(address(_token) != 0x0);
+        <span class="missing-if-branch" title="else path not taken" >E</span>require(_startTime &lt; _closingTime);
+        <span class="missing-if-branch" title="else path not taken" >E</span>require(_startTime &gt; now);
+&nbsp;
+        token = _token;
+        startTime = _startTime;
+        closingTime = _closingTime;
+        topRanksCount = 0;
+    }
+&nbsp;
+    /**
+     * @dev Stakes a certain amount of tokens.
+     * @param amount Amount of tokens to stake.
+     */
+    function stake(uint256 amount) public {
+        stakeFor(msg.sender, amount);
+    }
+&nbsp;
+    /**
+     * @dev Stakes a certain amount of tokens for another user.
+     * @param user Address of the user to stake for.
+     * @param amount Amount of tokens to stake.
+     */
+    function stakeFor(address user, uint256 amount) public onlyWhenUnlocked whenStakingOpen {
+        addStakingPoints(user, amount);
+&nbsp;
+        <span class="missing-if-branch" title="else path not taken" >E</span>require(token.transferFrom(msg.sender, address(this), amount));
+    }
+&nbsp;
+    function addStakingPoints(address user, uint256 amount) internal {
+        uint256 timeUntilEnd = closingTime.sub(now);
+        uint256 addedStakingPoints = timeUntilEnd.mul(amount);
+&nbsp;
+        totalStakingPointsFor[user] = totalStakingPointsFor[user].add(addedStakingPoints);
+        totalStakedFor[user] = totalStakedFor[user].add(amount);
+&nbsp;
+        emit Staked(user, amount, addedStakingPoints);
+    }
+&nbsp;
+    // TODO: Remove for production
+<span class="fstat-no" title="function not covered" >    function fakeInsert(address user, uint256 amount, address referenceNode) publi</span>c {
+<span class="cstat-no" title="statement not covered" >        addStakingPoints(user, amount)</span>;
+        topRanks.insert(referenceNode, user, NEXT);
+&nbsp;
+        topRanksCount++;
+    }
+&nbsp;
+    /**
+     * @dev Returns the previous or next top rank node.
+     * @param referenceNode Address of the reference.
+     * @param direction Bool for direction
+     */
+<span class="fstat-no" title="function not covered" >    function getTopRank(address referenceNode, bool direction) public view returns (address</span>) {
+<span class="cstat-no" title="statement not covered" >        return topRanks.list[referenceNode][direction];</span>
+    }
+&nbsp;
+    /**
+     * @dev Returns a flat list of 3-tuples (address, stakingPoints, totalStaked).
+     */
+<span class="fstat-no" title="function not covered" >    function getTopRanksTuples() public view returns (uint256[]</span>) {
+<span class="cstat-no" title="statement not covered" >        uint256 tripleRanksCount = topRanksCount * 3</span>;
+<span class="cstat-no" title="statement not covered" >        uint256[] memory topRanksList = new uint256[](tripleRanksCount)</span>;
+&nbsp;
+<span class="cstat-no" title="statement not covered" >        address referenceNode = HEAD</span>;
+<span class="cstat-no" title="statement not covered" >        uint256 x = 0</span>;
+&nbsp;
+<span class="cstat-no" title="statement not covered" >        while(x &lt; tripleRanksCount) {</span>
+<span class="cstat-no" title="statement not covered" >            referenceNode = getTopRank(referenceNode, NEXT)</span>;
+&nbsp;
+<span class="cstat-no" title="statement not covered" >            topRanksList[x] = uint256(referenceNode)</span>;
+            x++;
+&nbsp;
+<span class="cstat-no" title="statement not covered" >            topRanksList[x] = totalStakingPointsFor[referenceNode]</span>;
+            x++;
+&nbsp;
+<span class="cstat-no" title="statement not covered" >            topRanksList[x] = totalStakedFor[referenceNode]</span>;
+            x++;
+        }
+&nbsp;
+<span class="cstat-no" title="statement not covered" >        return topRanksList;</span>
+    }
+}
+&nbsp;</pre></td></tr>
+</table></pre>
+<div class='push'></div><!-- for sticky footer -->
+</div><!-- /wrapper -->
+<div class='footer quiet pad2 space-top1 center small'>
+  Code coverage
+  generated by <a href="http://istanbul-js.org/" target="_blank">istanbul</a> at Mon Aug 20 2018 20:43:25 GMT+0200 (CEST)
+</div>
+</div>
+<script src="../prettify.js"></script>
+<script>
+window.onload = function () {
+        if (typeof prettyPrint === 'function') {
+            prettyPrint();
+        }
+};
+</script>
+<script src="../sorter.js"></script>
+</body>
+</html>
