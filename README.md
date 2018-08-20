@@ -118,6 +118,18 @@ To generate test coverage, type:
 
 -   `npm run cov`
 
+**Generate Flattened Contracts**
+
+To generate flattened version of contracts in `flats/`, type:
+
+-   `npm run flat`
+
+To generate flatten version of contracts and serve them to remix, type:
+
+-   install `remixd` with `npm -g remixd`
+
+-   `npm run remix`
+
 
 ## License and Warranty
 
