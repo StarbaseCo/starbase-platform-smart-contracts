@@ -35,8 +35,8 @@ contract StarStaking is StarStakingInterface, Lockable {
 
     /**
      * @param _token Token that can be staked.
-     * @param _startTime Timestamp for the beginning of the staking event
-     * @param _closingTime Timestamp of the end of staking event
+     * @param _startTime Timestamp for the beginning of the staking event.
+     * @param _closingTime Timestamp of the end of staking event.
      */
     constructor(ERC20 _token, uint256 _startTime, uint256 _closingTime) public {
         require(address(_token) != 0x0);
@@ -51,10 +51,11 @@ contract StarStaking is StarStakingInterface, Lockable {
 
     /**
      * @dev Stakes a certain amount of tokens.
-     * @param amount Amount of tokens to stake.
+     * @param _amount Amount of tokens to stake.
+     * @param _node Node as reference for insert position into top ranks.
      */
-    function stake(uint256 amount) public {
-        stakeFor(msg.sender, amount);
+    function stake(uint256 _amount, address _node) public {
+        stakeFor(msg.sender, _amount, _node);
     }
 
     /**
@@ -123,11 +124,11 @@ contract StarStaking is StarStakingInterface, Lockable {
 
     /**
      * @dev Returns the previous or next top rank node.
-     * @param referenceNode Address of the reference.
-     * @param direction Bool for direction
+     * @param _referenceNode Address of the reference.
+     * @param _direction Bool for direction.
      */
-    function getTopRank(address referenceNode, bool direction) public view returns (address) {
-        return topRanks.list[referenceNode][direction];
+    function getTopRank(address _referenceNode, bool _direction) public view returns (address) {
+        return topRanks.list[_referenceNode][_direction];
     }
 
     /**
