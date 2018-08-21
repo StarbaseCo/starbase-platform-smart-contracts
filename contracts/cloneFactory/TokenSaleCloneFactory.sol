@@ -3,11 +3,8 @@ pragma solidity 0.4.24;
 import "../TokenSaleInterface.sol";
 import "./CloneFactory.sol";
 import "../lib/Ownable.sol";
-import "../lib/SafeMath.sol";
-
 
 contract TokenSaleCloneFactory is Ownable, CloneFactory {
-    using SafeMath for uint256;
     // TokenSale contract address for cloning purposes
     address public libraryAddress;
     address starToken;
@@ -21,21 +18,23 @@ contract TokenSaleCloneFactory is Ownable, CloneFactory {
     /**
     * @dev set TokenSale contract clone as well as starToken upon deployment
     * @param _libraryAddress TokenSale contract address for cloning purposes
-    * @param _starToken Star contract address
-    * in the _libraryAddress deployment
+    * @param _starToken Star contract address in the _libraryAddress deployment
     */
     constructor(address _libraryAddress, address _starToken) public {
-        require(_libraryAddress != address(0) && _starToken != address(0), "params _libraryAddress and _starToken should not be empty");
+        require(
+            _libraryAddress != address(0) && _starToken != address(0),
+            "_libraryAddress and _starToken should not be empty!"
+        );
         libraryAddress = _libraryAddress;
         starToken = _starToken;
     }
 
    /**
-    * @dev Have the option of updating the TokenSale contract for cloning
+    * @dev Have the option of updating the TokenSale contract for cloning.
     * @param _libraryAddress Address for new contract
     */
     function setLibraryAddress(address _libraryAddress) external onlyOwner {
-        require(_libraryAddress != address(0), "params _libraryAddress should not be empty");
+        require(_libraryAddress != address(0), "_libraryAddress should not be empty!");
         libraryAddress = _libraryAddress;
     }
 
