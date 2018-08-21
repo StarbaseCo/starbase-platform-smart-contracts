@@ -3,7 +3,6 @@ const LinkedListMock = artifacts.require('LinkedListMock.sol');
 
 const { should } = require('./helpers/utils');
 
-const NULL = '0x0000000000000000000000000000000000000000';
 const HEAD = '0x0000000000000000000000000000000000000000';
 const PREV = false;
 const NEXT = true;
