@@ -27,8 +27,8 @@ contract StarStaking is StarStakingInterface, Lockable {
     uint256 public closingTime;
 
     modifier whenStakingOpen {
-        require(now >= startTime);
-        require(now < closingTime);
+        require(now >= startTime, "Staking period not yet started!");
+        require(now < closingTime, "Staking period already closed!");
 
         _;
     }
@@ -39,9 +39,9 @@ contract StarStaking is StarStakingInterface, Lockable {
      * @param _closingTime Timestamp of the end of staking event.
      */
     constructor(ERC20 _token, uint256 _startTime, uint256 _closingTime) public {
-        require(address(_token) != 0x0);
-        require(_startTime < _closingTime);
-        require(_startTime > now);
+        require(address(_token) != 0x0, "Token address may must be defined!");
+        require(_startTime < _closingTime, "Start time must be before closing time!");
+        require(_startTime > now, "Start time must be after current time!");
 
         token = _token;
         startTime = _startTime;
