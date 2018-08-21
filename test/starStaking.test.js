@@ -23,7 +23,7 @@ const  BALANCES = [
     new BigNumber(1000000000),
 ];
 
-contract.only('StarStaking', function([user1, user2, user3, user4, user5, user6]) {
+contract('StarStaking', function([user1, user2, user3, user4, user5, user6]) {
     let stakingContract, token, initialBalance, openingTime, closingTime;
 
     beforeEach(async () => {
