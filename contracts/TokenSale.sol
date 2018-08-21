@@ -4,7 +4,7 @@ import "./lib/Pausable.sol";
 import "./lib/FinalizableCrowdsale.sol";
 import "./CompanyToken.sol";
 import "./Whitelist.sol";
-
+import "./TokenSaleInterface.sol";
 
 /**
  * @title Token Sale contract - crowdsale of company tokens.
@@ -27,7 +27,7 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
     event TokenPurchaseWithStar(address indexed purchaser, address indexed beneficiary, uint256 value, uint256 amount);
 
     /**
-     * @dev Contract constructor function
+     * @dev initialization function
      * @param _startTime The timestamp of the beginning of the crowdsale
      * @param _endTime Timestamp when the crowdsale will finish
      * @param _whitelist contract containing the whitelisted addresses
@@ -38,29 +38,40 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
      * @param _wallet Multisig wallet that will hold the crowdsale funds.
      * @param _crowdsaleCap Cap for the token sale
      */
-    constructor(
-            uint256 _startTime,
-            uint256 _endTime,
-            address _whitelist,
-            address _starToken,
-            address _companyToken,
-            uint256 _rate,
-            uint256 _starRate,
-            address _wallet,
-            uint256 _crowdsaleCap
-        )
-        public
-        FinalizableCrowdsale()
-        Crowdsale(_startTime, _endTime, _rate, _wallet)
+    function init(
+        uint256 _startTime,
+        uint256 _endTime,
+        address _whitelist,
+        address _starToken,
+        address _companyToken,
+        uint256 _rate,
+        uint256 _starRate,
+        address _wallet,
+        uint256 _crowdsaleCap
+    )
+        external
     {
         require(
-                _whitelist != address(0) &&
-                _starToken != address(0) &&
-                _starRate != 0 &&
-                _companyToken != address(0) &&
-                _crowdsaleCap != 0
+            whitelist == address(0) &&
+            starToken == address(0) &&
+            rate == 0 &&
+            starRate == 0 &&
+            tokenOnSale == address(0) &&
+            crowdsaleCap == 0,
+            "Global variables should not have been set before!"
         );
 
+        require(
+            _whitelist != address(0) &&
+            _rate != 0 &&
+            _starToken != address(0) &&
+            _starRate != 0 &&
+            _companyToken != address(0) &&
+            _crowdsaleCap != 0,
+            "Parameter variables cannot be empty!"
+        );
+
+        initCrowdsale(_startTime, _endTime, _rate, _wallet);
         tokenOnSale = CompanyToken(_companyToken);
         whitelist = Whitelist(_whitelist);
         starToken = StandardToken(_starToken);
@@ -70,7 +81,7 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
         uint256 tokenDecimals = CompanyToken(tokenOnSale).decimals();
         crowdsaleCap = _crowdsaleCap.mul(10 ** tokenDecimals);
 
-        require(CompanyToken(tokenOnSale).paused());
+        require(CompanyToken(tokenOnSale).paused(), "Company token must be paused upon initialization!");
     }
 
     modifier isWhitelisted(address beneficiary) {
