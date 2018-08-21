@@ -59,31 +59,66 @@ contract StarStaking is StarStakingInterface, Lockable {
 
     /**
      * @dev Stakes a certain amount of tokens for another user.
-     * @param user Address of the user to stake for.
-     * @param amount Amount of tokens to stake.
+     * @param _user Address of the user to stake for.
+     * @param _amount Amount of tokens to stake.
+     * @param _node Node as reference for insert position into top ranks.
      */
-    function stakeFor(address user, uint256 amount) public onlyWhenUnlocked whenStakingOpen {
-        addStakingPoints(user, amount);
+    function stakeFor(address _user, uint256 _amount, address _node) public onlyWhenUnlocked whenStakingOpen {
+        addStakingPoints(_user, _amount);
 
-        require(token.transferFrom(msg.sender, address(this), amount));
+        if (topRanksCount == 0) {
+            topRanks.insert(HEAD, _user, NEXT);
+            topRanksCount++;
+        } else {
+            if (topRanksCount < 100) {
+                require(_node != 0, "Top ranks count below threshold, please provide suggested position!");
+            }
+
+            if (_node != 0) {
+                require(topRanks.nodeExists(_node), "Node for suggested position does not exist!");
+                sortedInsert(_user, _node);
+
+                if (topRanksCount < 100) {
+                    topRanksCount++;
+                } else {
+                    topRanks.pop(PREV);
+                }
+            }
+        }
+
+        require(token.transferFrom(msg.sender, address(this), _amount), "Not enough funds for sender!");
     }
 
-    function addStakingPoints(address user, uint256 amount) internal {
+    function sortedInsert(address _user, address _node) internal {
+        uint256 newRankPoints = totalStakingPointsFor[_user];
+        uint256 replacedRankPoints = totalStakingPointsFor[_node];
+        address oneRankAbove = topRanks.list[_node][PREV];
+
+        if (oneRankAbove == HEAD && newRankPoints > replacedRankPoints) {
+            // first place
+            topRanks.insert(_node, _user, PREV);
+            return;
+        }
+
+        require(newRankPoints < replacedRankPoints, "Suggested position into top ranks too low!");
+
+        address oneRankBelow = topRanks.list[_node][NEXT];
+        if (oneRankBelow != HEAD) {
+            uint256 oneRankBelowPoints = totalStakingPointsFor[oneRankBelow];
+            require(newRankPoints > oneRankBelowPoints, "Suggested position into top ranks too high!");
+        }
+
+        topRanks.insert(_node, _user, NEXT);
+    }
+
+    function addStakingPoints(address _user, uint256 _amount) internal {
         uint256 timeUntilEnd = closingTime.sub(now);
-        uint256 addedStakingPoints = timeUntilEnd.mul(amount);
+        uint256 addedStakingPoints = timeUntilEnd.mul(_amount);
 
-        totalStakingPointsFor[user] = totalStakingPointsFor[user].add(addedStakingPoints);
-        totalStakedFor[user] = totalStakedFor[user].add(amount);
+        totalStakingPointsFor[_user] = totalStakingPointsFor[_user].add(addedStakingPoints);
+        totalStakedFor[_user] = totalStakedFor[_user].add(_amount);
 
-        emit Staked(user, amount, addedStakingPoints);
-    }
-
-    // TODO: Remove for production
-    function fakeInsert(address user, uint256 amount, address referenceNode) public {
-        addStakingPoints(user, amount);
-        topRanks.insert(referenceNode, user, NEXT);
-
-        topRanksCount++;
+        emit Staked(_user, _amount, addedStakingPoints);
     }
 
     /**
