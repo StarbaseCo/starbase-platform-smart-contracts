@@ -6,7 +6,6 @@ import "./CompanyToken.sol";
 import "./Whitelist.sol";
 import "./TokenSaleInterface.sol";
 
-
 /**
  * @title Token Sale contract - crowdsale of company tokens.
  * @author Gustavo Guimaraes - <gustavo@starbase.co>
