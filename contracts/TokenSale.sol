@@ -58,14 +58,18 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
             rate == 0 &&
             starRate == 0 &&
             tokenOnSale == address(0) &&
-            crowdsaleCap == 0 &&
+            crowdsaleCap == 0,
+            "Global variables should not have been set before!"
+        );
+
+        require(
             _whitelist != address(0) &&
             _rate != 0 &&
             _starToken != address(0) &&
             _starRate != 0 &&
             _companyToken != address(0) &&
             _crowdsaleCap != 0,
-            "Global variables should have not been set before and params variables cannot be empty"
+            "Parameter variables cannot be empty!"
         );
 
         initCrowdsale(_startTime, _endTime, _rate, _wallet);
@@ -78,7 +82,7 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
         uint256 tokenDecimals = CompanyToken(tokenOnSale).decimals();
         crowdsaleCap = _crowdsaleCap.mul(10 ** tokenDecimals);
 
-        require(CompanyToken(tokenOnSale).paused(), "Company token must be paused upon initialization");
+        require(CompanyToken(tokenOnSale).paused(), "Company token must be paused upon initialization!");
     }
 
     modifier isWhitelisted(address beneficiary) {
