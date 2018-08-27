@@ -3,7 +3,7 @@ pragma solidity 0.4.24;
 import "./lib/Ownable.sol";
 import "./lib/SafeMath.sol";
 import "./lib/ERC20.sol";
-import "./Lockable.sol";
+import "./lib/Lockable.sol";
 import "./LinkedListLib.sol";
 import "./StarStakingInterface.sol";
 
