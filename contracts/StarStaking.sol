@@ -23,6 +23,7 @@ contract StarStaking is StarStakingInterface, Lockable {
     LinkedListLib.LinkedList topRanks;
     uint256 public topRanksCount;
 
+    uint256 public topRanksMaxSize;
     uint256 public startTime;
     uint256 public closingTime;
 
@@ -35,18 +36,21 @@ contract StarStaking is StarStakingInterface, Lockable {
 
     /**
      * @param _token Token that can be staked.
+     * @param _topRanksMaxSize Maximal size of the top ranks.
      * @param _startTime Timestamp for the beginning of the staking event.
      * @param _closingTime Timestamp of the end of staking event.
      */
-    constructor(ERC20 _token, uint256 _startTime, uint256 _closingTime) public {
+    constructor(ERC20 _token, uint256 _topRanksMaxSize, uint256 _startTime, uint256 _closingTime) public {
         require(address(_token) != address(0), "Token address may must be defined!");
         require(_startTime < _closingTime, "Start time must be before closing time!");
         require(_startTime > now, "Start time must be after current time!");
+        require(_topRanksMaxSize > 0, "Top ranks size must be more than 0.");
 
         token = _token;
         startTime = _startTime;
         closingTime = _closingTime;
         topRanksCount = 0;
+        topRanksMaxSize = _topRanksMaxSize;
     }
 
     /**
@@ -71,7 +75,7 @@ contract StarStaking is StarStakingInterface, Lockable {
             topRanks.insert(HEAD, _user, NEXT);
             topRanksCount++;
         } else {
-            if (topRanksCount < 100) {
+            if (topRanksCount < topRanksMaxSize) {
                 require(_node != address(0), "Top ranks count below threshold, please provide suggested position!");
             }
 
@@ -79,7 +83,7 @@ contract StarStaking is StarStakingInterface, Lockable {
                 require(topRanks.nodeExists(_node), "Node for suggested position does not exist!");
                 sortedInsert(_user, _node);
 
-                if (topRanksCount < 100) {
+                if (topRanksCount < topRanksMaxSize) {
                     topRanksCount++;
                 } else {
                     topRanks.pop(PREV);
