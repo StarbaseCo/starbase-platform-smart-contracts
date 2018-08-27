@@ -130,7 +130,7 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
      * @dev allows sale to receive wei or not
      */
     function setIsWeiAccepted(bool _isWeiAccepted) external onlyOwner {
-        require(rate != 0);
+        require(rate != 0, "When accepting Wei you need to set a conversion rate!");
         isWeiAccepted = _isWeiAccepted;
     }
 
