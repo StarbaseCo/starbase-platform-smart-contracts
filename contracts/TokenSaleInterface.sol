@@ -15,7 +15,8 @@ interface TokenSaleInterface {
         uint256 _rate,
         uint256 _starRate,
         address _wallet,
-        uint256 _crowdsaleCap
+        uint256 _crowdsaleCap,
+        bool    _isWeiAccepted
     )
     external;
 }

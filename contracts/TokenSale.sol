@@ -16,7 +16,7 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
     uint256 public starRaised;
     uint256 public starRate;
     address public initialTokenOwner;
-    bool public enableWei;
+    bool public isWeiAccepted;
 
     // external contracts
     Whitelist public whitelist;
@@ -37,6 +37,7 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
      * @param _starRate The token rate per STAR
      * @param _wallet Multisig wallet that will hold the crowdsale funds.
      * @param _crowdsaleCap Cap for the token sale
+     * @param _isWeiAccepted Bool for acceptance of ether in token sale
      */
     function init(
         uint256 _startTime,
@@ -47,7 +48,8 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
         uint256 _rate,
         uint256 _starRate,
         address _wallet,
-        uint256 _crowdsaleCap
+        uint256 _crowdsaleCap,
+        bool    _isWeiAccepted
     )
         external
     {
@@ -63,9 +65,8 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
 
         require(
             _whitelist != address(0) &&
-            _rate != 0 &&
             _starToken != address(0) &&
-            _starRate != 0 &&
+            !(_rate == 0 && _starRate == 0) &&
             _companyToken != address(0) &&
             _crowdsaleCap != 0,
             "Parameter variables cannot be empty!"
@@ -76,6 +77,7 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
         whitelist = Whitelist(_whitelist);
         starToken = StandardToken(_starToken);
         starRate = _starRate;
+        isWeiAccepted = _isWeiAccepted;
 
         initialTokenOwner = CompanyToken(tokenOnSale).owner();
         uint256 tokenDecimals = CompanyToken(tokenOnSale).decimals();
@@ -125,10 +127,11 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
     }
 
     /**
-     * @dev enable sale to receive
+     * @dev allows sale to receive wei or not
      */
-    function toggleEnableWei() external onlyOwner {
-        enableWei = !enableWei;
+    function setIsWeiAccepted(bool _isWeiAccepted) external onlyOwner {
+        require(rate != 0);
+        isWeiAccepted = _isWeiAccepted;
     }
 
     /**
@@ -145,7 +148,7 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
         require(beneficiary != address(0));
         require(validPurchase() && tokenOnSale.totalSupply() < crowdsaleCap);
 
-        if (!enableWei) {
+        if (!isWeiAccepted) {
             require(msg.value == 0);
         } else if (msg.value > 0) {
             buyTokensWithWei(beneficiary);

@@ -20,6 +20,7 @@ contract(
     const starRate = new BigNumber(10);
     const rate = new BigNumber(50);
     const crowdsaleCap = new BigNumber(20000000); // 20M
+    const isWeiAcceptedDefaultValue = false;
 
     beforeEach(async () => {
       startTime = latestTime() + 20; // crowdsale starts in 20 seconds
@@ -88,7 +89,8 @@ contract(
           rate,
           starRate,
           wallet,
-          crowdsaleCap
+          crowdsaleCap,
+          isWeiAcceptedDefaultValue
         );
 
         expect(tokenSaleTx).to.exist;
@@ -104,6 +106,7 @@ contract(
           starRate,
           wallet,
           crowdsaleCap,
+          isWeiAcceptedDefaultValue,
           { from: owner }
         );
 
@@ -121,7 +124,7 @@ contract(
       });
 
       it("registers the number of tokenSale contract deployed per address", async () => {
-        const tokenSale = await tokenSaleCloneFactory.create(
+        await tokenSaleCloneFactory.create(
           startTime,
           endTime,
           whitelist,
@@ -130,6 +133,7 @@ contract(
           starRate,
           wallet,
           crowdsaleCap,
+          isWeiAcceptedDefaultValue,
           { from: owner }
         );
 
@@ -138,7 +142,7 @@ contract(
         );
         numberOfInstantiations.should.be.bignumber.equal(1);
 
-        const tokenSale2 = await tokenSaleCloneFactory.create(
+        await tokenSaleCloneFactory.create(
           startTime,
           endTime,
           whitelist,
@@ -147,6 +151,7 @@ contract(
           starRate,
           wallet,
           crowdsaleCap,
+          isWeiAcceptedDefaultValue,
           { from: owner }
         );
 

@@ -14,7 +14,7 @@ contract TokenSaleCloneFactory is Ownable, CloneFactory {
 
     event ContractInstantiation(address msgSender, address instantiation);
 
-    // 
+    //
     /**
     * @dev set TokenSale contract clone as well as starToken upon deployment
     * @param _libraryAddress TokenSale contract address for cloning purposes
@@ -61,6 +61,7 @@ contract TokenSaleCloneFactory is Ownable, CloneFactory {
      * @param _starRate The token rate per STAR
      * @param _wallet Multisig wallet that will hold the crowdsale funds.
      * @param _crowdsaleCap Cap for the token sale
+     * @param _isWeiAccepted Bool for acceptance of ether in token sale
      */
     function create
     (
@@ -71,7 +72,8 @@ contract TokenSaleCloneFactory is Ownable, CloneFactory {
         uint256 _rate,
         uint256 _starRate,
         address _wallet,
-        uint256 _crowdsaleCap
+        uint256 _crowdsaleCap,
+        bool    _isWeiAccepted
     )
         public
     {
@@ -85,7 +87,8 @@ contract TokenSaleCloneFactory is Ownable, CloneFactory {
             _rate,
             _starRate,
             _wallet,
-            _crowdsaleCap
+            _crowdsaleCap,
+            _isWeiAccepted
         );
 
         register(tokenSale);
