@@ -46,7 +46,6 @@ contract Crowdsale {
         );
         require(_startTime >= now, "_startTime must be more than current time!");
         require(_endTime >= _startTime, "_endTime must be more than _startTime!");
-        require(_rate > 0, "_rate must be greater than zero!");
         require(_wallet != address(0), "_wallet parameter must not be empty!");
 
         startTime = _startTime;
