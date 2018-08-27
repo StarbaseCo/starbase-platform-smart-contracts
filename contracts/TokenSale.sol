@@ -109,7 +109,7 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
      * @param newRate Figure that corresponds to the new ETH rate per token
      */
     function setRate(uint256 newRate) external onlyOwner {
-        require(newRate != 0);
+        require(newRate != 0, "ETH rate must be more than 0");
 
         emit TokenRateChanged(rate, newRate);
         rate = newRate;
@@ -120,7 +120,7 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
      * @param newStarRate Figure that corresponds to the new STAR rate per token
      */
     function setStarRate(uint256 newStarRate) external onlyOwner {
-        require(newStarRate != 0);
+        require(newStarRate != 0, "Star rate must be more than 0!");
 
         emit TokenStarRateChanged(starRate, newStarRate);
         starRate = newStarRate;
