@@ -11,7 +11,7 @@ contract StarStaking is StarStakingInterface, Lockable {
     using SafeMath for uint256;
     using LinkedListLib for LinkedListLib.LinkedList;
 
-    address constant HEAD = 0x0;
+    address constant HEAD = address(0);
     bool constant PREV = false;
     bool constant NEXT = true;
 
@@ -39,7 +39,7 @@ contract StarStaking is StarStakingInterface, Lockable {
      * @param _closingTime Timestamp of the end of staking event.
      */
     constructor(ERC20 _token, uint256 _startTime, uint256 _closingTime) public {
-        require(address(_token) != 0x0, "Token address may must be defined!");
+        require(address(_token) != address(0), "Token address may must be defined!");
         require(_startTime < _closingTime, "Start time must be before closing time!");
         require(_startTime > now, "Start time must be after current time!");
 
@@ -72,10 +72,10 @@ contract StarStaking is StarStakingInterface, Lockable {
             topRanksCount++;
         } else {
             if (topRanksCount < 100) {
-                require(_node != 0, "Top ranks count below threshold, please provide suggested position!");
+                require(_node != address(0), "Top ranks count below threshold, please provide suggested position!");
             }
 
-            if (_node != 0) {
+            if (_node != address(0)) {
                 require(topRanks.nodeExists(_node), "Node for suggested position does not exist!");
                 sortedInsert(_user, _node);
 
