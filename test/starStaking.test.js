@@ -1,4 +1,4 @@
-const BigNumber = require('bignumber.js');
+const BigNumber = web3.BigNumber;
 
 const StarStaking = artifacts.require('StarStaking.sol');
 const MintableToken = artifacts.require('MintableToken.sol');
