@@ -101,7 +101,7 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
      * @dev override fallback function. cannot use it
      */
     function () external payable {
-        revert();
+        revert("No fallback function defined!");
     }
 
     /**
