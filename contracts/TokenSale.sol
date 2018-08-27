@@ -225,7 +225,7 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
      * @return true if the transaction can buy tokens
      */
     function validPurchase() internal view returns (bool) {
-      return now >= startTime && now <= endTime;
+        return now >= startTime && now <= endTime;
     }
 
     /**
