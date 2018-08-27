@@ -388,55 +388,57 @@ contract MintableToken is StandardToken, Ownable {
  * as they arrive.
  */
 contract Crowdsale {
-  using SafeMath for uint256;
+    using SafeMath for uint256;
 
-  // The token being sold
-  MintableToken public tokenOnSale;
+    // The token being sold
+    MintableToken public tokenOnSale;
 
-  // start and end timestamps where investments are allowed (both inclusive)
-  uint256 public startTime;
-  uint256 public endTime;
+    // start and end timestamps where investments are allowed (both inclusive)
+    uint256 public startTime;
+    uint256 public endTime;
 
-  // address where funds are collected
-  address public wallet;
+    // address where funds are collected
+    address public wallet;
 
-  // how many token units a buyer gets per wei
-  uint256 public rate;
+    // how many token units a buyer gets per wei
+    uint256 public rate;
 
-  // amount of raised money in wei
-  uint256 public weiRaised;
+    // amount of raised money in wei
+    uint256 public weiRaised;
 
 
-   // event for token purchase logging
-   // purchaser who paid for the tokens
-   // beneficiary who got the tokens
-   // value weis paid for purchase
-   // amount amount of tokens purchased
-  event TokenPurchase(address indexed purchaser, address indexed beneficiary, uint256 value, uint256 amount);
+    // event for token purchase logging
+    // purchaser who paid for the tokens
+    // beneficiary who got the tokens
+    // value weis paid for purchase
+    // amount amount of tokens purchased
+    event TokenPurchase(address indexed purchaser, address indexed beneficiary, uint256 value, uint256 amount);
 
-  function initCrowdsale(uint256 _startTime, uint256 _endTime, uint256 _rate, address _wallet) public {
-    require(startTime == 0 && endTime == 0 && rate == 0 && wallet == address(0), "Ensure global variables are empty when initializing crowdsale");
-    require(_startTime >= now, "_starTime is more than current time");
-    require(_endTime >= _startTime, "_endTime must be more than _startTime");
-    require(_rate > 0, "rate is greater than zero");
-    require(_wallet != address(0), "_wallet params must not be empty");
+    function initCrowdsale(uint256 _startTime, uint256 _endTime, uint256 _rate, address _wallet) public {
+        require(
+            startTime == 0 && endTime == 0 && rate == 0 && wallet == address(0),
+            "Global variables must be empty when initializing crowdsale!"
+        );
+        require(_startTime >= now, "_startTime must be more than current time!");
+        require(_endTime >= _startTime, "_endTime must be more than _startTime!");
+        require(_wallet != address(0), "_wallet parameter must not be empty!");
 
-    startTime = _startTime;
-    endTime = _endTime;
-    rate = _rate;
-    wallet = _wallet;
-  }
+        startTime = _startTime;
+        endTime = _endTime;
+        rate = _rate;
+        wallet = _wallet;
+    }
 
-  // @return true if crowdsale event has ended
-  function hasEnded() public view returns (bool) {
-    return now > endTime;
-  }
+    // @return true if crowdsale event has ended
+    function hasEnded() public view returns (bool) {
+        return now > endTime;
+    }
 
-  // send ether to the fund collection wallet
-  // override to create custom fund forwarding mechanisms
-  function forwardFunds() internal {
-    wallet.transfer(msg.value);
-  }
+    // send ether to the fund collection wallet
+    // override to create custom fund forwarding mechanisms
+    function forwardFunds() internal {
+        wallet.transfer(msg.value);
+    }
 }
 
 // File: contracts/lib/FinalizableCrowdsale.sol
@@ -590,7 +592,8 @@ interface TokenSaleInterface {
         uint256 _rate,
         uint256 _starRate,
         address _wallet,
-        uint256 _crowdsaleCap
+        uint256 _crowdsaleCap,
+        bool    _isWeiAccepted
     )
     external;
 }
@@ -607,7 +610,7 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
     uint256 public starRaised;
     uint256 public starRate;
     address public initialTokenOwner;
-    bool public enableWei;
+    bool public isWeiAccepted;
 
     // external contracts
     Whitelist public whitelist;
@@ -628,6 +631,7 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
      * @param _starRate The token rate per STAR
      * @param _wallet Multisig wallet that will hold the crowdsale funds.
      * @param _crowdsaleCap Cap for the token sale
+     * @param _isWeiAccepted Bool for acceptance of ether in token sale
      */
     function init(
         uint256 _startTime,
@@ -638,7 +642,8 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
         uint256 _rate,
         uint256 _starRate,
         address _wallet,
-        uint256 _crowdsaleCap
+        uint256 _crowdsaleCap,
+        bool    _isWeiAccepted
     )
         external
     {
@@ -648,14 +653,17 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
             rate == 0 &&
             starRate == 0 &&
             tokenOnSale == address(0) &&
-            crowdsaleCap == 0 &&
+            crowdsaleCap == 0,
+            "Global variables should not have been set before!"
+        );
+
+        require(
             _whitelist != address(0) &&
-            _rate != 0 &&
             _starToken != address(0) &&
-            _starRate != 0 &&
+            !(_rate == 0 && _starRate == 0) &&
             _companyToken != address(0) &&
             _crowdsaleCap != 0,
-            "Global variables should have not been set before and params variables cannot be empty"
+            "Parameter variables cannot be empty!"
         );
 
         initCrowdsale(_startTime, _endTime, _rate, _wallet);
@@ -663,12 +671,13 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
         whitelist = Whitelist(_whitelist);
         starToken = StandardToken(_starToken);
         starRate = _starRate;
+        isWeiAccepted = _isWeiAccepted;
 
         initialTokenOwner = CompanyToken(tokenOnSale).owner();
         uint256 tokenDecimals = CompanyToken(tokenOnSale).decimals();
         crowdsaleCap = _crowdsaleCap.mul(10 ** tokenDecimals);
 
-        require(CompanyToken(tokenOnSale).paused(), "Company token must be paused upon initialization");
+        require(CompanyToken(tokenOnSale).paused(), "Company token must be paused upon initialization!");
     }
 
     modifier isWhitelisted(address beneficiary) {
@@ -712,10 +721,11 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
     }
 
     /**
-     * @dev enable sale to receive
+     * @dev allows sale to receive wei or not
      */
-    function toggleEnableWei() external onlyOwner {
-        enableWei = !enableWei;
+    function setIsWeiAccepted(bool _isWeiAccepted) external onlyOwner {
+        require(rate != 0);
+        isWeiAccepted = _isWeiAccepted;
     }
 
     /**
@@ -732,7 +742,7 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
         require(beneficiary != address(0));
         require(validPurchase() && tokenOnSale.totalSupply() < crowdsaleCap);
 
-        if (!enableWei) {
+        if (!isWeiAccepted) {
             require(msg.value == 0);
         } else if (msg.value > 0) {
             buyTokensWithWei(beneficiary);

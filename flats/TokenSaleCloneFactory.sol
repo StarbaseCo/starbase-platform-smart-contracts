@@ -16,7 +16,8 @@ interface TokenSaleInterface {
         uint256 _rate,
         uint256 _starRate,
         address _wallet,
-        uint256 _crowdsaleCap
+        uint256 _crowdsaleCap,
+        bool    _isWeiAccepted
     )
     external;
 }
@@ -48,20 +49,20 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 contract CloneFactory {
 
-  event CloneCreated(address indexed target, address clone);
+    event CloneCreated(address indexed target, address clone);
 
-  function createClone(address target) internal returns (address result) {
-    bytes memory clone = hex"600034603b57603080600f833981f36000368180378080368173bebebebebebebebebebebebebebebebebebebebe5af43d82803e15602c573d90f35b3d90fd";
-    bytes20 targetBytes = bytes20(target);
-    for (uint i = 0; i < 20; i++) {
-      clone[26 + i] = targetBytes[i];
+    function createClone(address target) internal returns (address result) {
+        bytes memory clone = hex"600034603b57603080600f833981f36000368180378080368173bebebebebebebebebebebebebebebebebebebebe5af43d82803e15602c573d90f35b3d90fd";
+        bytes20 targetBytes = bytes20(target);
+        for (uint i = 0; i < 20; i++) {
+            clone[26 + i] = targetBytes[i];
+        }
+        assembly {
+            let len := mload(clone)
+            let data := add(clone, 0x20)
+            result := create(0, data, len)
+        }
     }
-    assembly {
-      let len := mload(clone)
-      let data := add(clone, 0x20)
-      result := create(0, data, len)
-    }
-  }
 }
 
 // File: contracts/lib/Ownable.sol
@@ -126,58 +127,9 @@ contract Ownable {
   }
 }
 
-// File: contracts/lib/SafeMath.sol
-
-/**
- * @title SafeMath
- * @dev Math operations with safety checks that throw on error
- */
-library SafeMath {
-
-  /**
-  * @dev Multiplies two numbers, throws on overflow.
-  */
-  function mul(uint256 a, uint256 b) internal pure returns (uint256 c) {
-    if (a == 0) {
-      return 0;
-    }
-    c = a * b;
-    assert(c / a == b);
-    return c;
-  }
-
-  /**
-  * @dev Integer division of two numbers, truncating the quotient.
-  */
-  function div(uint256 a, uint256 b) internal pure returns (uint256) {
-    // assert(b > 0); // Solidity automatically throws when dividing by 0
-    // uint256 c = a / b;
-    // assert(a == b * c + a % b); // There is no case in which this doesn't hold
-    return a / b;
-  }
-
-  /**
-  * @dev Subtracts two numbers, throws on overflow (i.e. if subtrahend is greater than minuend).
-  */
-  function sub(uint256 a, uint256 b) internal pure returns (uint256) {
-    assert(b <= a);
-    return a - b;
-  }
-
-  /**
-  * @dev Adds two numbers, throws on overflow.
-  */
-  function add(uint256 a, uint256 b) internal pure returns (uint256 c) {
-    c = a + b;
-    assert(c >= a);
-    return c;
-  }
-}
-
 // File: contracts/cloneFactory/TokenSaleCloneFactory.sol
 
 contract TokenSaleCloneFactory is Ownable, CloneFactory {
-    using SafeMath for uint256;
     // TokenSale contract address for cloning purposes
     address public libraryAddress;
     address starToken;
@@ -187,25 +139,27 @@ contract TokenSaleCloneFactory is Ownable, CloneFactory {
 
     event ContractInstantiation(address msgSender, address instantiation);
 
-    // 
+    //
     /**
     * @dev set TokenSale contract clone as well as starToken upon deployment
     * @param _libraryAddress TokenSale contract address for cloning purposes
-    * @param _starToken Star contract address
-    * in the _libraryAddress deployment
+    * @param _starToken Star contract address in the _libraryAddress deployment
     */
     constructor(address _libraryAddress, address _starToken) public {
-        require(_libraryAddress != address(0) && _starToken != address(0), "params _libraryAddress and _starToken should not be empty");
+        require(
+            _libraryAddress != address(0) && _starToken != address(0),
+            "_libraryAddress and _starToken should not be empty!"
+        );
         libraryAddress = _libraryAddress;
         starToken = _starToken;
     }
 
    /**
-    * @dev Have the option of updating the TokenSale contract for cloning
+    * @dev Have the option of updating the TokenSale contract for cloning.
     * @param _libraryAddress Address for new contract
     */
     function setLibraryAddress(address _libraryAddress) external onlyOwner {
-        require(_libraryAddress != address(0), "params _libraryAddress should not be empty");
+        require(_libraryAddress != address(0), "_libraryAddress should not be empty!");
         libraryAddress = _libraryAddress;
     }
 
@@ -232,6 +186,7 @@ contract TokenSaleCloneFactory is Ownable, CloneFactory {
      * @param _starRate The token rate per STAR
      * @param _wallet Multisig wallet that will hold the crowdsale funds.
      * @param _crowdsaleCap Cap for the token sale
+     * @param _isWeiAccepted Bool for acceptance of ether in token sale
      */
     function create
     (
@@ -242,7 +197,8 @@ contract TokenSaleCloneFactory is Ownable, CloneFactory {
         uint256 _rate,
         uint256 _starRate,
         address _wallet,
-        uint256 _crowdsaleCap
+        uint256 _crowdsaleCap,
+        bool    _isWeiAccepted
     )
         public
     {
@@ -256,7 +212,8 @@ contract TokenSaleCloneFactory is Ownable, CloneFactory {
             _rate,
             _starRate,
             _wallet,
-            _crowdsaleCap
+            _crowdsaleCap,
+            _isWeiAccepted
         );
 
         register(tokenSale);
