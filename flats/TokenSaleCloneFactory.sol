@@ -1,6 +1,6 @@
 pragma solidity 0.4.24;
 
-// File: contracts/TokenSaleInterface.sol
+// File: contracts\TokenSaleInterface.sol
 
 /**
  * @title TokenSale contract interface
@@ -22,7 +22,7 @@ interface TokenSaleInterface {
     external;
 }
 
-// File: contracts/cloneFactory/CloneFactory.sol
+// File: contracts\cloneFactory\CloneFactory.sol
 
 /*
 The MIT License (MIT)
@@ -49,23 +49,23 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 contract CloneFactory {
 
-    event CloneCreated(address indexed target, address clone);
+  event CloneCreated(address indexed target, address clone);
 
-    function createClone(address target) internal returns (address result) {
-        bytes memory clone = hex"600034603b57603080600f833981f36000368180378080368173bebebebebebebebebebebebebebebebebebebebe5af43d82803e15602c573d90f35b3d90fd";
-        bytes20 targetBytes = bytes20(target);
-        for (uint i = 0; i < 20; i++) {
-            clone[26 + i] = targetBytes[i];
-        }
-        assembly {
-            let len := mload(clone)
-            let data := add(clone, 0x20)
-            result := create(0, data, len)
-        }
+  function createClone(address target) internal returns (address result) {
+    bytes memory clone = hex"3d602d80600a3d3981f3363d3d373d3d3d363d73bebebebebebebebebebebebebebebebebebebebe5af43d82803e903d91602b57fd5bf3";
+    bytes20 targetBytes = bytes20(target);
+    for (uint i = 0; i < 20; i++) {
+      clone[20 + i] = targetBytes[i];
     }
+    assembly {
+      let len := mload(clone)
+      let data := add(clone, 0x20)
+      result := create(0, data, len)
+    }
+  }
 }
 
-// File: contracts/lib/Ownable.sol
+// File: contracts\lib\Ownable.sol
 
 /**
  * @title Ownable
@@ -127,7 +127,7 @@ contract Ownable {
   }
 }
 
-// File: contracts/cloneFactory/TokenSaleCloneFactory.sol
+// File: contracts\cloneFactory\TokenSaleCloneFactory.sol
 
 contract TokenSaleCloneFactory is Ownable, CloneFactory {
     // TokenSale contract address for cloning purposes

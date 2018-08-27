@@ -1,4 +1,4 @@
-const BigNumber = require('bignumber.js');
+const BigNumber = web3.BigNumber;
 
 const StarStaking = artifacts.require('StarStaking.sol');
 const MintableToken = artifacts.require('MintableToken.sol');
@@ -23,31 +23,65 @@ const  BALANCES = [
     new BigNumber(1000000000),
 ];
 
-contract('StarStaking', function([user1, user2, user3, user4, user5, user6]) {
-    let stakingContract, token, initialBalance, openingTime, closingTime;
+contract('StarStaking', _accounts => {
+    let stakingContract, token, initialBalance, startTime, closingTime, accounts;
 
     beforeEach(async () => {
+        accounts = _accounts;
         initialBalance = new BigNumber(1000000000);
         token = await MintableToken.new();
        
-        openingTime = new BigNumber(latestTime().toString()).plus(1000);
-        closingTime = openingTime.plus(200000);
-        stakingContract = await StarStaking.new(token.address, openingTime, closingTime);
+        topRanksMaxSize = new BigNumber(10);
+        startTime = new BigNumber(latestTime().toString()).plus(1000);
+        closingTime = startTime.plus(200000);
+        stakingContract = await StarStaking.new(token.address, topRanksMaxSize, startTime, closingTime);
 
-        await token.mint(user1, initialBalance);
+        await token.mint(accounts[0], initialBalance);
         await token.approve(stakingContract.address, initialBalance, {
-            from: user1
+            from: accounts[0]
         });
     });
 
-    describe('staking period is open', async () => {
+    describe('when deploying the contract', () => {
+        it('sets initial parameters correctly', async () => {
+            const tokenAddress = await stakingContract.token();
+            const _topRanksMaxSize = await stakingContract.topRanksMaxSize();
+            const _startTime = await stakingContract.startTime();
+            const _closingTime = await stakingContract.closingTime();
+            const topRanksCount = await stakingContract.topRanksCount();
+    
+            tokenAddress.should.be.equal(token.address, 'Token address not matching!');
+            _topRanksMaxSize.should.be.bignumber.equal(topRanksMaxSize, 'Top ranks size not matching!');
+            _startTime.should.be.bignumber.equal(startTime, 'Opening time not matching!');
+            _closingTime.should.be.bignumber.equal(closingTime, 'Closing time not matching!');
+            topRanksCount.should.be.bignumber.equal(0, 'Initial top ranks count should be 0!');
+        });
+    });
+
+    describe('topRanksMaxSize', () => {
+        it('respects the maximum top ranks count', async () => {
+            await increaseTimeTo(startTime);
+            await stakingContract.stakeFor(accounts[0], 10000, HEAD, { from: accounts[0] });
+
+            for (let i = 1; i < 11; i++) {
+                const topRanksCount = await stakingContract.topRanksCount();
+                topRanksCount.should.be.bignumber.equal(i, "Top ranks count is not incremented!");
+                await stakingContract.stakeFor(accounts[i], 10000 - 500 * i, accounts[i - 1], { from: accounts[0] });
+            }
+
+            const topRanksCount = await stakingContract.topRanksCount();
+            topRanksCount.should.be.bignumber.equal(10, "Top ranks count should not exceed maximum top ranks size!");
+        });
+    });
+
+    describe('staking period is open', () => {
         beforeEach(async () => {
-            await increaseTimeTo(openingTime);
+            await increaseTimeTo(startTime);
         });
 
         it('transfers tokens to stakingContract when staked', async () => {
             await stakingContract.stake(initialBalance, HEAD);
-            const userBalance = await token.balanceOf.call(user1);
+            const userBalance = await token.balanceOf.call(accounts[0]);
             const stakingContractBalance = await token.balanceOf.call(
                 stakingContract.address
             );
@@ -57,12 +91,12 @@ contract('StarStaking', function([user1, user2, user3, user4, user5, user6]) {
         });
 
         it('allows user to stake for other person', async () => {
-            await stakingContract.stakeFor(user2, initialBalance, HEAD, { from: user1 });
+            await stakingContract.stakeFor(accounts[1], initialBalance, HEAD, { from: accounts[0] });
 
-            const user2TotalStaked = await stakingContract.totalStakedFor.call(
-                user2
+            const user1TotalStaked = await stakingContract.totalStakedFor.call(
+                accounts[1]
             );
-            user2TotalStaked.should.be.bignumber.equal(initialBalance);
+            user1TotalStaked.should.be.bignumber.equal(initialBalance);
         });           
     });
 
@@ -77,7 +111,7 @@ contract('StarStaking', function([user1, user2, user3, user4, user5, user6]) {
     async function evaluateComputation(amount) {
         await stakingContract.stake(amount, HEAD);
         const timeWhenSubmitted = new BigNumber(latestTime());
-        const userTotalStakingPoints = await stakingContract.totalStakingPointsFor.call(user1);
+        const userTotalStakingPoints = await stakingContract.totalStakingPointsFor.call(accounts[0]);
         
         const pointsWithoutTimeAdvanced = computeStakingPoints({ amount, timeWhenSubmitted, timeAdvanced: false });
         const pointsWithTimeAdvanced = computeStakingPoints({ amount, timeWhenSubmitted, timeAdvanced: true });
@@ -86,16 +120,16 @@ contract('StarStaking', function([user1, user2, user3, user4, user5, user6]) {
         userTotalStakingPoints.should.be.bignumber.at.most(pointsWithTimeAdvanced);
     }
 
-    describe('adding new stake', async () => {
+    describe('adding new stake', () => {
         BALANCES.forEach(async (balance, i) => {
             describe(`staking ${balance.toNumber()} tokens`, async () => {
                 it('calculates the points correctly at the beginning', async () => {
-                    await increaseTimeTo(openingTime);
+                    await increaseTimeTo(startTime);
                     evaluateComputation(balance);
                 });
 
                 it('calculates the points correctly in the middle', async () => {
-                    await increaseTimeTo(openingTime.plus(closingTime.minus(openingTime).div(2)));
+                    await increaseTimeTo(startTime.plus(closingTime.minus(startTime).div(2)));
                     evaluateComputation(balance);
                 });
         
@@ -144,28 +178,30 @@ contract('StarStaking', function([user1, user2, user3, user4, user5, user6]) {
             const totalStaked = [100000,10000,1000,100,10];
             const timesWhenSubmitted = [];
 
-            await increaseTimeTo(openingTime);
-            await stakingContract.stakeFor(user2, totalStaked[4], HEAD, { from: user1 });
+            await increaseTimeTo(startTime);
+            await stakingContract.stakeFor(accounts[1], totalStaked[4], HEAD, { from: accounts[0] });
             timesWhenSubmitted.push(new BigNumber(latestTime().toString()));
 
-            await increaseTimeTo(openingTime.plus(10));
-            await stakingContract.stakeFor(user3, totalStaked[3], user2, { from: user1 });
+            await increaseTimeTo(startTime.plus(10));
+            await stakingContract.stakeFor(accounts[2], totalStaked[3], accounts[1], { from: accounts[0] });
             timesWhenSubmitted.push(new BigNumber(latestTime().toString()));
 
-            await increaseTimeTo(openingTime.plus(15));
-            await stakingContract.stakeFor(user4, totalStaked[2], user3, { from: user1 });
+            await increaseTimeTo(startTime.plus(15));
+            await stakingContract.stakeFor(accounts[3], totalStaked[2], accounts[2], { from: accounts[0] });
             timesWhenSubmitted.push(new BigNumber(latestTime().toString()));
 
-            await increaseTimeTo(openingTime.plus(20));
-            await stakingContract.stakeFor(user5, totalStaked[1], user4, { from: user1 });
+            await increaseTimeTo(startTime.plus(20));
+            await stakingContract.stakeFor(accounts[4], totalStaked[1], accounts[3], { from: accounts[0] });
             timesWhenSubmitted.push(new BigNumber(latestTime().toString()));
 
-            await increaseTimeTo(openingTime.plus(25));
-            await stakingContract.stakeFor(user6, totalStaked[0], user5, { from: user1 });
+            await increaseTimeTo(startTime.plus(25));
+            await stakingContract.stakeFor(accounts[5], totalStaked[0], accounts[4], { from: accounts[0] });
             timesWhenSubmitted.push(new BigNumber(latestTime().toString()));
 
             const result = await stakingContract.getTopRanksTuples();
-            const addresses = [user6, user5, user4, user3, user2].map(user => new BigNumber(user).toNumber());
+            const addresses = [accounts[5], accounts[4], accounts[3], accounts[2], accounts[1]].map(
+                user => new BigNumber(user).toNumber()
+            );
 
             listShouldEqualExpected(result, addresses, totalStaked, timesWhenSubmitted.reverse());
         });
@@ -176,32 +212,32 @@ contract('StarStaking', function([user1, user2, user3, user4, user5, user6]) {
             const totalStaked = [6000,5000,4000,3000,2000,1000];
             const timesWhenSubmitted = [];
 
-            await increaseTimeTo(openingTime);
-            await stakingContract.stakeFor(user1, totalStaked[0], HEAD, { from: user1 });
+            await increaseTimeTo(startTime);
+            await stakingContract.stakeFor(accounts[0], totalStaked[0], HEAD, { from: accounts[0] });
             timesWhenSubmitted.push(new BigNumber(latestTime().toString()));
 
             await increaseTimeTo(closingTime.minus(50));
-            await stakingContract.stakeFor(user2, totalStaked[1], user1, { from: user1 });
+            await stakingContract.stakeFor(accounts[1], totalStaked[1], accounts[0], { from: accounts[0] });
             timesWhenSubmitted.push(new BigNumber(latestTime().toString()));
 
             await increaseTimeTo(closingTime.minus(40));
-            await stakingContract.stakeFor(user3, totalStaked[2], user2, { from: user1 });
+            await stakingContract.stakeFor(accounts[2], totalStaked[2], accounts[1], { from: accounts[0] });
             timesWhenSubmitted.push(new BigNumber(latestTime().toString()));
 
             await increaseTimeTo(closingTime.minus(30));
-            await stakingContract.stakeFor(user4, totalStaked[3], user3, { from: user1 });
+            await stakingContract.stakeFor(accounts[3], totalStaked[3], accounts[2], { from: accounts[0] });
             timesWhenSubmitted.push(new BigNumber(latestTime().toString()));
 
             await increaseTimeTo(closingTime.minus(20));
-            await stakingContract.stakeFor(user5, totalStaked[4], user4, { from: user1 });
+            await stakingContract.stakeFor(accounts[4], totalStaked[4], accounts[3], { from: accounts[0] });
             timesWhenSubmitted.push(new BigNumber(latestTime().toString()));
 
             await increaseTimeTo(closingTime.minus(10));
-            await stakingContract.stakeFor(user6, totalStaked[5], user5, { from: user1 });
+            await stakingContract.stakeFor(accounts[5], totalStaked[5], accounts[4], { from: accounts[0] });
             timesWhenSubmitted.push(new BigNumber(latestTime().toString()));
 
             const result = await stakingContract.getTopRanksTuples();
-            const addresses = [user1, user2, user3, user4, user5, user6].map(user => new BigNumber(user).toNumber());
+            const addresses = [accounts[0], accounts[1], accounts[2], accounts[3], accounts[4], accounts[5]].map(user => new BigNumber(user).toNumber());
 
             listShouldEqualExpected(result, addresses, totalStaked, timesWhenSubmitted);
         });

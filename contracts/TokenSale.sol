@@ -87,13 +87,12 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
     }
 
     modifier isWhitelisted(address beneficiary) {
-        require(whitelist.allowedAddresses(beneficiary));
+        require(whitelist.allowedAddresses(beneficiary), "Beneficiary not whitelisted!");
         _;
     }
 
     modifier crowdsaleIsTokenOwner() {
-        // token owner should be contract address
-        require(tokenOnSale.owner() == address(this));
+        require(tokenOnSale.owner() == address(this), "The token owner must be contract address!");
         _;
     }
 
@@ -101,7 +100,7 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
      * @dev override fallback function. cannot use it
      */
     function () external payable {
-        revert();
+        revert("No fallback function defined!");
     }
 
     /**
@@ -109,7 +108,7 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
      * @param newRate Figure that corresponds to the new ETH rate per token
      */
     function setRate(uint256 newRate) external onlyOwner {
-        require(newRate != 0);
+        require(newRate != 0, "ETH rate must be more than 0");
 
         emit TokenRateChanged(rate, newRate);
         rate = newRate;
@@ -120,7 +119,7 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
      * @param newStarRate Figure that corresponds to the new STAR rate per token
      */
     function setStarRate(uint256 newStarRate) external onlyOwner {
-        require(newStarRate != 0);
+        require(newStarRate != 0, "Star rate must be more than 0!");
 
         emit TokenStarRateChanged(starRate, newStarRate);
         starRate = newStarRate;
@@ -130,7 +129,7 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
      * @dev allows sale to receive wei or not
      */
     function setIsWeiAccepted(bool _isWeiAccepted) external onlyOwner {
-        require(rate != 0);
+        require(rate != 0, "When accepting Wei you need to set a conversion rate!");
         isWeiAccepted = _isWeiAccepted;
     }
 
@@ -226,7 +225,7 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
      * @return true if the transaction can buy tokens
      */
     function validPurchase() internal view returns (bool) {
-      return now >= startTime && now <= endTime;
+        return now >= startTime && now <= endTime;
     }
 
     /**
