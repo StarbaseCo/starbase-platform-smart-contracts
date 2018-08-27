@@ -31,8 +31,10 @@ contract('StarStaking', _accounts => {
         initialBalance = new BigNumber(1000000000);
         token = await MintableToken.new();
        
+        topRanksMaxSize = new BigNumber(10);
         startTime = new BigNumber(latestTime().toString()).plus(1000);
         closingTime = startTime.plus(200000);
+        stakingContract = await StarStaking.new(token.address, topRanksMaxSize, startTime, closingTime);
 
         await token.mint(accounts[0], initialBalance);
         await token.approve(stakingContract.address, initialBalance, {
@@ -40,7 +42,21 @@ contract('StarStaking', _accounts => {
         });
     });
 
-    describe('staking period is open', async () => {
+    describe('when deploying the contract', () => {
+        it('sets initial parameters correctly', async () => {
+            const tokenAddress = await stakingContract.token();
+            const _topRanksMaxSize = await stakingContract.topRanksMaxSize();
+            const _startTime = await stakingContract.startTime();
+            const _closingTime = await stakingContract.closingTime();
+            const topRanksCount = await stakingContract.topRanksCount();
+    
+            tokenAddress.should.be.equal(token.address, 'Token address not matching!');
+            _topRanksMaxSize.should.be.bignumber.equal(topRanksMaxSize, 'Top ranks size not matching!');
+            _startTime.should.be.bignumber.equal(startTime, 'Opening time not matching!');
+            _closingTime.should.be.bignumber.equal(closingTime, 'Closing time not matching!');
+            topRanksCount.should.be.bignumber.equal(0, 'Initial top ranks count should be 0!');
+        });
+    });
         beforeEach(async () => {
             await increaseTimeTo(startTime);
         });
