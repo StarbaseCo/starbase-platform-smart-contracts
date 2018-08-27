@@ -57,6 +57,24 @@ contract('StarStaking', _accounts => {
             topRanksCount.should.be.bignumber.equal(0, 'Initial top ranks count should be 0!');
         });
     });
+
+    describe('topRanksMaxSize', () => {
+        it('respects the maximum top ranks count', async () => {
+            await increaseTimeTo(startTime);
+            await stakingContract.stakeFor(accounts[0], 10000, HEAD, { from: accounts[0] });
+
+            for (let i = 1; i < 11; i++) {
+                const topRanksCount = await stakingContract.topRanksCount();
+                topRanksCount.should.be.bignumber.equal(i, "Top ranks count is not incremented!");
+                await stakingContract.stakeFor(accounts[i], 10000 - 500 * i, accounts[i - 1], { from: accounts[0] });
+            }
+
+            const topRanksCount = await stakingContract.topRanksCount();
+            topRanksCount.should.be.bignumber.equal(10, "Top ranks count should not exceed maximum top ranks size!");
+        });
+    });
+
+    describe('staking period is open', () => {
         beforeEach(async () => {
             await increaseTimeTo(startTime);
         });
