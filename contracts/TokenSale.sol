@@ -87,13 +87,12 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
     }
 
     modifier isWhitelisted(address beneficiary) {
-        require(whitelist.allowedAddresses(beneficiary));
+        require(whitelist.allowedAddresses(beneficiary), "Beneficiary not whitelisted!");
         _;
     }
 
     modifier crowdsaleIsTokenOwner() {
-        // token owner should be contract address
-        require(tokenOnSale.owner() == address(this));
+        require(tokenOnSale.owner() == address(this), "The token owner must be contract address!");
         _;
     }
 
