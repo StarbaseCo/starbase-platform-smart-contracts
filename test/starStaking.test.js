@@ -3,7 +3,7 @@ const BigNumber = web3.BigNumber;
 const StarStaking = artifacts.require('StarStaking.sol');
 const MintableToken = artifacts.require('MintableToken.sol');
 
-const { should } = require('./helpers/utils');
+const { should, ensuresException } = require('./helpers/utils');
 const { increaseTimeTo, latestTime } = require('./helpers/timer');
 
 const HEAD = '0x0000000000000000000000000000000000000000';
@@ -43,6 +43,36 @@ contract('StarStaking', _accounts => {
     });
 
     describe('when deploying the contract', () => {
+        async function itFailsToDeployContract(_address, _topRanksMaxSize, _startTime, _closingTime) {
+            let emptyStakingContract;
+
+            try {
+                emptyStakingContract = await StarStaking.new(_address, _topRanksMaxSize, _startTime, _closingTime);
+                assert.fail();
+            } catch (e) {
+                ensuresException(e);
+            }
+      
+            should.equal(emptyStakingContract, undefined);
+        }
+
+        it("does NOT allow to deploy without a token address", () => {
+            itFailsToDeployContract(0, topRanksMaxSize, startTime, closingTime);
+        });
+
+        it("does NOT allow to deploy with a closing time before starting time", () => {
+            itFailsToDeployContract(token.address, topRanksMaxSize, closingTime, startTime);
+        });
+
+        it("does NOT allow to deploy with a starting time before the current time", () => {
+            const earlyStartTime = new BigNumber(latestTime().toString()).minus(1000);
+            itFailsToDeployContract(token.address, topRanksMaxSize, earlyStartTime, closingTime);
+        });
+
+        it("does NOT allow to deploy with a topRanksMaxSize of 0", () => {
+            itFailsToDeployContract(token.address, 0, startTime, closingTime);
+        });
+
         it('sets initial parameters correctly', async () => {
             const tokenAddress = await stakingContract.token();
             const _topRanksMaxSize = await stakingContract.topRanksMaxSize();
