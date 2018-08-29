@@ -3,12 +3,10 @@ const BigNumber = web3.BigNumber;
 const StarStaking = artifacts.require('StarStaking.sol');
 const MintableToken = artifacts.require('MintableToken.sol');
 
-const { should } = require('./helpers/utils');
+const { should, ensuresException } = require('./helpers/utils');
 const { increaseTimeTo, latestTime } = require('./helpers/timer');
 
-const HEAD = '0x0000000000000000000000000000000000000000';
-const PREV = false;
-const NEXT = true;
+const NULL = '0x0000000000000000000000000000000000000000';
 
 const  BALANCES = [
     new BigNumber(10),
@@ -43,6 +41,36 @@ contract('StarStaking', _accounts => {
     });
 
     describe('when deploying the contract', () => {
+        async function itFailsToDeployContract(_address, _topRanksMaxSize, _startTime, _closingTime) {
+            let emptyStakingContract;
+
+            try {
+                emptyStakingContract = await StarStaking.new(_address, _topRanksMaxSize, _startTime, _closingTime);
+                assert.fail();
+            } catch (e) {
+                ensuresException(e);
+            }
+      
+            should.equal(emptyStakingContract, undefined);
+        }
+
+        it("does NOT allow to deploy without a token address", () => {
+            itFailsToDeployContract(0, topRanksMaxSize, startTime, closingTime);
+        });
+
+        it("does NOT allow to deploy with a closing time before starting time", () => {
+            itFailsToDeployContract(token.address, topRanksMaxSize, closingTime, startTime);
+        });
+
+        it("does NOT allow to deploy with a starting time before the current time", () => {
+            const earlyStartTime = new BigNumber(latestTime().toString()).minus(1000);
+            itFailsToDeployContract(token.address, topRanksMaxSize, earlyStartTime, closingTime);
+        });
+
+        it("does NOT allow to deploy with a topRanksMaxSize of 0", () => {
+            itFailsToDeployContract(token.address, 0, startTime, closingTime);
+        });
+
         it('sets initial parameters correctly', async () => {
             const tokenAddress = await stakingContract.token();
             const _topRanksMaxSize = await stakingContract.topRanksMaxSize();
@@ -61,7 +89,7 @@ contract('StarStaking', _accounts => {
     describe('topRanksMaxSize', () => {
         it('respects the maximum top ranks count', async () => {
             await increaseTimeTo(startTime);
-            await stakingContract.stakeFor(accounts[0], 10000, HEAD, { from: accounts[0] });
+            await stakingContract.stakeFor(accounts[0], 10000, NULL, { from: accounts[0] });
 
             for (let i = 1; i < 11; i++) {
                 const topRanksCount = await stakingContract.topRanksCount();
@@ -79,8 +107,23 @@ contract('StarStaking', _accounts => {
             await increaseTimeTo(startTime);
         });
 
+        it("must have sufficient funds for the staking", async () => {
+            await stakingContract.stakeFor(accounts[1], 10, NULL, { from: accounts[0] });
+            const timeWhenSubmitted = [new BigNumber(latestTime().toString())];
+
+            try {
+                await stakingContract.stakeFor(accounts[2], 100, accounts[1], { from: accounts[2] });
+                assert.fail();
+            } catch (e) {
+                ensuresException(e);
+            }
+
+            const result = await stakingContract.getTopRanksTuples();      
+            listShouldEqualExpected(result, [new BigNumber(accounts[1]).toNumber()], [10], timeWhenSubmitted);
+        });
+
         it('transfers tokens to stakingContract when staked', async () => {
-            await stakingContract.stake(initialBalance, HEAD);
+            await stakingContract.stake(initialBalance, NULL);
             const userBalance = await token.balanceOf.call(accounts[0]);
             const stakingContractBalance = await token.balanceOf.call(
                 stakingContract.address
@@ -91,7 +134,7 @@ contract('StarStaking', _accounts => {
         });
 
         it('allows user to stake for other person', async () => {
-            await stakingContract.stakeFor(accounts[1], initialBalance, HEAD, { from: accounts[0] });
+            await stakingContract.stakeFor(accounts[1], initialBalance, NULL, { from: accounts[0] });
 
             const user1TotalStaked = await stakingContract.totalStakedFor.call(
                 accounts[1]
@@ -109,7 +152,7 @@ contract('StarStaking', _accounts => {
     }
 
     async function evaluateComputation(amount) {
-        await stakingContract.stake(amount, HEAD);
+        await stakingContract.stake(amount, NULL);
         const timeWhenSubmitted = new BigNumber(latestTime());
         const userTotalStakingPoints = await stakingContract.totalStakingPointsFor.call(accounts[0]);
         
@@ -174,72 +217,174 @@ contract('StarStaking', _accounts => {
     }
 
     describe('building the top ranks', () => {
-        it('correctly insert into top ranks', async () => {
+        it("must provide a reference node when topRanksCount less than max size", async () => {
+            await increaseTimeTo(startTime);
+            await stakingContract.stakeFor(accounts[1], 10, NULL, { from: accounts[0] });
+            const timeWhenSubmitted = [new BigNumber(latestTime().toString())];
+
+            try {
+                await stakingContract.stakeFor(accounts[2], 100, NULL, { from: accounts[0] });
+                assert.fail();
+            } catch (e) {
+                ensuresException(e);
+            }
+
+            const result = await stakingContract.getTopRanksTuples();      
+            listShouldEqualExpected(result, [new BigNumber(accounts[1]).toNumber()], [10], timeWhenSubmitted);
+        });
+
+        it("must provide a reference node that exists", async () => {
+            await increaseTimeTo(startTime);
+            await stakingContract.stakeFor(accounts[1], 10, NULL, { from: accounts[0] });
+            const timeWhenSubmitted = [new BigNumber(latestTime().toString())];
+
+            try {
+                await stakingContract.stakeFor(accounts[2], 100, accounts[3], { from: accounts[0] });
+                assert.fail();
+            } catch (e) {
+                ensuresException(e);
+            }
+
+            const result = await stakingContract.getTopRanksTuples();      
+            listShouldEqualExpected(result, [new BigNumber(accounts[1]).toNumber()], [10], timeWhenSubmitted);
+        });
+
+        describe('referencing a node that is too low/high', () => {
+            let timesWhenSubmitted = [];
+
+            beforeEach(async () => {
+                await increaseTimeTo(startTime);
+                await stakingContract.stakeFor(accounts[0], 100, NULL, { from: accounts[0] });
+                timesWhenSubmitted = [new BigNumber(latestTime().toString())];
+
+                await stakingContract.stakeFor(accounts[1], 10, accounts[0], { from: accounts[0] });
+                timesWhenSubmitted.push(new BigNumber(latestTime().toString()));
+
+                await stakingContract.stakeFor(accounts[2], 1, accounts[1], { from: accounts[0] });
+                timesWhenSubmitted.push(new BigNumber(latestTime().toString()));
+            });
+
+            it("throws an error for suggested positions that are too high", async () => {
+                try {
+                    await stakingContract.stakeFor(accounts[3], 5, accounts[0], { from: accounts[0] });
+                    assert.fail();
+                } catch (e) {
+                    ensuresException(e);
+                }
+    
+                const result = await stakingContract.getTopRanksTuples();
+                const addresses = accounts.slice(0, 3).map(user => new BigNumber(user).toNumber());   
+                listShouldEqualExpected(result, addresses, [100, 10, 1], timesWhenSubmitted);
+            });
+    
+            it("throws an error for suggested positions that are too low", async () => {
+                try {
+                    await stakingContract.stakeFor(accounts[3], 1000, accounts[2], { from: accounts[0] });
+                    assert.fail();
+                } catch (e) {
+                    ensuresException(e);
+                }
+    
+                const result = await stakingContract.getTopRanksTuples();
+                const addresses = accounts.slice(0, 3).map(user => new BigNumber(user).toNumber());   
+                listShouldEqualExpected(result, addresses, [100, 10, 1], timesWhenSubmitted);
+            });
+        });
+
+        it('correctly insert into top ranks at first rank position', async () => {
             const totalStaked = [100000,10000,1000,100,10];
             const timesWhenSubmitted = [];
 
             await increaseTimeTo(startTime);
-            await stakingContract.stakeFor(accounts[1], totalStaked[4], HEAD, { from: accounts[0] });
+            await stakingContract.stakeFor(accounts[0], totalStaked[4], NULL, { from: accounts[0] });
             timesWhenSubmitted.push(new BigNumber(latestTime().toString()));
 
-            await increaseTimeTo(startTime.plus(10));
-            await stakingContract.stakeFor(accounts[2], totalStaked[3], accounts[1], { from: accounts[0] });
+            for (let i = 1; i < totalStaked.length; i++) {
+                await increaseTimeTo(startTime.plus(i * 5));
+                await stakingContract.stakeFor(accounts[i], totalStaked[4 - i], accounts[i - 1], { from: accounts[0] });
             timesWhenSubmitted.push(new BigNumber(latestTime().toString()));
-
-            await increaseTimeTo(startTime.plus(15));
-            await stakingContract.stakeFor(accounts[3], totalStaked[2], accounts[2], { from: accounts[0] });
-            timesWhenSubmitted.push(new BigNumber(latestTime().toString()));
-
-            await increaseTimeTo(startTime.plus(20));
-            await stakingContract.stakeFor(accounts[4], totalStaked[1], accounts[3], { from: accounts[0] });
-            timesWhenSubmitted.push(new BigNumber(latestTime().toString()));
-
-            await increaseTimeTo(startTime.plus(25));
-            await stakingContract.stakeFor(accounts[5], totalStaked[0], accounts[4], { from: accounts[0] });
-            timesWhenSubmitted.push(new BigNumber(latestTime().toString()));
+            }
 
             const result = await stakingContract.getTopRanksTuples();
-            const addresses = [accounts[5], accounts[4], accounts[3], accounts[2], accounts[1]].map(
+            const addresses = accounts.slice(0, totalStaked.length).reverse().map(
                 user => new BigNumber(user).toNumber()
             );
 
             listShouldEqualExpected(result, addresses, totalStaked, timesWhenSubmitted.reverse());
         });
-    });
 
-    describe('reading the top ranks with respective staking points and total staked', async () => {
-        it('returns the correct flat list of tuples', async () => {
+        it('correctly insert into top ranks at last rank position', async () => {
             const totalStaked = [6000,5000,4000,3000,2000,1000];
             const timesWhenSubmitted = [];
 
             await increaseTimeTo(startTime);
-            await stakingContract.stakeFor(accounts[0], totalStaked[0], HEAD, { from: accounts[0] });
+            await stakingContract.stakeFor(accounts[0], totalStaked[0], NULL, { from: accounts[0] });
             timesWhenSubmitted.push(new BigNumber(latestTime().toString()));
 
-            await increaseTimeTo(closingTime.minus(50));
+            for (let i = 1; i < totalStaked.length; i++) {
+                await increaseTimeTo(startTime.plus(i * 1000));
+                await stakingContract.stakeFor(accounts[i], totalStaked[i], accounts[i - 1], { from: accounts[0] });
+            timesWhenSubmitted.push(new BigNumber(latestTime().toString()));
+            }
+
+            const result = await stakingContract.getTopRanksTuples();
+            const addresses = accounts.slice(0, totalStaked.length).map(
+                user => new BigNumber(user).toNumber()
+            );
+
+            listShouldEqualExpected(result, addresses, totalStaked, timesWhenSubmitted);
+        });
+    });
+
+    describe('reading the top ranks with respective staking points and total staked', async () => {
+        function arrayFromIndices(array, indices) {
+            const newArray = [];
+
+            for (let i = 0; i < indices.length; i++) {
+                newArray.push(array[indices[i]]);
+            }
+
+            return newArray;
+        }
+
+        it('returns the correct flat list of tuples', async () => {
+            const totalStaked = [500,74444,1,9999,100000,44];
+            const timesWhenSubmitted = [];
+
+            await increaseTimeTo(startTime);
+            await stakingContract.stakeFor(accounts[0], totalStaked[0], NULL, { from: accounts[0] });
+            timesWhenSubmitted.push(new BigNumber(latestTime().toString()));
+
+            await increaseTimeTo(startTime.plus(5000));
             await stakingContract.stakeFor(accounts[1], totalStaked[1], accounts[0], { from: accounts[0] });
             timesWhenSubmitted.push(new BigNumber(latestTime().toString()));
 
-            await increaseTimeTo(closingTime.minus(40));
-            await stakingContract.stakeFor(accounts[2], totalStaked[2], accounts[1], { from: accounts[0] });
+            await increaseTimeTo(closingTime.minus(999));
+            await stakingContract.stakeFor(accounts[2], totalStaked[2], accounts[0], { from: accounts[0] });
             timesWhenSubmitted.push(new BigNumber(latestTime().toString()));
 
-            await increaseTimeTo(closingTime.minus(30));
-            await stakingContract.stakeFor(accounts[3], totalStaked[3], accounts[2], { from: accounts[0] });
+            await increaseTimeTo(closingTime.minus(444));
+            await stakingContract.stakeFor(accounts[3], totalStaked[3], accounts[0], { from: accounts[0] });
             timesWhenSubmitted.push(new BigNumber(latestTime().toString()));
 
-            await increaseTimeTo(closingTime.minus(20));
-            await stakingContract.stakeFor(accounts[4], totalStaked[4], accounts[3], { from: accounts[0] });
+            await increaseTimeTo(closingTime.minus(84));
+            await stakingContract.stakeFor(accounts[4], totalStaked[4], accounts[0], { from: accounts[0] });
             timesWhenSubmitted.push(new BigNumber(latestTime().toString()));
 
             await increaseTimeTo(closingTime.minus(10));
-            await stakingContract.stakeFor(accounts[5], totalStaked[5], accounts[4], { from: accounts[0] });
+            await stakingContract.stakeFor(accounts[5], totalStaked[5], accounts[2], { from: accounts[0] });
             timesWhenSubmitted.push(new BigNumber(latestTime().toString()));
 
             const result = await stakingContract.getTopRanksTuples();
-            const addresses = [accounts[0], accounts[1], accounts[2], accounts[3], accounts[4], accounts[5]].map(user => new BigNumber(user).toNumber());
+            const expectedRankingIndices = [1, 0, 4, 3, 2, 5];
+            
+            const addresses = arrayFromIndices(accounts, expectedRankingIndices).map(
+                user => new BigNumber(user).toNumber()
+            );
+            const sortedTimesWhenSubmitted = arrayFromIndices(timesWhenSubmitted, expectedRankingIndices);
+            const sortedTotalStaked = arrayFromIndices(totalStaked, expectedRankingIndices);
 
-            listShouldEqualExpected(result, addresses, totalStaked, timesWhenSubmitted);
+            listShouldEqualExpected(result, addresses, sortedTotalStaked, sortedTimesWhenSubmitted);
         });
     });
 });

@@ -43,7 +43,7 @@ contract StarStaking is StarStakingInterface, Lockable {
     constructor(ERC20 _token, uint256 _topRanksMaxSize, uint256 _startTime, uint256 _closingTime) public {
         require(address(_token) != address(0), "Token address may must be defined!");
         require(_startTime < _closingTime, "Start time must be before closing time!");
-        require(_startTime > now, "Start time must be after current time!");
+        require(_startTime >= now, "Start time must be after current time!");
         require(_topRanksMaxSize > 0, "Top ranks size must be more than 0.");
 
         token = _token;
