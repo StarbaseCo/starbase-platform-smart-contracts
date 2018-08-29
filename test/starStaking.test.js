@@ -187,7 +187,7 @@ contract('StarStaking', _accounts => {
     function listShouldEqualExpected(result, addresses, totalStaked, timesWhenSubmitted) {
         const [rcvAddrs, rcvStakingPoints, rcvTotalStaked] = [[], [], []];
 
-        result.map((e, i) => {
+        result.forEach((e, i) => {
             if (!(i % 3)) {
                 rcvAddrs.push(e.toNumber());
                 rcvStakingPoints.push(result[i + 1]);
