@@ -302,7 +302,7 @@ contract('StarStaking', _accounts => {
             for (let i = 1; i < totalStaked.length; i++) {
                 await increaseTimeTo(startTime.plus(i * 5));
                 await stakingContract.stakeFor(accounts[i], totalStaked[4 - i], accounts[i - 1], { from: accounts[0] });
-            timesWhenSubmitted.push(new BigNumber(latestTime().toString()));
+                timesWhenSubmitted.push(new BigNumber(latestTime().toString()));
             }
 
             const result = await stakingContract.getTopRanksTuples();
@@ -324,7 +324,7 @@ contract('StarStaking', _accounts => {
             for (let i = 1; i < totalStaked.length; i++) {
                 await increaseTimeTo(startTime.plus(i * 1000));
                 await stakingContract.stakeFor(accounts[i], totalStaked[i], accounts[i - 1], { from: accounts[0] });
-            timesWhenSubmitted.push(new BigNumber(latestTime().toString()));
+                timesWhenSubmitted.push(new BigNumber(latestTime().toString()));
             }
 
             const result = await stakingContract.getTopRanksTuples();
@@ -333,6 +333,39 @@ contract('StarStaking', _accounts => {
             );
 
             listShouldEqualExpected(result, addresses, totalStaked, timesWhenSubmitted);
+        });
+    });
+
+    describe('when there is a sorted top ranking', async () => {
+        it('getSortedSpot returns correct reference node', async () => {
+            const totalStaked = [100000,10000,1000,100,10];
+            const timesWhenSubmitted = [];
+
+            await increaseTimeTo(startTime);
+            await stakingContract.stakeFor(accounts[0], totalStaked[4], NULL, { from: accounts[0] });
+            timesWhenSubmitted.push(new BigNumber(latestTime().toString()));
+
+            for (let i = 1; i < totalStaked.length; i++) {
+                await increaseTimeTo(startTime.plus(i * 5));
+                await stakingContract.stakeFor(accounts[i], totalStaked[4 - i], accounts[i - 1], { from: accounts[0] });
+                timesWhenSubmitted.push(new BigNumber(latestTime().toString()));
+            }
+
+            const result = await stakingContract.getTopRanksTuples();
+            const rcvStakingPoints = [];
+
+            result.forEach((e, i) => {
+                if (!(i % 3)) {
+                    rcvStakingPoints.push(result[i + 1].toNumber());
+                }
+            });
+            const spots = [await stakingContract.getSortedSpot(rcvStakingPoints[0] + 20)];
+
+            for (let i = 0; i < rcvStakingPoints.length; i++) {
+                spots.push(await stakingContract.getSortedSpot(rcvStakingPoints[i] - 20));                
+            }
+
+            spots.should.eql([accounts[totalStaked.length - 1], ...accounts.slice(0, totalStaked.length).reverse() ]);
         });
     });
 
