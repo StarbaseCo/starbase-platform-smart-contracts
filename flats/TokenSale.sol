@@ -1,6 +1,6 @@
 pragma solidity 0.4.24;
 
-// File: contracts/lib/Ownable.sol
+// File: contracts\lib\Ownable.sol
 
 /**
  * @title Ownable
@@ -62,7 +62,7 @@ contract Ownable {
   }
 }
 
-// File: contracts/lib/Pausable.sol
+// File: contracts\lib\Pausable.sol
 
 /**
  * @title Pausable
@@ -108,7 +108,7 @@ contract Pausable is Ownable {
   }
 }
 
-// File: contracts/lib/SafeMath.sol
+// File: contracts\lib\SafeMath.sol
 
 /**
  * @title SafeMath
@@ -156,7 +156,7 @@ library SafeMath {
   }
 }
 
-// File: contracts/lib/ERC20Basic.sol
+// File: contracts\lib\ERC20Basic.sol
 
 /**
  * @title ERC20Basic
@@ -170,7 +170,7 @@ contract ERC20Basic {
   event Transfer(address indexed from, address indexed to, uint256 value);
 }
 
-// File: contracts/lib/BasicToken.sol
+// File: contracts\lib\BasicToken.sol
 
 /**
  * @title Basic token
@@ -217,7 +217,7 @@ contract BasicToken is ERC20Basic {
 
 }
 
-// File: contracts/lib/ERC20.sol
+// File: contracts\lib\ERC20.sol
 
 /**
  * @title ERC20 interface
@@ -235,7 +235,7 @@ contract ERC20 {
     event Transfer(address indexed from, address indexed to, uint256 value);
 }
 
-// File: contracts/lib/StandardToken.sol
+// File: contracts\lib\StandardToken.sol
 
 /**
  * @title Standard ERC20 token
@@ -332,7 +332,7 @@ contract StandardToken is ERC20, BasicToken {
 
 }
 
-// File: contracts/lib/MintableToken.sol
+// File: contracts\lib\MintableToken.sol
 
 /**
  * @title Mintable token
@@ -377,7 +377,7 @@ contract MintableToken is StandardToken, Ownable {
   }
 }
 
-// File: contracts/lib/Crowdsale.sol
+// File: contracts\lib\Crowdsale.sol
 
 /**
  * @title Crowdsale - modified from zeppelin-solidity library
@@ -441,7 +441,7 @@ contract Crowdsale {
     }
 }
 
-// File: contracts/lib/FinalizableCrowdsale.sol
+// File: contracts\lib\FinalizableCrowdsale.sol
 
 /**
  * @title FinalizableCrowdsale
@@ -478,7 +478,7 @@ contract FinalizableCrowdsale is Crowdsale, Ownable {
   }
 }
 
-// File: contracts/lib/PausableToken.sol
+// File: contracts\lib\PausableToken.sol
 
 /**
  * @title Pausable token
@@ -507,7 +507,7 @@ contract PausableToken is StandardToken, Pausable {
   }
 }
 
-// File: contracts/CompanyToken.sol
+// File: contracts\CompanyToken.sol
 
 /**
  * @title CompanyToken contract - ERC20 compatible token contract with customized token parameters.
@@ -533,7 +533,7 @@ contract CompanyToken is PausableToken, MintableToken {
     }
 }
 
-// File: contracts/Whitelist.sol
+// File: contracts\Whitelist.sol
 
 /**
  * @title Whitelist - crowdsale whitelist contract
@@ -576,7 +576,7 @@ contract Whitelist is Ownable {
     }
 }
 
-// File: contracts/TokenSaleInterface.sol
+// File: contracts\TokenSaleInterface.sol
 
 /**
  * @title TokenSale contract interface
@@ -598,7 +598,7 @@ interface TokenSaleInterface {
     external;
 }
 
-// File: contracts/TokenSale.sol
+// File: contracts\TokenSale.sol
 
 /**
  * @title Token Sale contract - crowdsale of company tokens.
@@ -681,13 +681,12 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
     }
 
     modifier isWhitelisted(address beneficiary) {
-        require(whitelist.allowedAddresses(beneficiary));
+        require(whitelist.allowedAddresses(beneficiary), "Beneficiary not whitelisted!");
         _;
     }
 
     modifier crowdsaleIsTokenOwner() {
-        // token owner should be contract address
-        require(tokenOnSale.owner() == address(this));
+        require(tokenOnSale.owner() == address(this), "The token owner must be contract address!");
         _;
     }
 
@@ -695,7 +694,7 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
      * @dev override fallback function. cannot use it
      */
     function () external payable {
-        revert();
+        revert("No fallback function defined!");
     }
 
     /**
@@ -703,7 +702,7 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
      * @param newRate Figure that corresponds to the new ETH rate per token
      */
     function setRate(uint256 newRate) external onlyOwner {
-        require(newRate != 0);
+        require(newRate != 0, "ETH rate must be more than 0");
 
         emit TokenRateChanged(rate, newRate);
         rate = newRate;
@@ -714,7 +713,7 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
      * @param newStarRate Figure that corresponds to the new STAR rate per token
      */
     function setStarRate(uint256 newStarRate) external onlyOwner {
-        require(newStarRate != 0);
+        require(newStarRate != 0, "Star rate must be more than 0!");
 
         emit TokenStarRateChanged(starRate, newStarRate);
         starRate = newStarRate;
@@ -724,7 +723,7 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
      * @dev allows sale to receive wei or not
      */
     function setIsWeiAccepted(bool _isWeiAccepted) external onlyOwner {
-        require(rate != 0);
+        require(rate != 0, "When accepting Wei you need to set a conversion rate!");
         isWeiAccepted = _isWeiAccepted;
     }
 
@@ -820,7 +819,7 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
      * @return true if the transaction can buy tokens
      */
     function validPurchase() internal view returns (bool) {
-      return now >= startTime && now <= endTime;
+        return now >= startTime && now <= endTime;
     }
 
     /**

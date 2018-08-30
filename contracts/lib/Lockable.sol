@@ -1,6 +1,6 @@
 pragma solidity 0.4.24;
 
-import "./lib/Ownable.sol";
+import "./Ownable.sol";
 
 contract Lockable is Ownable {
 

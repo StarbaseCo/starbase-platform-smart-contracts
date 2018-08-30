@@ -163,7 +163,7 @@ contract("TokenSale", ([owner, wallet, buyer, buyer2, user1, fakeWallet]) => {
   });
 
   describe("changing rate", () => {
-    it("does NOT allows anyone to change rate other than the owner", async () => {
+    it("does NOT allow anyone to change rate other than the owner", async () => {
       try {
         await crowdsale.setRate(newRate, { from: buyer });
         assert.fail();
