@@ -23,7 +23,6 @@ contract("TokenSale", ([owner, wallet, buyer, buyer2, user1, fakeWallet]) => {
   let startTime, endTime;
   let crowdsale, token, star, whitelist;
   let crowdsaleTokensLeftover;
-  let tokenFactory;
 
   const newCrowdsale = async (rate, starRate) => {
     startTime = latestTime() + 15; // crowdsale starts in seconds into the future
@@ -34,11 +33,11 @@ contract("TokenSale", ([owner, wallet, buyer, buyer2, user1, fakeWallet]) => {
     token = await CompanyToken.new("Example Token", "EXT", 18);
     const tokenSaleLibrary = await TokenSale.new();
 
-    tokenFactory = await TokenSaleCloneFactory.new(
+    const tokenSaleFactory = await TokenSaleCloneFactory.new(
       tokenSaleLibrary.address,
       star.address
     );
-    const tx = await tokenFactory.create(
+    const tx = await tokenSaleFactory.create(
       startTime,
       endTime,
       whitelist.address,
