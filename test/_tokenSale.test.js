@@ -1,4 +1,5 @@
 const TokenSale = artifacts.require("./TokenSale.sol");
+const TokenSaleCloneFactory = artifacts.require("./TokenSaleCloneFactory.sol");
 const CompanyToken = artifacts.require("./CompanyToken.sol");
 const MintableToken = artifacts.require("./MintableToken.sol");
 const Whitelist = artifacts.require("./Whitelist.sol");
@@ -22,40 +23,38 @@ contract("TokenSale", ([owner, wallet, buyer, buyer2, user1, fakeWallet]) => {
   let startTime, endTime;
   let crowdsale, token, star, whitelist;
   let crowdsaleTokensLeftover;
+  let tokenFactory;
 
-  const newCrowdsale = (rate, starRate) => {
+  const newCrowdsale = async (rate, starRate) => {
     startTime = latestTime() + 15; // crowdsale starts in seconds into the future
     endTime = startTime + duration.days(70); // 70 days
 
-    return Whitelist.new()
-      .then(whitelistRegistry => {
-        whitelist = whitelistRegistry;
-        return MintableToken.new();
-      })
-      .then(mintableToken => {
-        star = mintableToken;
-        return CompanyToken.new("Example Token", "EXT", 18);
-      })
-      .then(CompanyToken => {
-        token = CompanyToken;
-        return TokenSale.new();
-      })
-      .then(tokenSale => {
-        crowdsale = tokenSale;
+    whitelist = await Whitelist.new();
+    star = await MintableToken.new();
+    token = await CompanyToken.new("Example Token", "EXT", 18);
+    const tokenSaleLibrary = await TokenSale.new();
 
-        return crowdsale.init(
-          startTime,
-          endTime,
-          whitelist.address,
-          star.address,
-          token.address,
-          rate,
-          starRate,
-          wallet,
-          crowdsaleCap,
-          isWeiAcceptedDefaultValue
-        );
-      });
+    tokenFactory = await TokenSaleCloneFactory.new(
+      tokenSaleLibrary.address,
+      star.address
+    );
+    const tx = await tokenFactory.create(
+      startTime,
+      endTime,
+      whitelist.address,
+      token.address,
+      rate,
+      starRate,
+      wallet,
+      crowdsaleCap,
+      isWeiAcceptedDefaultValue
+    );
+
+    const event = tx.logs.find(
+      event => event.event === "ContractInstantiation"
+    );
+
+    crowdsale = TokenSale.at(event.args.instantiation);
   };
 
   beforeEach("initialize contract", async () => {
@@ -118,6 +117,11 @@ contract("TokenSale", ([owner, wallet, buyer, buyer2, user1, fakeWallet]) => {
   it("has a wallet", async () => {
     const walletAddress = await crowdsale.wallet();
     walletAddress.should.equal(wallet);
+  });
+
+  it("owner is the tx originator and NOT the tokenSaleCloneFactory", async () => {
+    const contractOwner = await crowdsale.owner();
+    contractOwner.should.equal(owner);
   });
 
   it("has a crowdsaleCap variable", async () => {

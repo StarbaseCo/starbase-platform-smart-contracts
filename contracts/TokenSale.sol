@@ -78,6 +78,7 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
         starToken = StandardToken(_starToken);
         starRate = _starRate;
         isWeiAccepted = _isWeiAccepted;
+        owner = tx.origin;
 
         initialTokenOwner = CompanyToken(tokenOnSale).owner();
         uint256 tokenDecimals = CompanyToken(tokenOnSale).decimals();
