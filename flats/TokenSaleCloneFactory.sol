@@ -1,6 +1,6 @@
 pragma solidity 0.4.24;
 
-// File: contracts\TokenSaleInterface.sol
+// File: contracts/TokenSaleInterface.sol
 
 /**
  * @title TokenSale contract interface
@@ -22,7 +22,7 @@ interface TokenSaleInterface {
     external;
 }
 
-// File: contracts\cloneFactory\CloneFactory.sol
+// File: contracts/cloneFactory/CloneFactory.sol
 
 /*
 The MIT License (MIT)
@@ -65,7 +65,7 @@ contract CloneFactory {
   }
 }
 
-// File: contracts\lib\Ownable.sol
+// File: contracts/lib/Ownable.sol
 
 /**
  * @title Ownable
@@ -93,7 +93,7 @@ contract Ownable {
    * @dev Throws if called by any account other than the owner.
    */
   modifier onlyOwner() {
-    require(msg.sender == owner);
+    require(msg.sender == owner, "only owner is able to call this function");
     _;
   }
 
@@ -127,7 +127,7 @@ contract Ownable {
   }
 }
 
-// File: contracts\cloneFactory\TokenSaleCloneFactory.sol
+// File: contracts/cloneFactory/TokenSaleCloneFactory.sol
 
 contract TokenSaleCloneFactory is Ownable, CloneFactory {
     // TokenSale contract address for cloning purposes

@@ -1,6 +1,6 @@
 pragma solidity 0.4.24;
 
-// File: contracts\lib\Ownable.sol
+// File: contracts/lib/Ownable.sol
 
 /**
  * @title Ownable
@@ -28,7 +28,7 @@ contract Ownable {
    * @dev Throws if called by any account other than the owner.
    */
   modifier onlyOwner() {
-    require(msg.sender == owner);
+    require(msg.sender == owner, "only owner is able to call this function");
     _;
   }
 
@@ -62,7 +62,7 @@ contract Ownable {
   }
 }
 
-// File: contracts\lib\SafeMath.sol
+// File: contracts/lib/SafeMath.sol
 
 /**
  * @title SafeMath
@@ -110,7 +110,7 @@ library SafeMath {
   }
 }
 
-// File: contracts\lib\ERC20.sol
+// File: contracts/lib/ERC20.sol
 
 /**
  * @title ERC20 interface
@@ -128,7 +128,7 @@ contract ERC20 {
     event Transfer(address indexed from, address indexed to, uint256 value);
 }
 
-// File: contracts\lib\Lockable.sol
+// File: contracts/lib/Lockable.sol
 
 contract Lockable is Ownable {
 
@@ -148,7 +148,7 @@ contract Lockable is Ownable {
     }
 }
 
-// File: contracts\LinkedListLib.sol
+// File: contracts/LinkedListLib.sol
 
 /**
  * @title LinkedListLib
@@ -345,13 +345,13 @@ library LinkedListLib {
     }
 }
 
-// File: contracts\StarStakingInterface.sol
+// File: contracts/StarStakingInterface.sol
 
 contract StarStakingInterface {
     event Staked(address indexed user, uint256 amount, uint256 addedStakingPoints);
 }
 
-// File: contracts\StarStaking.sol
+// File: contracts/StarStaking.sol
 
 contract StarStaking is StarStakingInterface, Lockable {
     using SafeMath for uint256;
@@ -389,7 +389,7 @@ contract StarStaking is StarStakingInterface, Lockable {
     constructor(ERC20 _token, uint256 _topRanksMaxSize, uint256 _startTime, uint256 _closingTime) public {
         require(address(_token) != address(0), "Token address may must be defined!");
         require(_startTime < _closingTime, "Start time must be before closing time!");
-        require(_startTime > now, "Start time must be after current time!");
+        require(_startTime >= now, "Start time must be after current time!");
         require(_topRanksMaxSize > 0, "Top ranks size must be more than 0.");
 
         token = _token;

@@ -1,6 +1,6 @@
 pragma solidity 0.4.24;
 
-// File: contracts\lib\Ownable.sol
+// File: contracts/lib/Ownable.sol
 
 /**
  * @title Ownable
@@ -28,7 +28,7 @@ contract Ownable {
    * @dev Throws if called by any account other than the owner.
    */
   modifier onlyOwner() {
-    require(msg.sender == owner);
+    require(msg.sender == owner, "only owner is able to call this function");
     _;
   }
 
@@ -62,7 +62,7 @@ contract Ownable {
   }
 }
 
-// File: contracts\lib\Pausable.sol
+// File: contracts/lib/Pausable.sol
 
 /**
  * @title Pausable
@@ -108,7 +108,7 @@ contract Pausable is Ownable {
   }
 }
 
-// File: contracts\lib\SafeMath.sol
+// File: contracts/lib/SafeMath.sol
 
 /**
  * @title SafeMath
@@ -156,7 +156,7 @@ library SafeMath {
   }
 }
 
-// File: contracts\lib\ERC20Basic.sol
+// File: contracts/lib/ERC20Basic.sol
 
 /**
  * @title ERC20Basic
@@ -170,7 +170,7 @@ contract ERC20Basic {
   event Transfer(address indexed from, address indexed to, uint256 value);
 }
 
-// File: contracts\lib\BasicToken.sol
+// File: contracts/lib/BasicToken.sol
 
 /**
  * @title Basic token
@@ -217,7 +217,7 @@ contract BasicToken is ERC20Basic {
 
 }
 
-// File: contracts\lib\ERC20.sol
+// File: contracts/lib/ERC20.sol
 
 /**
  * @title ERC20 interface
@@ -235,7 +235,7 @@ contract ERC20 {
     event Transfer(address indexed from, address indexed to, uint256 value);
 }
 
-// File: contracts\lib\StandardToken.sol
+// File: contracts/lib/StandardToken.sol
 
 /**
  * @title Standard ERC20 token
@@ -332,7 +332,7 @@ contract StandardToken is ERC20, BasicToken {
 
 }
 
-// File: contracts\lib\MintableToken.sol
+// File: contracts/lib/MintableToken.sol
 
 /**
  * @title Mintable token
@@ -377,7 +377,7 @@ contract MintableToken is StandardToken, Ownable {
   }
 }
 
-// File: contracts\lib\Crowdsale.sol
+// File: contracts/lib/Crowdsale.sol
 
 /**
  * @title Crowdsale - modified from zeppelin-solidity library
@@ -441,7 +441,7 @@ contract Crowdsale {
     }
 }
 
-// File: contracts\lib\FinalizableCrowdsale.sol
+// File: contracts/lib/FinalizableCrowdsale.sol
 
 /**
  * @title FinalizableCrowdsale
@@ -478,7 +478,7 @@ contract FinalizableCrowdsale is Crowdsale, Ownable {
   }
 }
 
-// File: contracts\lib\PausableToken.sol
+// File: contracts/lib/PausableToken.sol
 
 /**
  * @title Pausable token
@@ -507,7 +507,7 @@ contract PausableToken is StandardToken, Pausable {
   }
 }
 
-// File: contracts\CompanyToken.sol
+// File: contracts/CompanyToken.sol
 
 /**
  * @title CompanyToken contract - ERC20 compatible token contract with customized token parameters.
@@ -533,7 +533,7 @@ contract CompanyToken is PausableToken, MintableToken {
     }
 }
 
-// File: contracts\Whitelist.sol
+// File: contracts/Whitelist.sol
 
 /**
  * @title Whitelist - crowdsale whitelist contract
@@ -576,7 +576,7 @@ contract Whitelist is Ownable {
     }
 }
 
-// File: contracts\TokenSaleInterface.sol
+// File: contracts/TokenSaleInterface.sol
 
 /**
  * @title TokenSale contract interface
@@ -598,7 +598,7 @@ interface TokenSaleInterface {
     external;
 }
 
-// File: contracts\TokenSale.sol
+// File: contracts/TokenSale.sol
 
 /**
  * @title Token Sale contract - crowdsale of company tokens.
@@ -672,6 +672,7 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
         starToken = StandardToken(_starToken);
         starRate = _starRate;
         isWeiAccepted = _isWeiAccepted;
+        owner = tx.origin;
 
         initialTokenOwner = CompanyToken(tokenOnSale).owner();
         uint256 tokenDecimals = CompanyToken(tokenOnSale).decimals();
