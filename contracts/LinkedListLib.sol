@@ -3,6 +3,8 @@ pragma solidity 0.4.24;
 /**
  * @title LinkedListLib
  * @author Darryl Morris (o0ragman0o) and Modular.network
+ * 
+ * Modified by Markus Waas (gorgos) and Starbase
  *
  * This utility library was forked from https://github.com/o0ragman0o/LibCLL
  * into the Modular-Network ethereum-libraries repo at https://github.com/Modular-Network/ethereum-libraries
@@ -36,9 +38,8 @@ pragma solidity 0.4.24;
 
 
 library LinkedListLib {
-
-    address constant NULL = 0x0;
-    address constant HEAD = 0x0;
+    address constant NULL = address(0);
+    address constant HEAD = address(0);
     bool constant PREV = false;
     bool constant NEXT = true;
 
@@ -118,26 +119,6 @@ library LinkedListLib {
         }
     }
 
-    /// @dev Can be used before `insert` to build an ordered list
-    /// @param self stored linked list from contract
-    /// @param _node an existing node to search from, e.g. HEAD.
-    /// @param _value value to seek
-    /// @param _direction direction to seek in
-    //  @return next first node beyond '_node' in direction `_direction`
-
-    // TODO change to reflect _value as totalStakingPoints[_value]
-    function getSortedSpot(LinkedList storage self, address _node, address _value, bool _direction)
-        internal view returns (address)
-    {
-        if (sizeOf(self) == 0) { return 0; }
-        require((_node == 0) || nodeExists(self,_node));
-        bool exists;
-        address next;
-        (exists,next) = getAdjacent(self, _node, _direction);
-        while  ((next != 0) && (_value != next) && ((_value < next) != _direction)) next = self.list[next][_direction];
-        return next;
-    }
-
     /// @dev Creates a bidirectional link between two nodes on direction `_direction`
     /// @param self stored linked list from contract
     /// @param _node first node for linking
@@ -167,7 +148,9 @@ library LinkedListLib {
     /// @param self stored linked list from contract
     /// @param _node node to remove from the list
     function remove(LinkedList storage self, address _node) internal returns (address) {
-        if ((_node == NULL) || (!nodeExists(self,_node))) { return 0; }
+        if ((_node == NULL) || (!nodeExists(self,_node))) {
+            return 0;
+        }
         createLink(self, self.list[_node][PREV], self.list[_node][NEXT], NEXT);
         delete self.list[_node][PREV];
         delete self.list[_node][NEXT];
