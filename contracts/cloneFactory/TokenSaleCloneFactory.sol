@@ -7,7 +7,7 @@ import "../lib/Ownable.sol";
 contract TokenSaleCloneFactory is Ownable, CloneFactory {
     // TokenSale contract address for cloning purposes
     address public libraryAddress;
-    address starToken;
+    address public starToken;
 
     mapping(address => bool) public isInstantiation;
     mapping(address => address[]) public instantiations;
