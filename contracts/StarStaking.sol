@@ -126,6 +126,29 @@ contract StarStaking is StarStakingInterface, Lockable {
         emit Staked(_user, _amount, addedStakingPoints);
     }
 
+    /// @dev Can be used before `stakeFor` to get the correct reference node
+    /// @param _value value to seek
+    //  @return next first node beyond '_node'
+    function getSortedSpot(uint256 _value) external view returns (address) {
+        if (topRanks.sizeOf() == 0) {
+            return address(0);
+        }
+
+        bool exists;
+        address next;
+        (exists, next) = topRanks.getAdjacent(HEAD, PREV);
+
+        while ((next != 0) && ((totalStakingPointsFor[next] < _value))) {
+            next = topRanks.list[next][PREV];
+        }
+
+        if (next == 0) {
+            return topRanks.list[next][NEXT];
+        }
+
+        return next;
+    }
+
     /**
      * @dev Returns the previous or next top rank node.
      * @param _referenceNode Address of the reference.
