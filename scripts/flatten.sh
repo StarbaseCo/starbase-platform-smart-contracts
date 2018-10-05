@@ -6,3 +6,4 @@ rm -rf flats/*
 ./node_modules/.bin/truffle-flattener contracts/cloneFactory/TokenSaleCloneFactory.sol > flats/TokenSaleCloneFactory.sol
 ./node_modules/.bin/truffle-flattener contracts/TokenSale.sol > flats/TokenSale.sol
 ./node_modules/.bin/truffle-flattener contracts/CompanyToken.sol > flats/CompanyToken.sol
+./node_modules/.bin/truffle-flattener contracts/Whitelist.sol > flats/Whitelist.sol
