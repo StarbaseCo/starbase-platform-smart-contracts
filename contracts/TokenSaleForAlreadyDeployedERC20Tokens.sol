@@ -2,7 +2,7 @@ pragma solidity 0.4.24;
 
 import "./lib/Pausable.sol";
 import "./lib/FinalizableCrowdsale.sol";
-import "./CompanyToken.sol";
+import "./lib/ERC20.sol";
 import "./Whitelist.sol";
 import "./TokenSaleInterface.sol";
 
@@ -10,19 +10,18 @@ import "./TokenSaleInterface.sol";
  * @title Token Sale contract - crowdsale of company tokens.
  * @author Gustavo Guimaraes - <gustavo@starbase.co>
  */
-contract TokenSale is FinalizableCrowdsale, Pausable {
+contract TokenSaleForAlreadyDeployedERC20Tokens is FinalizableCrowdsale, Pausable {
     uint256 public crowdsaleCap;
     // amount of raised money in STAR
     uint256 public starRaised;
     uint256 public starRate;
-    address public initialTokenOwner;
     bool public isWeiAccepted;
 
     // external contracts
     Whitelist public whitelist;
-    StandardToken public starToken;
+    ERC20 public starToken;
     // The token being sold
-    MintableToken public tokenOnSale;
+    ERC20 public tokenOnSale;
 
     event TokenRateChanged(uint256 previousRate, uint256 newRate);
     event TokenStarRateChanged(uint256 previousStarRate, uint256 newStarRate);
@@ -34,7 +33,7 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
      * @param _endTime Timestamp when the crowdsale will finish
      * @param _whitelist contract containing the whitelisted addresses
      * @param _starToken STAR token contract address
-     * @param _companyToken ERC20 CompanyToken contract address
+     * @param _tokenOnSale ERC20 token for sale
      * @param _rate The token rate per ETH
      * @param _starRate The token rate per STAR
      * @param _wallet Multisig wallet that will hold the crowdsale funds.
@@ -46,7 +45,7 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
         uint256 _endTime,
         address _whitelist,
         address _starToken,
-        address _companyToken,
+        address _tokenOnSale,
         uint256 _rate,
         uint256 _starRate,
         address _wallet,
@@ -69,33 +68,24 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
             _whitelist != address(0) &&
             _starToken != address(0) &&
             !(_rate == 0 && _starRate == 0) &&
-            _companyToken != address(0) &&
+            _tokenOnSale != address(0) &&
             _crowdsaleCap != 0,
             "Parameter variables cannot be empty!"
         );
 
         initCrowdsale(_startTime, _endTime, _rate, _wallet);
-        tokenOnSale = CompanyToken(_companyToken);
+        tokenOnSale = ERC20(_tokenOnSale);
         whitelist = Whitelist(_whitelist);
-        starToken = StandardToken(_starToken);
+        starToken = ERC20(_starToken);
         starRate = _starRate;
         isWeiAccepted = _isWeiAccepted;
         owner = tx.origin;
 
-        initialTokenOwner = CompanyToken(tokenOnSale).owner();
-        uint256 tokenDecimals = CompanyToken(tokenOnSale).decimals();
-        crowdsaleCap = _crowdsaleCap.mul(10 ** tokenDecimals);
-
-        require(CompanyToken(tokenOnSale).paused(), "Company token must be paused upon initialization!");
+        crowdsaleCap = _crowdsaleCap.mul(10 ** 18);
     }
 
     modifier isWhitelisted(address beneficiary) {
         require(whitelist.allowedAddresses(beneficiary), "Beneficiary not whitelisted!");
-        _;
-    }
-
-    modifier crowdsaleIsTokenOwner() {
-        require(tokenOnSale.owner() == address(this), "The token owner must be contract address!");
         _;
     }
 
@@ -145,10 +135,9 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
         payable
         whenNotPaused
         isWhitelisted(beneficiary)
-        crowdsaleIsTokenOwner
     {
         require(beneficiary != address(0));
-        require(validPurchase() && tokenOnSale.totalSupply() < crowdsaleCap);
+        require(validPurchase() && tokenOnSale.balanceOf(address(this)) > 0);
 
         if (!isWeiAccepted) {
             require(msg.value == 0);
@@ -157,14 +146,14 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
         }
 
         // beneficiary must allow TokenSale address to transfer star tokens on its behalf
-        uint256 starAllocationToTokenSale = starToken.allowance(beneficiary, this);
+        uint256 starAllocationToTokenSale = starToken.allowance(beneficiary, address(this));
         if (starAllocationToTokenSale > 0) {
             // calculate token amount to be created
             uint256 tokens = starAllocationToTokenSale.mul(starRate);
 
             //remainder logic
-            if (tokenOnSale.totalSupply().add(tokens) > crowdsaleCap) {
-                tokens = crowdsaleCap.sub(tokenOnSale.totalSupply());
+            if (tokens > tokenOnSale.balanceOf(address(this))) {
+                tokens = tokenOnSale.balanceOf(address(this));
 
                 starAllocationToTokenSale = tokens.div(starRate);
             }
@@ -172,7 +161,7 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
             // update state
             starRaised = starRaised.add(starAllocationToTokenSale);
 
-            tokenOnSale.mint(beneficiary, tokens);
+            tokenOnSale.transfer(beneficiary, tokens);
             emit TokenPurchaseWithStar(msg.sender, beneficiary, starAllocationToTokenSale, tokens);
 
             // forward funds
@@ -194,8 +183,8 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
         uint256 tokens = weiAmount.mul(rate);
 
         //remainder logic
-        if (tokenOnSale.totalSupply().add(tokens) > crowdsaleCap) {
-            tokens = crowdsaleCap.sub(tokenOnSale.totalSupply());
+        if (tokens > tokenOnSale.balanceOf(address(this))) {
+            tokens = tokenOnSale.balanceOf(address(this));
             weiAmount = tokens.div(rate);
 
             weiRefund = msg.value.sub(weiAmount);
@@ -204,7 +193,7 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
         // update state
         weiRaised = weiRaised.add(weiAmount);
 
-        tokenOnSale.mint(beneficiary, tokens);
+        tokenOnSale.transfer(beneficiary, tokens);
         emit TokenPurchase(msg.sender, beneficiary, weiAmount, tokens);
 
         wallet.transfer(weiAmount);
@@ -216,7 +205,7 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
     // override Crowdsale#hasEnded to add cap logic
     // @return true if crowdsale event has ended
     function hasEnded() public view returns (bool) {
-        if (tokenOnSale.totalSupply() >= crowdsaleCap) {
+        if (tokenOnSale.balanceOf(address(this)) == uint(0) && (starRaised > 0 || weiRaised > 0)) {
             return true;
         }
 
@@ -235,13 +224,12 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
      * @dev finalizes crowdsale
      */
     function finalization() internal {
-        if (crowdsaleCap > tokenOnSale.totalSupply()) {
-            uint256 remainingTokens = crowdsaleCap.sub(tokenOnSale.totalSupply());
+        if (tokenOnSale.balanceOf(address(this)) > 0) {
+            uint256 remainingTokens = tokenOnSale.balanceOf(address(this));
 
-            tokenOnSale.mint(wallet, remainingTokens);
+            tokenOnSale.transfer(wallet, remainingTokens);
         }
 
-        tokenOnSale.transferOwnership(initialTokenOwner);
         super.finalization();
     }
 }
