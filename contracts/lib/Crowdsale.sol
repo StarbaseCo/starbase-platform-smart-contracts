@@ -1,9 +1,5 @@
 pragma solidity 0.4.24;
 
-import "./SafeMath.sol";
-import "./MintableToken.sol";
-
-
 /**
  * @title Crowdsale - modified from zeppelin-solidity library
  * @dev Crowdsale is a base contract for managing a token crowdsale.
@@ -13,11 +9,6 @@ import "./MintableToken.sol";
  * as they arrive.
  */
 contract Crowdsale {
-    using SafeMath for uint256;
-
-    // The token being sold
-    MintableToken public tokenOnSale;
-
     // start and end timestamps where investments are allowed (both inclusive)
     uint256 public startTime;
     uint256 public endTime;
