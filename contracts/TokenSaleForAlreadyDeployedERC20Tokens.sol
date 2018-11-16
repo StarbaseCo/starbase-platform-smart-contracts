@@ -81,7 +81,7 @@ contract TokenSaleForAlreadyDeployedERC20Tokens is FinalizableCrowdsale, Pausabl
         isWeiAccepted = _isWeiAccepted;
         owner = tx.origin;
 
-        crowdsaleCap = _crowdsaleCap.mul(10 ** 18);
+        crowdsaleCap = _crowdsaleCap;
     }
 
     modifier isWhitelisted(address beneficiary) {
