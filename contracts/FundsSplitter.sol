@@ -8,7 +8,6 @@ contract FundsSplitter {
 
     address public client;
     address public starbase;
-    uint256 public clientPercentage;
     uint256 public starbasePercentage;
 
     ERC20 public star;
@@ -17,14 +16,12 @@ contract FundsSplitter {
      * @dev initialization function
      * @param _client Address where client's share goes
      * @param _starbase Address where starbase's share goes
-     * @param _clientPercentage Number that denotes client percentage share.It should be btw 1 and 100
      * @param _starbasePercentage Number that denotes client percentage share. It should be btw 1 and 100
      * @param _star Star ERC20 token address
      */
     constructor(
         address _client,
         address _starbase,
-        uint256 _clientPercentage,
         uint256 _starbasePercentage,
         ERC20 _star
     )
@@ -32,9 +29,7 @@ contract FundsSplitter {
     {
         client = _client;
         starbase = _starbase;
-        clientPercentage = _clientPercentage;
         starbasePercentage = _starbasePercentage;
-
         star = _star;
     }
 
@@ -50,12 +45,10 @@ contract FundsSplitter {
      */
     function splitStarFunds() public {
         uint256 starFunds = star.balanceOf(address(this));
-
         uint256 starbaseShare = starFunds.mul(starbasePercentage).div(100);
-        uint256 clientShare = starFunds.mul(clientPercentage).div(100);
 
         star.transfer(starbase, starbaseShare);
-        star.transfer(client, clientShare);
+        star.transfer(client, star.balanceOf(address(this))); // send remaining stars to client
     }
 
     /**
@@ -64,9 +57,8 @@ contract FundsSplitter {
      */
     function splitFunds(uint256 value) internal {
         uint256 starbaseShare = value.mul(starbasePercentage).div(100);
-        uint256 clientShare = value.mul(clientPercentage).div(100);
 
         starbase.transfer(starbaseShare);
-        client.transfer(clientShare);
+        client.transfer(address(this).balance); // remaining ether to client
     }
 }
