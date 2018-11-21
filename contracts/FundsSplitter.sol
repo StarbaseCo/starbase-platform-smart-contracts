@@ -16,7 +16,7 @@ contract FundsSplitter {
      * @dev initialization function
      * @param _client Address where client's share goes
      * @param _starbase Address where starbase's share goes
-     * @param _starbasePercentage Number that denotes client percentage share. It should be btw 1 and 100
+     * @param _starbasePercentage Number that denotes client percentage share (between 1 and 100)
      * @param _star Star ERC20 token address
      */
     constructor(
@@ -34,7 +34,7 @@ contract FundsSplitter {
     }
 
     /**
-     * @dev fallback functions that diverts funds sent to the contract to both client and starbase
+     * @dev fallback function that diverts funds sent to the contract to both client and starbase
      */
     function() public payable {
         splitFunds(msg.value);
