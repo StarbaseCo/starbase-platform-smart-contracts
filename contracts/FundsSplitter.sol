@@ -11,6 +11,7 @@ contract FundsSplitter {
     uint256 public starbasePercentage;
 
     ERC20 public star;
+    ERC20 public tokenOnSale;
 
     /**
      * @dev initialization function
@@ -18,12 +19,14 @@ contract FundsSplitter {
      * @param _starbase Address where starbase's share goes
      * @param _starbasePercentage Number that denotes client percentage share (between 1 and 100)
      * @param _star Star ERC20 token address
+     * @param _tokenOnSale Token on sale's ERC20 token address
      */
     constructor(
         address _client,
         address _starbase,
         uint256 _starbasePercentage,
-        ERC20 _star
+        ERC20 _star,
+        ERC20 _tokenOnSale
     )
         public
     {
@@ -31,6 +34,7 @@ contract FundsSplitter {
         starbase = _starbase;
         starbasePercentage = _starbasePercentage;
         star = _star;
+        tokenOnSale = _tokenOnSale;
     }
 
     /**
@@ -60,5 +64,12 @@ contract FundsSplitter {
 
         starbase.transfer(starbaseShare);
         client.transfer(address(this).balance); // remaining ether to client
+    }
+
+    /**
+     * @dev withdraw any remaining tokens on sale
+     */
+    function withdrawRemainingTokens() public {
+        tokenOnSale.transfer(client, tokenOnSale.balanceOf(address(this)));
     }
 }
