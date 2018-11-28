@@ -2,13 +2,20 @@ const FundsSplitter = artifacts.require("./FundsSplitter.sol");
 const MintableToken = artifacts.require("./MintableToken.sol");
 
 contract("FundsSplitter", ([_, client, starbase]) => {
-  let token, fundsSplitter;
+  let token, tokenOnSale, fundsSplitter;
 
   const starbasePercentageNumber = 10;
 
   beforeEach(async () => {
     token = await MintableToken.new();
-    fundsSplitter = await FundsSplitter.new(client, starbase, starbasePercentageNumber, token.address);
+    tokenOnSale = await MintableToken.new();
+    fundsSplitter = await FundsSplitter.new(
+      client,
+      starbase,
+      starbasePercentageNumber,
+      token.address,
+      tokenOnSale.address,
+    );
   });
 
   describe("#splitFunds", () => {
@@ -42,6 +49,19 @@ contract("FundsSplitter", ([_, client, starbase]) => {
 
         starbaseStarBalance.should.be.bignumber.equal(1e18);
         clientStarBalance.should.be.bignumber.equal(9e18);
+    });
+  });
+
+  describe("#withdrawRemainingTokens", () => {
+    beforeEach(async () => {
+      tokenOnSale.mint(fundsSplitter.address, 10e18);
+    });
+
+    it("withdraw all remaining tokens on sale to client", async () => {
+        await fundsSplitter.withdrawRemainingTokens({ from: _ });
+
+        const clientStarBalance = await tokenOnSale.balanceOf(client);
+        clientStarBalance.should.be.bignumber.equal(10e18);
     });
   });
 });

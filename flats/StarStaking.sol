@@ -1,6 +1,6 @@
 pragma solidity 0.4.24;
 
-// File: contracts/lib/Ownable.sol
+// File: contracts\lib\Ownable.sol
 
 /**
  * @title Ownable
@@ -62,7 +62,7 @@ contract Ownable {
   }
 }
 
-// File: contracts/lib/SafeMath.sol
+// File: contracts\lib\SafeMath.sol
 
 /**
  * @title SafeMath
@@ -110,7 +110,7 @@ library SafeMath {
   }
 }
 
-// File: contracts/lib/ERC20.sol
+// File: contracts\lib\ERC20.sol
 
 /**
  * @title ERC20 interface
@@ -128,7 +128,7 @@ contract ERC20 {
     event Transfer(address indexed from, address indexed to, uint256 value);
 }
 
-// File: contracts/lib/Lockable.sol
+// File: contracts\lib\Lockable.sol
 
 contract Lockable is Ownable {
 
@@ -148,7 +148,7 @@ contract Lockable is Ownable {
     }
 }
 
-// File: contracts/LinkedListLib.sol
+// File: contracts\LinkedListLib.sol
 
 /**
  * @title LinkedListLib
@@ -328,13 +328,13 @@ library LinkedListLib {
     }
 }
 
-// File: contracts/StarStakingInterface.sol
+// File: contracts\StarStakingInterface.sol
 
 contract StarStakingInterface {
     event Staked(address indexed user, uint256 amount, uint256 addedStakingPoints);
 }
 
-// File: contracts/StarStaking.sol
+// File: contracts\StarStaking.sol
 
 contract StarStaking is StarStakingInterface, Lockable {
     using SafeMath for uint256;

@@ -7,3 +7,5 @@ rm -rf flats/*
 ./node_modules/.bin/truffle-flattener contracts/TokenSale.sol > flats/TokenSale.sol
 ./node_modules/.bin/truffle-flattener contracts/CompanyToken.sol > flats/CompanyToken.sol
 ./node_modules/.bin/truffle-flattener contracts/Whitelist.sol > flats/Whitelist.sol
+./node_modules/.bin/truffle-flattener contracts/FundsSplitter.sol > flats/FundsSplitter.sol
+./node_modules/.bin/truffle-flattener contracts/TokenSaleForAlreadyDeployedERC20Tokens.sol > flats/TokenSaleForAlreadyDeployedERC20Tokens.sol
