@@ -9,7 +9,7 @@ const expect = require("chai").expect;
 
 const BigNumber = web3.BigNumber;
 
-contract.only(
+contract(
   "TokenSaleForAlreadyDeployedERC20Tokens",
   ([owner, wallet, buyer, buyer2, user1, fakeWallet]) => {
     const starRate = new BigNumber(10);

@@ -81,7 +81,6 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
         starRate = _starRate;
         isWeiAccepted = _isWeiAccepted;
         _owner = tx.origin;
-        // transferOwnership(tx.origin);
 
         initialTokenOwner = ERC20Plus(tokenOnSale).owner();
         uint256 tokenDecimals = ERC20Plus(tokenOnSale).decimals();
