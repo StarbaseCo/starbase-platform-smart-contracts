@@ -2,7 +2,7 @@ pragma solidity 0.4.24;
 
 import "./lib/Pausable.sol";
 import "./lib/FinalizableCrowdsale.sol";
-import "./CompanyToken.sol";
+import "./lib/ERC20Plus.sol";
 import "./Whitelist.sol";
 import "./TokenSaleInterface.sol";
 
@@ -20,9 +20,9 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
 
     // external contracts
     Whitelist public whitelist;
-    StandardToken public starToken;
+    ERC20Plus public starToken;
     // The token being sold
-    MintableToken public tokenOnSale;
+    ERC20Plus public tokenOnSale;
 
     event TokenRateChanged(uint256 previousRate, uint256 newRate);
     event TokenStarRateChanged(uint256 previousStarRate, uint256 newStarRate);
@@ -34,7 +34,7 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
      * @param _endTime Timestamp when the crowdsale will finish
      * @param _whitelist contract containing the whitelisted addresses
      * @param _starToken STAR token contract address
-     * @param _companyToken ERC20 CompanyToken contract address
+     * @param _companyToken ERC20 contract address that has minting capabilities
      * @param _rate The token rate per ETH
      * @param _starRate The token rate per STAR
      * @param _wallet Multisig wallet that will hold the crowdsale funds.
@@ -75,18 +75,19 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
         );
 
         initCrowdsale(_startTime, _endTime, _rate, _wallet);
-        tokenOnSale = CompanyToken(_companyToken);
+        tokenOnSale = ERC20Plus(_companyToken);
         whitelist = Whitelist(_whitelist);
-        starToken = StandardToken(_starToken);
+        starToken = ERC20Plus(_starToken);
         starRate = _starRate;
         isWeiAccepted = _isWeiAccepted;
-        owner = tx.origin;
+        _owner = tx.origin;
+        // transferOwnership(tx.origin);
 
-        initialTokenOwner = CompanyToken(tokenOnSale).owner();
-        uint256 tokenDecimals = CompanyToken(tokenOnSale).decimals();
+        initialTokenOwner = ERC20Plus(tokenOnSale).owner();
+        uint256 tokenDecimals = ERC20Plus(tokenOnSale).decimals();
         crowdsaleCap = _crowdsaleCap.mul(10 ** tokenDecimals);
 
-        require(CompanyToken(tokenOnSale).paused(), "Company token must be paused upon initialization!");
+        require(ERC20Plus(tokenOnSale).paused(), "Company token must be paused upon initialization!");
     }
 
     modifier isWhitelisted(address beneficiary) {

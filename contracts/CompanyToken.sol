@@ -9,21 +9,42 @@ import "./lib/PausableToken.sol";
  * @author Gustavo Guimaraes - <gustavo@starbase.co>
  */
 contract CompanyToken is PausableToken, MintableToken {
-    string public name;
-    string public symbol;
-    uint8 public decimals;
+    string private _name;
+    string private _symbol;
+    uint8 private _decimals;
 
     /**
      * @dev Contract constructor function
-     * @param _name Token name
-     * @param _symbol Token symbol - up to 4 characters
-     * @param _decimals Decimals for token
+     * @param name Token name
+     * @param symbol Token symbol - up to 4 characters
+     * @param decimals Decimals for token
      */
-    constructor(string _name, string _symbol, uint8 _decimals) public {
-        name = _name;
-        symbol = _symbol;
-        decimals = _decimals;
+    constructor(string name, string symbol, uint8 decimals) public {
+        _name = name;
+        _symbol = symbol;
+        _decimals = decimals;
 
         pause();
+    }
+
+    /**
+     * @return the name of the token.
+     */
+    function name() public view returns (string) {
+        return _name;
+    }
+
+    /**
+     * @return the symbol of the token.
+     */
+    function symbol() public view returns (string) {
+        return _symbol;
+    }
+
+    /**
+     * @return the number of decimals of the token.
+     */
+    function decimals() public view returns (uint8) {
+        return _decimals;
     }
 }
