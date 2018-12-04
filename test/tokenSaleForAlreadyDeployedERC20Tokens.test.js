@@ -62,15 +62,6 @@ contract(
       await token.mint(crowdsale.address, crowdsaleCap.mul(1e18));
     });
 
-    afterEach(
-      "check for invariant: total token supply <= total token cap",
-      async () => {
-        expect(await token.totalSupply()).to.be.bignumber.most(
-          await crowdsale.crowdsaleCap()
-        );
-      }
-    );
-
     it("deployment fails when both starRate and rate are zero", async () => {
       try {
         await newCrowdsale(0, 0);
@@ -128,7 +119,7 @@ contract(
     it("has a crowdsaleCap variable", async () => {
       const crowdsaleCapFigure = await crowdsale.crowdsaleCap();
 
-      crowdsaleCapFigure.should.be.bignumber.equal(crowdsaleCap * 1e18);
+      crowdsaleCapFigure.should.be.bignumber.equal(crowdsaleCap);
     });
 
     it("cannot call init again once initial values are set", async () => {

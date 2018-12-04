@@ -79,8 +79,7 @@ contract TokenSaleForAlreadyDeployedERC20Tokens is FinalizableCrowdsale, Pausabl
         starToken = ERC20(_starToken);
         starRate = _starRate;
         isWeiAccepted = _isWeiAccepted;
-        owner = tx.origin;
-
+        _owner = tx.origin;
         crowdsaleCap = _crowdsaleCap;
     }
 
