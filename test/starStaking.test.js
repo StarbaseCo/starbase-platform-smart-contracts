@@ -7,32 +7,27 @@ const { should, ensuresException } = require('./helpers/utils');
 const { increaseTimeTo, latestTime } = require('./helpers/timer');
 
 const NULL = '0x0000000000000000000000000000000000000000';
-
-const  BALANCES = [
-    new BigNumber(10),
-    new BigNumber(200),
-    new BigNumber(4000),
-    new BigNumber(10000),
-    new BigNumber(60000),
-    new BigNumber(200000),
-    new BigNumber(3333333),
-    new BigNumber(44444444),
-    new BigNumber(999999999),
-    new BigNumber(1000000000),
-];
+const BALANCES = [1,60000,99999999].map(n => new BigNumber(n))
 
 contract('StarStaking', _accounts => {
-    let stakingContract, token, initialBalance, startTime, closingTime, accounts;
+    let stakingContract, token, initialBalance, startTime, closingTime, stakingSaleCap, accounts;
 
     beforeEach(async () => {
         accounts = _accounts;
-        initialBalance = new BigNumber(1000000000);
+        initialBalance = new BigNumber(10000000000);
         token = await MintableToken.new();
        
         topRanksMaxSize = new BigNumber(10);
         startTime = new BigNumber(latestTime().toString()).plus(1000);
         closingTime = startTime.plus(200000);
-        stakingContract = await StarStaking.new(token.address, topRanksMaxSize, startTime, closingTime);
+        stakingSaleCap = new BigNumber(1000000000);
+        stakingContract = await StarStaking.new(
+            token.address,
+            topRanksMaxSize,
+            startTime,
+            closingTime,
+            stakingSaleCap
+        );
 
         await token.mint(accounts[0], initialBalance);
         await token.approve(stakingContract.address, initialBalance, {
@@ -41,11 +36,17 @@ contract('StarStaking', _accounts => {
     });
 
     describe('when deploying the contract', () => {
-        async function itFailsToDeployContract(_address, _topRanksMaxSize, _startTime, _closingTime) {
+        async function itFailsToDeployContract(_address, _topRanksMaxSize, _startTime, _closingTime, _stakingSaleCap) {
             let emptyStakingContract;
 
             try {
-                emptyStakingContract = await StarStaking.new(_address, _topRanksMaxSize, _startTime, _closingTime);
+                emptyStakingContract = await StarStaking.new(
+                    _address,
+                    _topRanksMaxSize,
+                    _startTime,
+                    _closingTime,
+                    _stakingSaleCap
+                );
                 assert.fail();
             } catch (e) {
                 ensuresException(e);
@@ -55,20 +56,24 @@ contract('StarStaking', _accounts => {
         }
 
         it("does NOT allow to deploy without a token address", () => {
-            itFailsToDeployContract(0, topRanksMaxSize, startTime, closingTime);
+            itFailsToDeployContract(0, topRanksMaxSize, startTime, closingTime, stakingSaleCap);
         });
 
         it("does NOT allow to deploy with a closing time before starting time", () => {
-            itFailsToDeployContract(token.address, topRanksMaxSize, closingTime, startTime);
+            itFailsToDeployContract(token.address, topRanksMaxSize, closingTime, startTime, stakingSaleCap);
         });
 
         it("does NOT allow to deploy with a starting time before the current time", () => {
             const earlyStartTime = new BigNumber(latestTime().toString()).minus(1000);
-            itFailsToDeployContract(token.address, topRanksMaxSize, earlyStartTime, closingTime);
+            itFailsToDeployContract(token.address, topRanksMaxSize, earlyStartTime, closingTime, stakingSaleCap);
         });
 
         it("does NOT allow to deploy with a topRanksMaxSize of 0", () => {
-            itFailsToDeployContract(token.address, 0, startTime, closingTime);
+            itFailsToDeployContract(token.address, 0, startTime, closingTime, stakingSaleCap);
+        });
+
+        it("does NOT allow to deploy with a stakeSaleCap of 0", () => {
+            itFailsToDeployContract(token.address, topRanksMaxSize, startTime, closingTime, 0);
         });
 
         it('sets initial parameters correctly', async () => {
@@ -140,7 +145,18 @@ contract('StarStaking', _accounts => {
                 accounts[1]
             );
             user1TotalStaked.should.be.bignumber.equal(initialBalance);
-        });           
+        });
+        
+        it('adds only the remaining staking tokens when cap is reached', async () => {
+            await stakingContract.stake(stakingSaleCap.plus(10000), NULL);
+            const userBalance = await token.balanceOf.call(accounts[0]);
+            const stakingContractBalance = await token.balanceOf.call(
+                stakingContract.address
+            );
+
+            userBalance.should.be.bignumber.equal(initialBalance.minus(stakingSaleCap));
+            stakingContractBalance.should.be.bignumber.equal(stakingSaleCap);
+        });
     });
 
     function computeStakingPoints({ amount, timeWhenSubmitted, timeAdvanced }) {
