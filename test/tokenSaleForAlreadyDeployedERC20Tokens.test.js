@@ -119,7 +119,7 @@ contract(
     it("has a crowdsaleCap variable", async () => {
       const crowdsaleCapFigure = await crowdsale.crowdsaleCap();
 
-      crowdsaleCapFigure.should.be.bignumber.equal(crowdsaleCap);
+      crowdsaleCapFigure.should.be.bignumber.equal(crowdsaleCap * 1e18);
     });
 
     it("cannot call init again once initial values are set", async () => {

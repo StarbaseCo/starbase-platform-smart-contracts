@@ -12,6 +12,7 @@ import "./TokenSaleInterface.sol";
  */
 contract TokenSale is FinalizableCrowdsale, Pausable {
     uint256 public crowdsaleCap;
+    uint256 public tokensSold;
     // amount of raised money in STAR
     uint256 public starRaised;
     uint256 public starRate;
@@ -148,7 +149,7 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
         crowdsaleIsTokenOwner
     {
         require(beneficiary != address(0));
-        require(validPurchase() && tokenOnSale.totalSupply() < crowdsaleCap);
+        require(validPurchase() && tokensSold < crowdsaleCap);
 
         if (!isWeiAccepted) {
             require(msg.value == 0);
@@ -163,8 +164,8 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
             uint256 tokens = starAllocationToTokenSale.mul(starRate);
 
             //remainder logic
-            if (tokenOnSale.totalSupply().add(tokens) > crowdsaleCap) {
-                tokens = crowdsaleCap.sub(tokenOnSale.totalSupply());
+            if (tokensSold.add(tokens) > crowdsaleCap) {
+                tokens = crowdsaleCap.sub(tokensSold);
 
                 starAllocationToTokenSale = tokens.div(starRate);
             }
@@ -172,6 +173,7 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
             // update state
             starRaised = starRaised.add(starAllocationToTokenSale);
 
+            tokensSold = tokensSold.add(tokens);
             tokenOnSale.mint(beneficiary, tokens);
             emit TokenPurchaseWithStar(msg.sender, beneficiary, starAllocationToTokenSale, tokens);
 
@@ -194,8 +196,8 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
         uint256 tokens = weiAmount.mul(rate);
 
         //remainder logic
-        if (tokenOnSale.totalSupply().add(tokens) > crowdsaleCap) {
-            tokens = crowdsaleCap.sub(tokenOnSale.totalSupply());
+        if (tokensSold.add(tokens) > crowdsaleCap) {
+            tokens = crowdsaleCap.sub(tokensSold);
             weiAmount = tokens.div(rate);
 
             weiRefund = msg.value.sub(weiAmount);
@@ -204,6 +206,7 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
         // update state
         weiRaised = weiRaised.add(weiAmount);
 
+        tokensSold = tokensSold.add(tokens);
         tokenOnSale.mint(beneficiary, tokens);
         emit TokenPurchase(msg.sender, beneficiary, weiAmount, tokens);
 
@@ -216,7 +219,7 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
     // override Crowdsale#hasEnded to add cap logic
     // @return true if crowdsale event has ended
     function hasEnded() public view returns (bool) {
-        if (tokenOnSale.totalSupply() >= crowdsaleCap) {
+        if (tokensSold >= crowdsaleCap) {
             return true;
         }
 
@@ -235,8 +238,8 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
      * @dev finalizes crowdsale
      */
     function finalization() internal {
-        if (crowdsaleCap > tokenOnSale.totalSupply()) {
-            uint256 remainingTokens = crowdsaleCap.sub(tokenOnSale.totalSupply());
+        if (crowdsaleCap > tokensSold) {
+            uint256 remainingTokens = crowdsaleCap.sub(tokensSold);
 
             tokenOnSale.mint(wallet, remainingTokens);
         }
