@@ -27,6 +27,9 @@ contract StarStaking is StarStakingInterface, Lockable {
     uint256 public startTime;
     uint256 public closingTime;
 
+    uint256 public stakeSaleCap;
+    uint256 public totalRaised;
+
     modifier whenStakingOpen {
         require(now >= startTime, "Staking period not yet started!");
         require(now < closingTime, "Staking period already closed!");
@@ -40,17 +43,25 @@ contract StarStaking is StarStakingInterface, Lockable {
      * @param _startTime Timestamp for the beginning of the staking event.
      * @param _closingTime Timestamp of the end of staking event.
      */
-    constructor(ERC20 _token, uint256 _topRanksMaxSize, uint256 _startTime, uint256 _closingTime) public {
+    constructor(
+        ERC20 _token,
+        uint256 _topRanksMaxSize,
+        uint256 _startTime,
+        uint256 _closingTime,
+        uint256 _stakeSaleCap
+    ) public {
         require(address(_token) != address(0), "Token address may must be defined!");
         require(_startTime < _closingTime, "Start time must be before closing time!");
         require(_startTime >= now, "Start time must be after current time!");
-        require(_topRanksMaxSize > 0, "Top ranks size must be more than 0.");
+        require(_topRanksMaxSize > 0, "Top ranks size must be more than 0!");
+        require(_stakeSaleCap > 0, "StakingSale cap should be higher than 0!");
 
         token = _token;
         startTime = _startTime;
         closingTime = _closingTime;
         topRanksCount = 0;
         topRanksMaxSize = _topRanksMaxSize;
+        stakeSaleCap = _stakeSaleCap;
     }
 
     /**
@@ -69,7 +80,12 @@ contract StarStaking is StarStakingInterface, Lockable {
      * @param _node Node as reference for insert position into top ranks.
      */
     function stakeFor(address _user, uint256 _amount, address _node) public onlyWhenUnlocked whenStakingOpen {
-        addStakingPoints(_user, _amount);
+        require(_amount > 0, "Insert amount higher than 0!");
+        uint256 amount = (totalRaised.add(_amount) > stakeSaleCap) ? stakeSaleCap.sub(totalRaised) : _amount; 
+
+        require(amount > 0, "StakeSale cap reached, the sale is finished!");
+
+        addStakingPoints(_user, amount);
 
         if (topRanksCount == 0) {
             topRanks.insert(HEAD, _user, NEXT);
@@ -91,7 +107,8 @@ contract StarStaking is StarStakingInterface, Lockable {
             }
         }
 
-        require(token.transferFrom(msg.sender, address(this), _amount), "Not enough funds for sender!");
+        require(token.transferFrom(msg.sender, address(this), amount), "Not enough funds for sender!");
+        totalRaised = totalRaised.add(amount);
     }
 
     function sortedInsert(address _user, address _node) internal {
