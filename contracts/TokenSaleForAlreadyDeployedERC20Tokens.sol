@@ -229,7 +229,7 @@ contract TokenSaleForAlreadyDeployedERC20Tokens is FinalizableCrowdsale, Pausabl
      */
     function finalization() internal {
         if (crowdsaleCap > tokensSold) {
-            uint256 remainingTokens = crowdsaleCap.sub(tokensSold);
+            uint256 remainingTokens = tokenOnSale.balanceOf(address(this)); // any remaining tokens in the contract
 
             tokenOnSale.transfer(wallet, remainingTokens);
         }
