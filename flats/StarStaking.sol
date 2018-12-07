@@ -1,6 +1,6 @@
 pragma solidity 0.4.24;
 
-// File: contracts\lib\Ownable.sol
+// File: contracts/lib/Ownable.sol
 
 /**
  * @title Ownable
@@ -8,61 +8,72 @@ pragma solidity 0.4.24;
  * functions, this simplifies the implementation of "user permissions".
  */
 contract Ownable {
-  address public owner;
+    address public _owner;
 
-  event OwnershipRenounced(address indexed previousOwner);
-  event OwnershipTransferred(
-    address indexed previousOwner,
-    address indexed newOwner
-  );
+    event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
 
-  /**
-   * @dev The Ownable constructor sets the original `owner` of the contract to the sender
-   * account.
-   */
-  constructor() public {
-    owner = msg.sender;
-  }
+    /**
+     * @dev The Ownable constructor sets the original `owner` of the contract to the sender
+     * account.
+     */
+    constructor () internal {
+        _owner = msg.sender;
+        emit OwnershipTransferred(address(0), _owner);
+    }
 
-  /**
-   * @dev Throws if called by any account other than the owner.
-   */
-  modifier onlyOwner() {
-    require(msg.sender == owner, "only owner is able to call this function");
-    _;
-  }
+    /**
+     * @return the address of the owner.
+     */
+    function owner() public view returns (address) {
+        return _owner;
+    }
 
-  /**
-   * @dev Allows the current owner to relinquish control of the contract.
-   * @notice Renouncing to ownership will leave the contract without an owner.
-   * It will not be possible to call the functions with the `onlyOwner`
-   * modifier anymore.
-   */
-  function renounceOwnership() public onlyOwner {
-    emit OwnershipRenounced(owner);
-    owner = address(0);
-  }
+    /**
+     * @dev Throws if called by any account other than the owner.
+     */
+    modifier onlyOwner() {
+        require(isOwner());
+        _;
+    }
 
-  /**
-   * @dev Allows the current owner to transfer control of the contract to a newOwner.
-   * @param _newOwner The address to transfer ownership to.
-   */
-  function transferOwnership(address _newOwner) public onlyOwner {
-    _transferOwnership(_newOwner);
-  }
+    /**
+     * @return true if `msg.sender` is the owner of the contract.
+     */
+    function isOwner() public view returns (bool) {
+        return msg.sender == _owner;
+    }
 
-  /**
-   * @dev Transfers control of the contract to a newOwner.
-   * @param _newOwner The address to transfer ownership to.
-   */
-  function _transferOwnership(address _newOwner) internal {
-    require(_newOwner != address(0));
-    emit OwnershipTransferred(owner, _newOwner);
-    owner = _newOwner;
-  }
+    /**
+     * @dev Allows the current owner to relinquish control of the contract.
+     * @notice Renouncing to ownership will leave the contract without an owner.
+     * It will not be possible to call the functions with the `onlyOwner`
+     * modifier anymore.
+     */
+    function renounceOwnership() public onlyOwner {
+        emit OwnershipTransferred(_owner, address(0));
+        _owner = address(0);
+    }
+
+    /**
+     * @dev Allows the current owner to transfer control of the contract to a newOwner.
+     * @param newOwner The address to transfer ownership to.
+     */
+    function transferOwnership(address newOwner) public onlyOwner {
+        _transferOwnership(newOwner);
+    }
+
+    /**
+     * @dev Transfers control of the contract to a newOwner.
+     * @param newOwner The address to transfer ownership to.
+     */
+    function _transferOwnership(address newOwner) internal {
+        require(newOwner != address(0));
+        emit OwnershipTransferred(_owner, newOwner);
+        _owner = newOwner;
+    }
 }
 
-// File: contracts\lib\SafeMath.sol
+// File: contracts/lib/SafeMath.sol
 
 /**
  * @title SafeMath
@@ -110,7 +121,7 @@ library SafeMath {
   }
 }
 
-// File: contracts\lib\ERC20.sol
+// File: contracts/lib/ERC20.sol
 
 /**
  * @title ERC20 interface
@@ -128,7 +139,7 @@ contract ERC20 {
     event Transfer(address indexed from, address indexed to, uint256 value);
 }
 
-// File: contracts\lib\Lockable.sol
+// File: contracts/lib/Lockable.sol
 
 contract Lockable is Ownable {
 
@@ -148,7 +159,7 @@ contract Lockable is Ownable {
     }
 }
 
-// File: contracts\LinkedListLib.sol
+// File: contracts/LinkedListLib.sol
 
 /**
  * @title LinkedListLib
@@ -328,13 +339,13 @@ library LinkedListLib {
     }
 }
 
-// File: contracts\StarStakingInterface.sol
+// File: contracts/StarStakingInterface.sol
 
 contract StarStakingInterface {
     event Staked(address indexed user, uint256 amount, uint256 addedStakingPoints);
 }
 
-// File: contracts\StarStaking.sol
+// File: contracts/StarStaking.sol
 
 contract StarStaking is StarStakingInterface, Lockable {
     using SafeMath for uint256;
@@ -356,6 +367,9 @@ contract StarStaking is StarStakingInterface, Lockable {
     uint256 public startTime;
     uint256 public closingTime;
 
+    uint256 public stakeSaleCap;
+    uint256 public totalRaised;
+
     modifier whenStakingOpen {
         require(now >= startTime, "Staking period not yet started!");
         require(now < closingTime, "Staking period already closed!");
@@ -369,17 +383,25 @@ contract StarStaking is StarStakingInterface, Lockable {
      * @param _startTime Timestamp for the beginning of the staking event.
      * @param _closingTime Timestamp of the end of staking event.
      */
-    constructor(ERC20 _token, uint256 _topRanksMaxSize, uint256 _startTime, uint256 _closingTime) public {
+    constructor(
+        ERC20 _token,
+        uint256 _topRanksMaxSize,
+        uint256 _startTime,
+        uint256 _closingTime,
+        uint256 _stakeSaleCap
+    ) public {
         require(address(_token) != address(0), "Token address may must be defined!");
         require(_startTime < _closingTime, "Start time must be before closing time!");
         require(_startTime >= now, "Start time must be after current time!");
-        require(_topRanksMaxSize > 0, "Top ranks size must be more than 0.");
+        require(_topRanksMaxSize > 0, "Top ranks size must be more than 0!");
+        require(_stakeSaleCap > 0, "StakingSale cap should be higher than 0!");
 
         token = _token;
         startTime = _startTime;
         closingTime = _closingTime;
         topRanksCount = 0;
         topRanksMaxSize = _topRanksMaxSize;
+        stakeSaleCap = _stakeSaleCap;
     }
 
     /**
@@ -398,7 +420,12 @@ contract StarStaking is StarStakingInterface, Lockable {
      * @param _node Node as reference for insert position into top ranks.
      */
     function stakeFor(address _user, uint256 _amount, address _node) public onlyWhenUnlocked whenStakingOpen {
-        addStakingPoints(_user, _amount);
+        require(_amount > 0, "Insert amount higher than 0!");
+        uint256 amount = (totalRaised.add(_amount) > stakeSaleCap) ? stakeSaleCap.sub(totalRaised) : _amount; 
+
+        require(amount > 0, "StakeSale cap reached, the sale is finished!");
+
+        addStakingPoints(_user, amount);
 
         if (topRanksCount == 0) {
             topRanks.insert(HEAD, _user, NEXT);
@@ -420,7 +447,8 @@ contract StarStaking is StarStakingInterface, Lockable {
             }
         }
 
-        require(token.transferFrom(msg.sender, address(this), _amount), "Not enough funds for sender!");
+        require(token.transferFrom(msg.sender, address(this), amount), "Not enough funds for sender!");
+        totalRaised = totalRaised.add(amount);
     }
 
     function sortedInsert(address _user, address _node) internal {

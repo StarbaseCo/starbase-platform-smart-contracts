@@ -1,6 +1,6 @@
 pragma solidity 0.4.24;
 
-// File: contracts\lib\Ownable.sol
+// File: contracts/lib/Ownable.sol
 
 /**
  * @title Ownable
@@ -8,107 +8,128 @@ pragma solidity 0.4.24;
  * functions, this simplifies the implementation of "user permissions".
  */
 contract Ownable {
-  address public owner;
+    address public _owner;
 
-  event OwnershipRenounced(address indexed previousOwner);
-  event OwnershipTransferred(
-    address indexed previousOwner,
-    address indexed newOwner
-  );
+    event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
 
-  /**
-   * @dev The Ownable constructor sets the original `owner` of the contract to the sender
-   * account.
-   */
-  constructor() public {
-    owner = msg.sender;
-  }
+    /**
+     * @dev The Ownable constructor sets the original `owner` of the contract to the sender
+     * account.
+     */
+    constructor () internal {
+        _owner = msg.sender;
+        emit OwnershipTransferred(address(0), _owner);
+    }
 
-  /**
-   * @dev Throws if called by any account other than the owner.
-   */
-  modifier onlyOwner() {
-    require(msg.sender == owner, "only owner is able to call this function");
-    _;
-  }
+    /**
+     * @return the address of the owner.
+     */
+    function owner() public view returns (address) {
+        return _owner;
+    }
 
-  /**
-   * @dev Allows the current owner to relinquish control of the contract.
-   * @notice Renouncing to ownership will leave the contract without an owner.
-   * It will not be possible to call the functions with the `onlyOwner`
-   * modifier anymore.
-   */
-  function renounceOwnership() public onlyOwner {
-    emit OwnershipRenounced(owner);
-    owner = address(0);
-  }
+    /**
+     * @dev Throws if called by any account other than the owner.
+     */
+    modifier onlyOwner() {
+        require(isOwner());
+        _;
+    }
 
-  /**
-   * @dev Allows the current owner to transfer control of the contract to a newOwner.
-   * @param _newOwner The address to transfer ownership to.
-   */
-  function transferOwnership(address _newOwner) public onlyOwner {
-    _transferOwnership(_newOwner);
-  }
+    /**
+     * @return true if `msg.sender` is the owner of the contract.
+     */
+    function isOwner() public view returns (bool) {
+        return msg.sender == _owner;
+    }
 
-  /**
-   * @dev Transfers control of the contract to a newOwner.
-   * @param _newOwner The address to transfer ownership to.
-   */
-  function _transferOwnership(address _newOwner) internal {
-    require(_newOwner != address(0));
-    emit OwnershipTransferred(owner, _newOwner);
-    owner = _newOwner;
-  }
+    /**
+     * @dev Allows the current owner to relinquish control of the contract.
+     * @notice Renouncing to ownership will leave the contract without an owner.
+     * It will not be possible to call the functions with the `onlyOwner`
+     * modifier anymore.
+     */
+    function renounceOwnership() public onlyOwner {
+        emit OwnershipTransferred(_owner, address(0));
+        _owner = address(0);
+    }
+
+    /**
+     * @dev Allows the current owner to transfer control of the contract to a newOwner.
+     * @param newOwner The address to transfer ownership to.
+     */
+    function transferOwnership(address newOwner) public onlyOwner {
+        _transferOwnership(newOwner);
+    }
+
+    /**
+     * @dev Transfers control of the contract to a newOwner.
+     * @param newOwner The address to transfer ownership to.
+     */
+    function _transferOwnership(address newOwner) internal {
+        require(newOwner != address(0));
+        emit OwnershipTransferred(_owner, newOwner);
+        _owner = newOwner;
+    }
 }
 
-// File: contracts\lib\Pausable.sol
+// File: contracts/lib/Pausable.sol
 
 /**
  * @title Pausable
  * @dev Base contract which allows children to implement an emergency stop mechanism.
  */
 contract Pausable is Ownable {
-  event Pause();
-  event Unpause();
+    event Pause();
+    event Unpause();
 
-  bool public paused = false;
+    bool private _paused;
 
+    constructor () internal {
+        _paused = false;
+    }
 
-  /**
-   * @dev Modifier to make a function callable only when the contract is not paused.
-   */
-  modifier whenNotPaused() {
-    require(!paused);
-    _;
-  }
+    /**
+     * @return true if the contract is paused, false otherwise.
+     */
+    function paused() public view returns (bool) {
+        return _paused;
+    }
 
-  /**
-   * @dev Modifier to make a function callable only when the contract is paused.
-   */
-  modifier whenPaused() {
-    require(paused);
-    _;
-  }
+    /**
+     * @dev Modifier to make a function callable only when the contract is not paused.
+     */
+    modifier whenNotPaused() {
+        require(!_paused, "must not be paused");
+        _;
+    }
 
-  /**
-   * @dev called by the owner to pause, triggers stopped state
-   */
-  function pause() onlyOwner whenNotPaused public {
-    paused = true;
-    emit Pause();
-  }
+    /**
+     * @dev Modifier to make a function callable only when the contract is paused.
+     */
+    modifier whenPaused() {
+        require(_paused, "must be paused");
+        _;
+    }
 
-  /**
-   * @dev called by the owner to unpause, returns to normal state
-   */
-  function unpause() onlyOwner whenPaused public {
-    paused = false;
-    emit Unpause();
-  }
+    /**
+     * @dev called by the owner to pause, triggers stopped state
+     */
+    function pause() public onlyOwner whenNotPaused {
+        _paused = true;
+        emit Pause();
+    }
+
+    /**
+     * @dev called by the owner to unpause, returns to normal state
+     */
+    function unpause() onlyOwner whenPaused public {
+        _paused = false;
+        emit Unpause();
+    }
 }
 
-// File: contracts\lib\SafeMath.sol
+// File: contracts/lib/SafeMath.sol
 
 /**
  * @title SafeMath
@@ -156,7 +177,7 @@ library SafeMath {
   }
 }
 
-// File: contracts\lib\Crowdsale.sol
+// File: contracts/lib/Crowdsale.sol
 
 /**
  * @title Crowdsale - modified from zeppelin-solidity library
@@ -215,7 +236,7 @@ contract Crowdsale {
     }
 }
 
-// File: contracts\lib\FinalizableCrowdsale.sol
+// File: contracts/lib/FinalizableCrowdsale.sol
 
 /**
  * @title FinalizableCrowdsale
@@ -252,7 +273,7 @@ contract FinalizableCrowdsale is Crowdsale, Ownable {
   }
 }
 
-// File: contracts\lib\ERC20.sol
+// File: contracts/lib/ERC20.sol
 
 /**
  * @title ERC20 interface
@@ -270,7 +291,7 @@ contract ERC20 {
     event Transfer(address indexed from, address indexed to, uint256 value);
 }
 
-// File: contracts\Whitelist.sol
+// File: contracts/Whitelist.sol
 
 /**
  * @title Whitelist - crowdsale whitelist contract
@@ -313,7 +334,7 @@ contract Whitelist is Ownable {
     }
 }
 
-// File: contracts\TokenSaleInterface.sol
+// File: contracts/TokenSaleInterface.sol
 
 /**
  * @title TokenSale contract interface
@@ -335,7 +356,7 @@ interface TokenSaleInterface {
     external;
 }
 
-// File: contracts\TokenSaleForAlreadyDeployedERC20Tokens.sol
+// File: contracts/TokenSaleForAlreadyDeployedERC20Tokens.sol
 
 /**
  * @title Token Sale contract - crowdsale of company tokens.
@@ -343,6 +364,7 @@ interface TokenSaleInterface {
  */
 contract TokenSaleForAlreadyDeployedERC20Tokens is FinalizableCrowdsale, Pausable {
     uint256 public crowdsaleCap;
+    uint256 public tokensSold;
     // amount of raised money in STAR
     uint256 public starRaised;
     uint256 public starRate;
@@ -410,9 +432,10 @@ contract TokenSaleForAlreadyDeployedERC20Tokens is FinalizableCrowdsale, Pausabl
         starToken = ERC20(_starToken);
         starRate = _starRate;
         isWeiAccepted = _isWeiAccepted;
-        owner = tx.origin;
+        _owner = tx.origin;
 
-        crowdsaleCap = _crowdsaleCap;
+        // NOTE: only works with tokens that has 18 decimals
+        crowdsaleCap = _crowdsaleCap.mul(10 ** 18);
     }
 
     modifier isWhitelisted(address beneficiary) {
@@ -468,7 +491,7 @@ contract TokenSaleForAlreadyDeployedERC20Tokens is FinalizableCrowdsale, Pausabl
         isWhitelisted(beneficiary)
     {
         require(beneficiary != address(0));
-        require(validPurchase() && tokenOnSale.balanceOf(address(this)) > 0);
+        require(validPurchase() && tokensSold < crowdsaleCap);
 
         if (!isWeiAccepted) {
             require(msg.value == 0);
@@ -483,8 +506,8 @@ contract TokenSaleForAlreadyDeployedERC20Tokens is FinalizableCrowdsale, Pausabl
             uint256 tokens = starAllocationToTokenSale.mul(starRate);
 
             //remainder logic
-            if (tokens > tokenOnSale.balanceOf(address(this))) {
-                tokens = tokenOnSale.balanceOf(address(this));
+            if (tokensSold.add(tokens) > crowdsaleCap) {
+                tokens = crowdsaleCap.sub(tokensSold);
 
                 starAllocationToTokenSale = tokens.div(starRate);
             }
@@ -492,6 +515,7 @@ contract TokenSaleForAlreadyDeployedERC20Tokens is FinalizableCrowdsale, Pausabl
             // update state
             starRaised = starRaised.add(starAllocationToTokenSale);
 
+            tokensSold = tokensSold.add(tokens);
             tokenOnSale.transfer(beneficiary, tokens);
             emit TokenPurchaseWithStar(msg.sender, beneficiary, starAllocationToTokenSale, tokens);
 
@@ -514,8 +538,8 @@ contract TokenSaleForAlreadyDeployedERC20Tokens is FinalizableCrowdsale, Pausabl
         uint256 tokens = weiAmount.mul(rate);
 
         //remainder logic
-        if (tokens > tokenOnSale.balanceOf(address(this))) {
-            tokens = tokenOnSale.balanceOf(address(this));
+        if (tokensSold.add(tokens) > crowdsaleCap) {
+            tokens = crowdsaleCap.sub(tokensSold);
             weiAmount = tokens.div(rate);
 
             weiRefund = msg.value.sub(weiAmount);
@@ -524,6 +548,7 @@ contract TokenSaleForAlreadyDeployedERC20Tokens is FinalizableCrowdsale, Pausabl
         // update state
         weiRaised = weiRaised.add(weiAmount);
 
+        tokensSold = tokensSold.add(tokens);
         tokenOnSale.transfer(beneficiary, tokens);
         emit TokenPurchase(msg.sender, beneficiary, weiAmount, tokens);
 
@@ -536,7 +561,7 @@ contract TokenSaleForAlreadyDeployedERC20Tokens is FinalizableCrowdsale, Pausabl
     // override Crowdsale#hasEnded to add cap logic
     // @return true if crowdsale event has ended
     function hasEnded() public view returns (bool) {
-        if (tokenOnSale.balanceOf(address(this)) == uint(0) && (starRaised > 0 || weiRaised > 0)) {
+        if (tokensSold >= crowdsaleCap) {
             return true;
         }
 
@@ -555,8 +580,8 @@ contract TokenSaleForAlreadyDeployedERC20Tokens is FinalizableCrowdsale, Pausabl
      * @dev finalizes crowdsale
      */
     function finalization() internal {
-        if (tokenOnSale.balanceOf(address(this)) > 0) {
-            uint256 remainingTokens = tokenOnSale.balanceOf(address(this));
+        if (crowdsaleCap > tokensSold) {
+            uint256 remainingTokens = tokenOnSale.balanceOf(address(this)); // any remaining tokens in the contract
 
             tokenOnSale.transfer(wallet, remainingTokens);
         }
