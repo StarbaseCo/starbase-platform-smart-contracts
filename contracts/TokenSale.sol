@@ -75,6 +75,12 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
             "Parameter variables cannot be empty!"
         );
 
+        if (_isWeiAccepted) {
+            require(_rate > 0, "Set a rate for Wei, when it is accepted for purchases!");
+        } else {
+            require(_rate == 0, "Only set a rate for Wei, when it is accepted for purchases!");
+        }
+
         initCrowdsale(_startTime, _endTime, _rate, _wallet);
         tokenOnSale = ERC20Plus(_companyToken);
         whitelist = Whitelist(_whitelist);
@@ -112,7 +118,8 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
      * @param newRate Figure that corresponds to the new ETH rate per token
      */
     function setRate(uint256 newRate) external onlyOwner {
-        require(newRate != 0, "ETH rate must be more than 0");
+        require(isWeiAccepted, "Sale must allow Wei for purchases to set a rate for Wei!");
+        require(newRate != 0, "ETH rate must be more than 0!");
 
         emit TokenRateChanged(rate, newRate);
         rate = newRate;
@@ -132,9 +139,15 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
     /**
      * @dev allows sale to receive wei or not
      */
-    function setIsWeiAccepted(bool _isWeiAccepted) external onlyOwner {
-        require(rate != 0, "When accepting Wei you need to set a conversion rate!");
+    function setIsWeiAccepted(bool _isWeiAccepted, uint256 _rate) external onlyOwner {
+        if (_isWeiAccepted) {
+            require(_rate > 0, "When accepting Wei, you need to set a conversion rate!");
+        } else {
+            require(_rate == 0, "When not accepting Wei, you need to set a conversion rate of 0!");
+        }
+
         isWeiAccepted = _isWeiAccepted;
+        rate = _rate;
     }
 
     /**
