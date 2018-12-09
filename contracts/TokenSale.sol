@@ -90,10 +90,10 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
         _owner = tx.origin;
 
         initialTokenOwner = ERC20Plus(tokenOnSale).owner();
-        uint256 tokenDecimals = ERC20Plus(tokenOnSale).decimals();
-        crowdsaleCap = _crowdsaleCap.mul(10 ** tokenDecimals);
+        crowdsaleCap = _crowdsaleCap.mul(10 ** 18);
 
         require(ERC20Plus(tokenOnSale).paused(), "Company token must be paused upon initialization!");
+        require(ERC20Plus(tokenOnSale).decimals() == 18, "Only sales for tokens with 18 decimals are supported!");
     }
 
     modifier isWhitelisted(address beneficiary) {
