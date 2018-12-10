@@ -3,8 +3,8 @@ const TokenSaleCloneFactory = artifacts.require("./TokenSaleCloneFactory.sol");
 const MintableToken = artifacts.require("./MintableToken.sol");
 const Whitelist = artifacts.require("./Whitelist.sol");
 
-const { should, ensuresException } = require("./helpers/utils");
-const { latestTime, duration, increaseTimeTo } = require("./helpers/timer");
+const { should, ensuresException } = require("../test/helpers/utils");
+const { latestTime, duration, increaseTimeTo } = require("../test/helpers/timer");
 const expect = require("chai").expect;
 
 const BigNumber = web3.BigNumber;
