@@ -128,23 +128,26 @@ contract('StarStaking', _accounts => {
         });
 
         it('transfers tokens to stakingContract when staked', async () => {
-            await stakingContract.stake(initialBalance, NULL);
+            const stakingAmount = new BigNumber(5000);
+
+            await stakingContract.stake(stakingAmount, NULL);
             const userBalance = await token.balanceOf.call(accounts[0]);
             const stakingContractBalance = await token.balanceOf.call(
                 stakingContract.address
             );
 
-            userBalance.should.be.bignumber.equal(0);
-            stakingContractBalance.should.be.bignumber.equal(initialBalance);
+            userBalance.should.be.bignumber.equal(initialBalance.sub(stakingAmount));
+            stakingContractBalance.should.be.bignumber.equal(stakingAmount);
         });
 
         it('allows user to stake for other person', async () => {
-            await stakingContract.stakeFor(accounts[1], initialBalance, NULL, { from: accounts[0] });
+            const stakingAmount = new BigNumber(5000);
+            await stakingContract.stakeFor(accounts[1], stakingAmount, NULL, { from: accounts[0] });
 
             const user1TotalStaked = await stakingContract.totalStakedFor.call(
                 accounts[1]
             );
-            user1TotalStaked.should.be.bignumber.equal(initialBalance);
+            user1TotalStaked.should.be.bignumber.equal(stakingAmount);
         });
         
         it('adds only the remaining staking tokens when cap is reached', async () => {
