@@ -11,6 +11,11 @@
         "flat": "bash scripts/flatten.sh",
         "remix": "bash scripts/flatten.sh && remixd -s ./flats"
     },
+    "husky": {
+        "hooks": {
+            "pre-push": "npm run flat && git add flats && git commit -m \"update flats\""
+        }
+    },
     "author": "Gustavo Guimaraes",
     "license": "ISC",
     "devDependencies": {
@@ -21,6 +26,7 @@
         "chai-bignumber": "^2.0.2",
         "dotenv": "^6.0.0",
         "ganache-cli": "^6.1.8",
+        "husky": "^1.2.0",
         "truffle": "^4.1.14",
         "truffle-flattener": "^1.2.6",
         "truffle-hdwallet-provider": "0.0.6"
