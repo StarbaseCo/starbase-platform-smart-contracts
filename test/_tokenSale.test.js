@@ -16,7 +16,6 @@ contract("TokenSale", ([owner, wallet, buyer, buyer2, user1, fakeWallet]) => {
   const rate = new BigNumber(50);
   const newRate = new BigNumber(60);
   const value = 1e18;
-  const isWeiAcceptedDefaultValue = false;
 
   const crowdsaleCap = new BigNumber(20000000); // 20M
 
@@ -24,13 +23,13 @@ contract("TokenSale", ([owner, wallet, buyer, buyer2, user1, fakeWallet]) => {
   let crowdsale, token, star, whitelist;
   let crowdsaleTokensLeftover;
 
-  const newCrowdsale = async (rate, starRate) => {
+  const newCrowdsale = async (rate, starRate, isWeiAccepted = true) => {
     startTime = latestTime() + 15; // crowdsale starts in seconds into the future
     endTime = startTime + duration.days(70); // 70 days
 
     whitelist = await Whitelist.new();
     star = await MintableToken.new();
-    token = await CompanyToken.new("Example Token", "EXT", 18);
+    token = await CompanyToken.new("Example Token", "EXT");
     const tokenSaleLibrary = await TokenSale.new();
 
     const tokenSaleFactory = await TokenSaleCloneFactory.new(
@@ -46,7 +45,7 @@ contract("TokenSale", ([owner, wallet, buyer, buyer2, user1, fakeWallet]) => {
       starRate,
       wallet,
       crowdsaleCap,
-      isWeiAcceptedDefaultValue
+      isWeiAccepted
     );
 
     const event = tx.logs.find(
@@ -63,7 +62,7 @@ contract("TokenSale", ([owner, wallet, buyer, buyer2, user1, fakeWallet]) => {
   afterEach(
     "check for invariant: total token supply <= total token cap",
     async () => {
-      expect(await token.totalSupply()).to.be.bignumber.most(
+      expect(await crowdsale.tokensSold()).to.be.bignumber.most(
         await crowdsale.crowdsaleCap()
       );
     }
@@ -84,7 +83,7 @@ contract("TokenSale", ([owner, wallet, buyer, buyer2, user1, fakeWallet]) => {
     (await crowdsale.starRate()).should.be.bignumber.eq(0);
 
     // deployment without rate
-    await newCrowdsale(0, starRate);
+    await newCrowdsale(0, starRate, false);
     (await crowdsale.rate()).should.be.bignumber.eq(0);
   });
 
@@ -153,7 +152,7 @@ contract("TokenSale", ([owner, wallet, buyer, buyer2, user1, fakeWallet]) => {
         starRate,
         fakeWallet,
         crowdsaleCap,
-        isWeiAcceptedDefaultValue
+        false
       );
       assert.fail();
     } catch (error) {
@@ -206,7 +205,7 @@ contract("TokenSale", ([owner, wallet, buyer, buyer2, user1, fakeWallet]) => {
   });
 
   describe("changing starRate", () => {
-    it("does NOT allows anyone to change starRate other than the owner", async () => {
+    it("does NOT allow anyone to change starRate other than the owner", async () => {
       try {
         await crowdsale.setStarRate(newStarRate, { from: buyer });
         assert.fail();
@@ -246,9 +245,23 @@ contract("TokenSale", ([owner, wallet, buyer, buyer2, user1, fakeWallet]) => {
   });
 
   describe("#isWeiAccepted", () => {
-    it("does NOT allows anyone to set isWeiAccepted other than the owner", async () => {
+    it("does NOT allow anyone to set isWeiAccepted other than the owner", async () => {
       try {
-        await crowdsale.setIsWeiAccepted(true, { from: buyer });
+        await crowdsale.setIsWeiAccepted(false, 0, { from: buyer });
+        assert.fail();
+      } catch (e) {
+        ensuresException(e);
+      }
+
+      const isWeiAccepted = await crowdsale.isWeiAccepted();
+      isWeiAccepted.should.be.true;
+    });
+
+    it("requires rate to be set when Wei is accepted", async () => {
+      await newCrowdsale(0, starRate, false);
+
+      try {
+        await crowdsale.setIsWeiAccepted(true, 0, { from: owner });
         assert.fail();
       } catch (e) {
         ensuresException(e);
@@ -258,30 +271,32 @@ contract("TokenSale", ([owner, wallet, buyer, buyer2, user1, fakeWallet]) => {
       isWeiAccepted.should.be.false;
     });
 
-    it("requires rate to be set", async () => {
-      await newCrowdsale(0, starRate);
-
+    it("requires rate to be 0 when Wei is not accepted", async () => {
       try {
-        await crowdsale.setIsWeiAccepted(true, { from: owner });
+        await crowdsale.setIsWeiAccepted(false, 12, { from: owner });
         assert.fail();
       } catch (e) {
         ensuresException(e);
       }
 
       const isWeiAccepted = await crowdsale.isWeiAccepted();
-      isWeiAccepted.should.be.false;
+      isWeiAccepted.should.be.true;
     });
 
     it("allows owner to set isWeiAccepted", async () => {
-      await crowdsale.setIsWeiAccepted(true, { from: owner });
+      await crowdsale.setIsWeiAccepted(false, 0, { from: owner });
 
       let isWeiAccepted = await crowdsale.isWeiAccepted();
-      isWeiAccepted.should.be.true;
+      isWeiAccepted.should.be.false;
+      let weiRate = await crowdsale.rate();
+      weiRate.should.be.bignumber.equal(0);
 
-      await crowdsale.setIsWeiAccepted(false, { from: owner });
+      await crowdsale.setIsWeiAccepted(true, rate, { from: owner });
 
       isWeiAccepted = await crowdsale.isWeiAccepted();
-      isWeiAccepted.should.be.false;
+      isWeiAccepted.should.be.true;
+      weiRate = await crowdsale.rate();
+      weiRate.should.be.bignumber.equal(rate);
     });
   });
 
@@ -420,6 +435,7 @@ contract("TokenSale", ([owner, wallet, buyer, buyer2, user1, fakeWallet]) => {
     });
 
     it("allows ONLY STAR tokens to purchase tokens at first", async () => {
+      await crowdsale.setIsWeiAccepted(false, 0, { from: owner });
       await increaseTimeTo(latestTime() + duration.days(22));
 
       await star.approve(crowdsale.address, 5e18, { from: buyer });
@@ -457,6 +473,7 @@ contract("TokenSale", ([owner, wallet, buyer, buyer2, user1, fakeWallet]) => {
     });
 
     it("cannot buy tokens by sending wei when isWeiAccepted is disabled", async () => {
+      await crowdsale.setIsWeiAccepted(false, 0, { from: owner });
       await increaseTimeTo(latestTime() + duration.days(22));
       await whitelist.addManyToWhitelist([user1]);
 
@@ -471,7 +488,7 @@ contract("TokenSale", ([owner, wallet, buyer, buyer2, user1, fakeWallet]) => {
       userBalance.should.be.bignumber.equal(0);
 
       // purchase occurence
-      await crowdsale.setIsWeiAccepted(true, { from: owner });
+      await crowdsale.setIsWeiAccepted(true, 50, { from: owner });
       await crowdsale.buyTokens(user1, { from: user1, value });
 
       const buyerBalance = await token.balanceOf(user1);
@@ -481,7 +498,6 @@ contract("TokenSale", ([owner, wallet, buyer, buyer2, user1, fakeWallet]) => {
     it("buys tokens by sending wei when it is enabled", async () => {
       await increaseTimeTo(latestTime() + duration.days(52));
       await whitelist.addManyToWhitelist([user1]);
-      await crowdsale.setIsWeiAccepted(true, { from: owner });
 
       await crowdsale.buyTokens(user1, { from: user1, value });
 
@@ -497,7 +513,6 @@ contract("TokenSale", ([owner, wallet, buyer, buyer2, user1, fakeWallet]) => {
     it("updates wei raised", async () => {
       await increaseTimeTo(latestTime() + duration.days(52));
       await whitelist.addManyToWhitelist([user1]);
-      await crowdsale.setIsWeiAccepted(true);
 
       await crowdsale.buyTokens(user1, { from: user1, value });
 
@@ -611,7 +626,6 @@ contract("TokenSale", ([owner, wallet, buyer, buyer2, user1, fakeWallet]) => {
 
       const buyerWeiBalanceBeforePurchase = web3.eth.getBalance(buyer);
 
-      await crowdsale.setIsWeiAccepted(true);
       await crowdsale.buyTokens(buyer, { from: buyer, value: value * 3 });
 
       const buyerBalance = await token.balanceOf(buyer);
@@ -639,7 +653,6 @@ contract("TokenSale", ([owner, wallet, buyer, buyer2, user1, fakeWallet]) => {
 
       await increaseTimeTo(latestTime() + duration.days(52));
       await whitelist.addManyToWhitelist([user1]);
-      await crowdsale.setIsWeiAccepted(true);
 
       await crowdsale.buyTokens(user1, { from: user1, value });
 
@@ -696,7 +709,6 @@ contract("TokenSale", ([owner, wallet, buyer, buyer2, user1, fakeWallet]) => {
       await token.transferOwnership(crowdsale.address);
 
       await increaseTimeTo(latestTime() + duration.days(54));
-      await crowdsale.setIsWeiAccepted(true);
       await crowdsale.buyTokens(buyer, { from: buyer, value });
 
       const hasEnded = await crowdsale.hasEnded();

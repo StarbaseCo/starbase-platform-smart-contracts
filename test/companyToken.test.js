@@ -5,7 +5,7 @@ contract('CompanyToken', () => {
     let token;
 
     beforeEach(async () => {
-        token = await CompanyToken.new('Example Token', 'ETK', 18);
+        token = await CompanyToken.new('Example Token', 'ETK');
     });
 
     it('has a name', async () => {
