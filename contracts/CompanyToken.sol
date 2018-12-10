@@ -11,18 +11,16 @@ import "./lib/PausableToken.sol";
 contract CompanyToken is PausableToken, MintableToken {
     string private _name;
     string private _symbol;
-    uint8 private _decimals;
+    uint8 constant private _decimals = 18;
 
     /**
      * @dev Contract constructor function
      * @param name Token name
      * @param symbol Token symbol - up to 4 characters
-     * @param decimals Decimals for token
      */
-    constructor(string name, string symbol, uint8 decimals) public {
+    constructor(string name, string symbol) public {
         _name = name;
         _symbol = symbol;
-        _decimals = decimals;
 
         pause();
     }
@@ -44,7 +42,7 @@ contract CompanyToken is PausableToken, MintableToken {
     /**
      * @return the number of decimals of the token.
      */
-    function decimals() public view returns (uint8) {
+    function decimals() public pure returns (uint8) {
         return _decimals;
     }
 }

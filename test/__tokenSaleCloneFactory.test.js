@@ -20,7 +20,7 @@ contract(
     const starRate = new BigNumber(10);
     const rate = new BigNumber(50);
     const crowdsaleCap = new BigNumber(20000000); // 20M
-    const isWeiAcceptedDefaultValue = false;
+    const isWeiAcceptedDefaultValue = true;
 
     beforeEach(async () => {
       startTime = latestTime() + 20; // crowdsale starts in 20 seconds
@@ -32,7 +32,7 @@ contract(
         tokenSale.address,
         starToken.address
       );
-      companyToken = await CompanyToken.new("Example Token", "EXT", 18);
+      companyToken = await CompanyToken.new("Example Token", "EXT");
     });
 
     describe("#setLibraryAddress", () => {

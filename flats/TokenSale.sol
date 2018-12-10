@@ -1,6 +1,6 @@
 pragma solidity 0.4.24;
 
-// File: contracts/lib/Ownable.sol
+// File: contracts\lib\Ownable.sol
 
 /**
  * @title Ownable
@@ -73,7 +73,7 @@ contract Ownable {
     }
 }
 
-// File: contracts/lib/Pausable.sol
+// File: contracts\lib\Pausable.sol
 
 /**
  * @title Pausable
@@ -129,7 +129,7 @@ contract Pausable is Ownable {
     }
 }
 
-// File: contracts/lib/SafeMath.sol
+// File: contracts\lib\SafeMath.sol
 
 /**
  * @title SafeMath
@@ -177,7 +177,7 @@ library SafeMath {
   }
 }
 
-// File: contracts/lib/Crowdsale.sol
+// File: contracts\lib\Crowdsale.sol
 
 /**
  * @title Crowdsale - modified from zeppelin-solidity library
@@ -236,7 +236,7 @@ contract Crowdsale {
     }
 }
 
-// File: contracts/lib/FinalizableCrowdsale.sol
+// File: contracts\lib\FinalizableCrowdsale.sol
 
 /**
  * @title FinalizableCrowdsale
@@ -273,7 +273,7 @@ contract FinalizableCrowdsale is Crowdsale, Ownable {
   }
 }
 
-// File: contracts/lib/ERC20Plus.sol
+// File: contracts\lib\ERC20Plus.sol
 
 /**
  * @title ERC20 interface with additional functions
@@ -301,7 +301,7 @@ contract ERC20Plus {
 
 }
 
-// File: contracts/Whitelist.sol
+// File: contracts\Whitelist.sol
 
 /**
  * @title Whitelist - crowdsale whitelist contract
@@ -344,7 +344,7 @@ contract Whitelist is Ownable {
     }
 }
 
-// File: contracts/TokenSaleInterface.sol
+// File: contracts\TokenSaleInterface.sol
 
 /**
  * @title TokenSale contract interface
@@ -366,7 +366,7 @@ interface TokenSaleInterface {
     external;
 }
 
-// File: contracts/TokenSale.sol
+// File: contracts\TokenSale.sol
 
 /**
  * @title Token Sale contract - crowdsale of company tokens.
@@ -437,6 +437,12 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
             "Parameter variables cannot be empty!"
         );
 
+        if (_isWeiAccepted) {
+            require(_rate > 0, "Set a rate for Wei, when it is accepted for purchases!");
+        } else {
+            require(_rate == 0, "Only set a rate for Wei, when it is accepted for purchases!");
+        }
+
         initCrowdsale(_startTime, _endTime, _rate, _wallet);
         tokenOnSale = ERC20Plus(_companyToken);
         whitelist = Whitelist(_whitelist);
@@ -446,10 +452,10 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
         _owner = tx.origin;
 
         initialTokenOwner = ERC20Plus(tokenOnSale).owner();
-        uint256 tokenDecimals = ERC20Plus(tokenOnSale).decimals();
-        crowdsaleCap = _crowdsaleCap.mul(10 ** tokenDecimals);
+        crowdsaleCap = _crowdsaleCap.mul(10 ** 18);
 
         require(ERC20Plus(tokenOnSale).paused(), "Company token must be paused upon initialization!");
+        require(ERC20Plus(tokenOnSale).decimals() == 18, "Only sales for tokens with 18 decimals are supported!");
     }
 
     modifier isWhitelisted(address beneficiary) {
@@ -474,7 +480,8 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
      * @param newRate Figure that corresponds to the new ETH rate per token
      */
     function setRate(uint256 newRate) external onlyOwner {
-        require(newRate != 0, "ETH rate must be more than 0");
+        require(isWeiAccepted, "Sale must allow Wei for purchases to set a rate for Wei!");
+        require(newRate != 0, "ETH rate must be more than 0!");
 
         emit TokenRateChanged(rate, newRate);
         rate = newRate;
@@ -494,9 +501,15 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
     /**
      * @dev allows sale to receive wei or not
      */
-    function setIsWeiAccepted(bool _isWeiAccepted) external onlyOwner {
-        require(rate != 0, "When accepting Wei you need to set a conversion rate!");
+    function setIsWeiAccepted(bool _isWeiAccepted, uint256 _rate) external onlyOwner {
+        if (_isWeiAccepted) {
+            require(_rate > 0, "When accepting Wei, you need to set a conversion rate!");
+        } else {
+            require(_rate == 0, "When not accepting Wei, you need to set a conversion rate of 0!");
+        }
+
         isWeiAccepted = _isWeiAccepted;
+        rate = _rate;
     }
 
     /**
