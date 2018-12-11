@@ -15,6 +15,7 @@ contract(
       starToken,
       newTokenSale,
       companyToken,
+      tokenOwnerAfterSale,
       startTime,
       endTime;
     const starRate = new BigNumber(10);
@@ -33,6 +34,7 @@ contract(
         starToken.address
       );
       companyToken = await CompanyToken.new("Example Token", "EXT");
+      tokenOwnerAfterSale = await companyToken.owner();
     });
 
     describe("#setLibraryAddress", () => {
@@ -86,6 +88,7 @@ contract(
           endTime,
           whitelist,
           companyToken.address,
+          tokenOwnerAfterSale,  
           rate,
           starRate,
           wallet,
@@ -102,6 +105,7 @@ contract(
           endTime,
           whitelist,
           companyToken.address,
+          tokenOwnerAfterSale,
           rate,
           starRate,
           wallet,
@@ -129,6 +133,7 @@ contract(
           endTime,
           whitelist,
           companyToken.address,
+          tokenOwnerAfterSale,
           rate,
           starRate,
           wallet,
@@ -147,6 +152,7 @@ contract(
           endTime,
           whitelist,
           companyToken.address,
+          tokenOwnerAfterSale,
           rate,
           starRate,
           wallet,

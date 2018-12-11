@@ -12,6 +12,7 @@ interface TokenSaleInterface {
         address _whitelist,
         address _starToken,
         address _companyToken,
+        address _tokenOwnerAfterSale,
         uint256 _rate,
         uint256 _starRate,
         address _wallet,
