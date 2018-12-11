@@ -41,6 +41,7 @@ contract("TokenSale", ([owner, wallet, buyer, buyer2, user1, fakeWallet]) => {
       endTime,
       whitelist.address,
       token.address,
+      (await token.owner()),
       rate,
       starRate,
       wallet,
@@ -133,10 +134,10 @@ contract("TokenSale", ([owner, wallet, buyer, buyer2, user1, fakeWallet]) => {
     paused.should.be.true;
   });
 
-  it("saves the initial token owner", async () => {
+  it("saves the next token owner", async () => {
     const tokenOwner = await token.owner();
-    const initialTokenOwner = await crowdsale.initialTokenOwner();
-    initialTokenOwner.should.be.equal(tokenOwner);
+    const tokenOwnerAfterSale = await crowdsale.tokenOwnerAfterSale();
+    tokenOwnerAfterSale.should.be.equal(tokenOwner);
   });
 
   it("cannot call init again once initial values are set", async () => {
@@ -148,6 +149,7 @@ contract("TokenSale", ([owner, wallet, buyer, buyer2, user1, fakeWallet]) => {
         whitelist.address,
         star.address,
         token.address,
+        (await token.owner()),
         rate,
         starRate,
         fakeWallet,
@@ -744,10 +746,10 @@ contract("TokenSale", ([owner, wallet, buyer, buyer2, user1, fakeWallet]) => {
       isCrowdsaleFinalized.should.be.true;
     });
 
-    it("returns token ownership to original owner", async function() {
-      const initialTokenOwner = await crowdsale.initialTokenOwner();
+    it("returns token ownership to next owner", async function() {
+      const tokenOwnerAfterSale = await crowdsale.tokenOwnerAfterSale();
       const tokenOwner = await token.owner();
-      tokenOwner.should.be.equal(initialTokenOwner);
+      tokenOwner.should.be.equal(tokenOwnerAfterSale);
     });
 
     it("mints remaining crowdsale tokens to wallet", async function() {

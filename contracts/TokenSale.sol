@@ -16,7 +16,7 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
     // amount of raised money in STAR
     uint256 public starRaised;
     uint256 public starRate;
-    address public initialTokenOwner;
+    address public tokenOwnerAfterSale;
     bool public isWeiAccepted;
 
     // external contracts
@@ -48,6 +48,7 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
         address _whitelist,
         address _starToken,
         address _companyToken,
+        address _tokenOwnerAfterSale,
         uint256 _rate,
         uint256 _starRate,
         address _wallet,
@@ -59,6 +60,7 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
         require(
             whitelist == address(0) &&
             starToken == address(0) &&
+            tokenOwnerAfterSale == address(0) &&
             rate == 0 &&
             starRate == 0 &&
             tokenOnSale == address(0) &&
@@ -69,6 +71,7 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
         require(
             _whitelist != address(0) &&
             _starToken != address(0) &&
+            _tokenOwnerAfterSale != address(0) &&
             !(_rate == 0 && _starRate == 0) &&
             _companyToken != address(0) &&
             _crowdsaleCap != 0,
@@ -85,11 +88,11 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
         tokenOnSale = ERC20Plus(_companyToken);
         whitelist = Whitelist(_whitelist);
         starToken = ERC20Plus(_starToken);
+        tokenOwnerAfterSale = _tokenOwnerAfterSale;
         starRate = _starRate;
         isWeiAccepted = _isWeiAccepted;
         _owner = tx.origin;
 
-        initialTokenOwner = ERC20Plus(tokenOnSale).owner();
         crowdsaleCap = _crowdsaleCap.mul(10 ** 18);
 
         require(ERC20Plus(tokenOnSale).paused(), "Company token must be paused upon initialization!");
@@ -257,7 +260,7 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
             tokenOnSale.mint(wallet, remainingTokens);
         }
 
-        tokenOnSale.transferOwnership(initialTokenOwner);
+        tokenOnSale.transferOwnership(tokenOwnerAfterSale);
         super.finalization();
     }
 }

@@ -57,6 +57,7 @@ contract TokenSaleCloneFactory is Ownable, CloneFactory {
      * @param _endTime Timestamp when the crowdsale will finish
      * @param _whitelist contract containing the whitelisted addresses
      * @param _companyToken ERC20 CompanyToken contract address
+     * @param _tokenOwnerAfterSale Token on sale owner address after sale is finished
      * @param _rate The token rate per ETH
      * @param _starRate The token rate per STAR
      * @param _wallet Multisig wallet that will hold the crowdsale funds.
@@ -69,6 +70,7 @@ contract TokenSaleCloneFactory is Ownable, CloneFactory {
         uint256 _endTime,
         address _whitelist,
         address _companyToken,
+        address _tokenOwnerAfterSale,
         uint256 _rate,
         uint256 _starRate,
         address _wallet,
@@ -84,6 +86,7 @@ contract TokenSaleCloneFactory is Ownable, CloneFactory {
             _whitelist,
             starToken,
             _companyToken,
+            _tokenOwnerAfterSale,
             _rate,
             _starRate,
             _wallet,
