@@ -368,6 +368,7 @@ contract StarStaking is StarStakingInterface, Lockable {
     uint256 public closingTime;
 
     uint256 public stakeSaleCap;
+    uint256 public maxStakePerUser;
     uint256 public totalRaised;
 
     modifier whenStakingOpen {
@@ -388,13 +389,15 @@ contract StarStaking is StarStakingInterface, Lockable {
         uint256 _topRanksMaxSize,
         uint256 _startTime,
         uint256 _closingTime,
-        uint256 _stakeSaleCap
+        uint256 _stakeSaleCap,
+        uint256 _maxStakePerUser
     ) public {
         require(address(_token) != address(0), "Token address may must be defined!");
         require(_startTime < _closingTime, "Start time must be before closing time!");
         require(_startTime >= now, "Start time must be after current time!");
         require(_topRanksMaxSize > 0, "Top ranks size must be more than 0!");
         require(_stakeSaleCap > 0, "StakingSale cap should be higher than 0!");
+        require(_maxStakePerUser > 0, "Max stake per user should be higher than 0!");
 
         token = _token;
         startTime = _startTime;
@@ -402,6 +405,7 @@ contract StarStaking is StarStakingInterface, Lockable {
         topRanksCount = 0;
         topRanksMaxSize = _topRanksMaxSize;
         stakeSaleCap = _stakeSaleCap;
+        maxStakePerUser = _maxStakePerUser;
     }
 
     /**
@@ -421,9 +425,17 @@ contract StarStaking is StarStakingInterface, Lockable {
      */
     function stakeFor(address _user, uint256 _amount, address _node) public onlyWhenUnlocked whenStakingOpen {
         require(_amount > 0, "Insert amount higher than 0!");
-        uint256 amount = (totalRaised.add(_amount) > stakeSaleCap) ? stakeSaleCap.sub(totalRaised) : _amount; 
+        uint256 amount = _amount;
 
-        require(amount > 0, "StakeSale cap reached, the sale is finished!");
+        if (totalRaised.add(_amount) > stakeSaleCap) {
+            require(totalRaised < stakeSaleCap, "StakeSale cap reached, the sale is finished!");
+            amount = stakeSaleCap.sub(totalRaised);
+        }
+
+        if (totalStakedFor[_user].add(_amount) > maxStakePerUser) {
+            require(totalStakedFor[_user] < maxStakePerUser, "Maximal stake for user reached!");
+            amount = maxStakePerUser.sub(totalStakedFor[_user]);
+        }
 
         addStakingPoints(_user, amount);
 
