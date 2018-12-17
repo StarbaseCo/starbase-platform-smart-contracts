@@ -17,6 +17,7 @@ contract("TokenSale", ([owner, wallet, buyer, buyer2, user1, fakeWallet]) => {
   const newRate = new BigNumber(60);
   const value = 1e18;
 
+  const softCap = new BigNumber(200000); // 200 000
   const crowdsaleCap = new BigNumber(20000000); // 20M
 
   let startTime, endTime;
@@ -45,6 +46,7 @@ contract("TokenSale", ([owner, wallet, buyer, buyer2, user1, fakeWallet]) => {
       rate,
       starRate,
       wallet,
+      softCap,
       crowdsaleCap,
       isWeiAccepted
     );
@@ -123,6 +125,12 @@ contract("TokenSale", ([owner, wallet, buyer, buyer2, user1, fakeWallet]) => {
     contractOwner.should.equal(owner);
   });
 
+  it("has a softCap variable", async () => {
+    const softCapFigure = await crowdsale.softCap();
+
+    softCapFigure.should.be.bignumber.equal(softCap * 1e18);
+  });
+  
   it("has a crowdsaleCap variable", async () => {
     const crowdsaleCapFigure = await crowdsale.crowdsaleCap();
 
@@ -153,6 +161,7 @@ contract("TokenSale", ([owner, wallet, buyer, buyer2, user1, fakeWallet]) => {
         rate,
         starRate,
         fakeWallet,
+        softCap,
         crowdsaleCap,
         false
       );
@@ -690,6 +699,24 @@ contract("TokenSale", ([owner, wallet, buyer, buyer2, user1, fakeWallet]) => {
       buyerBalance.should.be.bignumber.equal(crowdsaleCap * 1e18);
     });
 
+    it("checks when soft cap is reached", async () => {
+      await newCrowdsale(softCap, softCap);
+      await whitelist.addManyToWhitelist([buyer]);
+      await token.transferOwnership(crowdsale.address);
+      await star.mint(buyer, 10e18);
+      await star.approve(crowdsale.address, 1e18, { from: buyer });
+
+      await increaseTimeTo(latestTime() + duration.days(34));
+
+      let hasReachedSoftCap = await crowdsale.hasReachedSoftCap();
+      hasReachedSoftCap.should.be.false;
+
+      await crowdsale.buyTokens(buyer, { from: buyer });
+
+      hasReachedSoftCap = await crowdsale.hasReachedSoftCap();
+      hasReachedSoftCap.should.be.true;
+    });
+    
     it("ends crowdsale when all tokens are sold", async () => {
       await newCrowdsale(crowdsaleCap, crowdsaleCap);
       await whitelist.addManyToWhitelist([buyer]);

@@ -11,6 +11,7 @@ import "./TokenSaleInterface.sol";
  * @author Gustavo Guimaraes - <gustavo@starbase.co>
  */
 contract TokenSale is FinalizableCrowdsale, Pausable {
+    uint256 public softCap;
     uint256 public crowdsaleCap;
     uint256 public tokensSold;
     // amount of raised money in STAR
@@ -39,6 +40,7 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
      * @param _rate The token rate per ETH
      * @param _starRate The token rate per STAR
      * @param _wallet Multisig wallet that will hold the crowdsale funds.
+     * @param _softCap Soft cap of the token sale
      * @param _crowdsaleCap Cap for the token sale
      * @param _isWeiAccepted Bool for acceptance of ether in token sale
      */
@@ -52,6 +54,7 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
         uint256 _rate,
         uint256 _starRate,
         address _wallet,
+        uint256 _softCap,
         uint256 _crowdsaleCap,
         bool    _isWeiAccepted
     )
@@ -64,6 +67,7 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
             rate == 0 &&
             starRate == 0 &&
             tokenOnSale == address(0) &&
+            softCap == 0 &&
             crowdsaleCap == 0,
             "Global variables should not have been set before!"
         );
@@ -74,6 +78,7 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
             _tokenOwnerAfterSale != address(0) &&
             !(_rate == 0 && _starRate == 0) &&
             _companyToken != address(0) &&
+            _softCap != 0 &&
             _crowdsaleCap != 0,
             "Parameter variables cannot be empty!"
         );
@@ -93,6 +98,7 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
         isWeiAccepted = _isWeiAccepted;
         _owner = tx.origin;
 
+        softCap = _softCap.mul(10 ** 18);
         crowdsaleCap = _crowdsaleCap.mul(10 ** 18);
 
         require(ERC20Plus(tokenOnSale).paused(), "Company token must be paused upon initialization!");
@@ -230,6 +236,16 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
         if (weiRefund > 0) {
             msg.sender.transfer(weiRefund);
         }
+    }
+
+    // check for softCap achievement
+    // @return true when softCap is reached
+    function hasReachedSoftCap() public view returns (bool) {
+        if (tokensSold >= softCap) {
+            return true;
+        }
+
+        return false;
     }
 
     // override Crowdsale#hasEnded to add cap logic
