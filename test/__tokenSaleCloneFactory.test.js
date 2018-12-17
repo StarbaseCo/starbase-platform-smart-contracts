@@ -20,6 +20,7 @@ contract(
       endTime;
     const starRate = new BigNumber(10);
     const rate = new BigNumber(50);
+    const softCap = new BigNumber(200000); // 200 000
     const crowdsaleCap = new BigNumber(20000000); // 20M
     const isWeiAcceptedDefaultValue = true;
 
@@ -92,6 +93,7 @@ contract(
           rate,
           starRate,
           wallet,
+          softCap,
           crowdsaleCap,
           isWeiAcceptedDefaultValue
         );
@@ -109,6 +111,7 @@ contract(
           rate,
           starRate,
           wallet,
+          softCap,
           crowdsaleCap,
           isWeiAcceptedDefaultValue,
           { from: owner }
@@ -137,6 +140,7 @@ contract(
           rate,
           starRate,
           wallet,
+          softCap,
           crowdsaleCap,
           isWeiAcceptedDefaultValue,
           { from: owner }
@@ -156,6 +160,7 @@ contract(
           rate,
           starRate,
           wallet,
+          softCap,
           crowdsaleCap,
           isWeiAcceptedDefaultValue,
           { from: owner }
