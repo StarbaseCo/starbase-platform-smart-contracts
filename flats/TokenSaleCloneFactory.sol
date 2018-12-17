@@ -17,6 +17,7 @@ interface TokenSaleInterface {
         uint256 _rate,
         uint256 _starRate,
         address _wallet,
+        uint256 _softCap,
         uint256 _crowdsaleCap,
         bool    _isWeiAccepted
     )
@@ -198,6 +199,7 @@ contract TokenSaleCloneFactory is Ownable, CloneFactory {
      * @param _rate The token rate per ETH
      * @param _starRate The token rate per STAR
      * @param _wallet Multisig wallet that will hold the crowdsale funds.
+     * @param _softCap Soft cap of the token sale
      * @param _crowdsaleCap Cap for the token sale
      * @param _isWeiAccepted Bool for acceptance of ether in token sale
      */
@@ -211,6 +213,7 @@ contract TokenSaleCloneFactory is Ownable, CloneFactory {
         uint256 _rate,
         uint256 _starRate,
         address _wallet,
+        uint256 _softCap,
         uint256 _crowdsaleCap,
         bool    _isWeiAccepted
     )
@@ -227,6 +230,7 @@ contract TokenSaleCloneFactory is Ownable, CloneFactory {
             _rate,
             _starRate,
             _wallet,
+            _softCap,
             _crowdsaleCap,
             _isWeiAccepted
         );
