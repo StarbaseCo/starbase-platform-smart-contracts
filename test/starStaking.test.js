@@ -10,7 +10,7 @@ const NULL = '0x0000000000000000000000000000000000000000';
 const BALANCES = [1,60000,99999999].map(n => new BigNumber(n))
 
 contract('StarStaking', _accounts => {
-    let stakingContract, token, initialBalance, startTime, closingTime, stakingSaleCap, accounts;
+    let stakingContract, token, initialBalance, startTime, closingTime, stakeSaleCap, accounts;
 
     beforeEach(async () => {
         accounts = _accounts;
@@ -20,13 +20,15 @@ contract('StarStaking', _accounts => {
         topRanksMaxSize = new BigNumber(10);
         startTime = new BigNumber(latestTime().toString()).plus(1000);
         closingTime = startTime.plus(200000);
-        stakingSaleCap = new BigNumber(1000000000);
+        stakeSaleCap = new BigNumber(1000000000);
+        maxStakePerUser = new BigNumber(600000000);
         stakingContract = await StarStaking.new(
             token.address,
             topRanksMaxSize,
             startTime,
             closingTime,
-            stakingSaleCap
+            stakeSaleCap,
+            maxStakePerUser
         );
 
         await token.mint(accounts[0], initialBalance);
@@ -36,7 +38,14 @@ contract('StarStaking', _accounts => {
     });
 
     describe('when deploying the contract', () => {
-        async function itFailsToDeployContract(_address, _topRanksMaxSize, _startTime, _closingTime, _stakingSaleCap) {
+        async function itFailsToDeployContract(
+            _address,
+            _topRanksMaxSize,
+            _startTime,
+            _closingTime,
+            _stakingSaleCap,
+            _makStakePerUser
+        ) {
             let emptyStakingContract;
 
             try {
@@ -45,7 +54,8 @@ contract('StarStaking', _accounts => {
                     _topRanksMaxSize,
                     _startTime,
                     _closingTime,
-                    _stakingSaleCap
+                    _stakingSaleCap,
+                    _maxStakePerUser
                 );
                 assert.fail();
             } catch (e) {
@@ -56,38 +66,50 @@ contract('StarStaking', _accounts => {
         }
 
         it("does NOT allow to deploy without a token address", () => {
-            itFailsToDeployContract(0, topRanksMaxSize, startTime, closingTime, stakingSaleCap);
+            itFailsToDeployContract(0, topRanksMaxSize, startTime, closingTime, stakeSaleCap, maxStakePerUser);
         });
 
         it("does NOT allow to deploy with a closing time before starting time", () => {
-            itFailsToDeployContract(token.address, topRanksMaxSize, closingTime, startTime, stakingSaleCap);
+            itFailsToDeployContract(token.address, topRanksMaxSize, closingTime, startTime, stakeSaleCap, maxStakePerUser);
         });
 
         it("does NOT allow to deploy with a starting time before the current time", () => {
             const earlyStartTime = new BigNumber(latestTime().toString()).minus(1000);
-            itFailsToDeployContract(token.address, topRanksMaxSize, earlyStartTime, closingTime, stakingSaleCap);
+            itFailsToDeployContract(token.address, topRanksMaxSize, earlyStartTime, closingTime, stakeSaleCap, maxStakePerUser);
         });
 
         it("does NOT allow to deploy with a topRanksMaxSize of 0", () => {
-            itFailsToDeployContract(token.address, 0, startTime, closingTime, stakingSaleCap);
+            itFailsToDeployContract(token.address, 0, startTime, closingTime, stakeSaleCap, maxStakePerUser);
         });
 
         it("does NOT allow to deploy with a stakeSaleCap of 0", () => {
-            itFailsToDeployContract(token.address, topRanksMaxSize, startTime, closingTime, 0);
+            itFailsToDeployContract(token.address, topRanksMaxSize, startTime, closingTime, 0, maxStakePerUser);
+        });
+
+        it("does NOT allow to deploy with a stakeSaleCap of 0", () => {
+            itFailsToDeployContract(token.address, topRanksMaxSize, startTime, closingTime, 0, maxStakePerUser);
+        });
+
+        it("does NOT allow to deploy with a maxStakePerUser of 0", () => {
+            itFailsToDeployContract(token.address, topRanksMaxSize, startTime, closingTime, stakeSaleCap, 0);
         });
 
         it('sets initial parameters correctly', async () => {
-            const tokenAddress = await stakingContract.token();
-            const _topRanksMaxSize = await stakingContract.topRanksMaxSize();
-            const _startTime = await stakingContract.startTime();
-            const _closingTime = await stakingContract.closingTime();
-            const topRanksCount = await stakingContract.topRanksCount();
+            const setTokenAddress = await stakingContract.token();
+            const setTopRanksMaxSize = await stakingContract.topRanksMaxSize();
+            const setStartTime = await stakingContract.startTime();
+            const setClosingTime = await stakingContract.closingTime();
+            const setTopRanksCount = await stakingContract.topRanksCount();
+            const setStakeSaleCap = await stakingContract.stakeSaleCap();
+            const setMaxStakePerUser = await stakingContract.maxStakePerUser();
     
-            tokenAddress.should.be.equal(token.address, 'Token address not matching!');
-            _topRanksMaxSize.should.be.bignumber.equal(topRanksMaxSize, 'Top ranks size not matching!');
-            _startTime.should.be.bignumber.equal(startTime, 'Opening time not matching!');
-            _closingTime.should.be.bignumber.equal(closingTime, 'Closing time not matching!');
-            topRanksCount.should.be.bignumber.equal(0, 'Initial top ranks count should be 0!');
+            setTokenAddress.should.be.equal(token.address, 'Token address not matching!');
+            setTopRanksMaxSize.should.be.bignumber.equal(topRanksMaxSize, 'Top ranks size not matching!');
+            setStartTime.should.be.bignumber.equal(startTime, 'Opening time not matching!');
+            setClosingTime.should.be.bignumber.equal(closingTime, 'Closing time not matching!');
+            setTopRanksCount.should.be.bignumber.equal(0, 'Initial top ranks count should be 0!');
+            setStakeSaleCap.should.be.bignumber.equal(stakeSaleCap, 'Stake sale cap not matching!');
+            setMaxStakePerUser.should.be.bignumber.equal(maxStakePerUser, 'Max stake per user not matching!');
         });
     });
 
@@ -151,14 +173,27 @@ contract('StarStaking', _accounts => {
         });
         
         it('adds only the remaining staking tokens when cap is reached', async () => {
-            await stakingContract.stake(stakingSaleCap.plus(10000), NULL);
+            await stakingContract.stakeFor(accounts[0], maxStakePerUser, NULL);
+            await stakingContract.stakeFor(accounts[1], maxStakePerUser, accounts[0]);
+
             const userBalance = await token.balanceOf.call(accounts[0]);
             const stakingContractBalance = await token.balanceOf.call(
                 stakingContract.address
             );
 
-            userBalance.should.be.bignumber.equal(initialBalance.minus(stakingSaleCap));
-            stakingContractBalance.should.be.bignumber.equal(stakingSaleCap);
+            userBalance.should.be.bignumber.equal(initialBalance.minus(stakeSaleCap));
+            stakingContractBalance.should.be.bignumber.equal(stakeSaleCap);
+        });
+
+        it('adds only the remaining staking tokens when maxStakePerUser is reached', async () => {
+            await stakingContract.stake(maxStakePerUser.plus(10000), NULL);
+            const userBalance = await token.balanceOf.call(accounts[0]);
+            const stakingContractBalance = await token.balanceOf.call(
+                stakingContract.address
+            );
+
+            userBalance.should.be.bignumber.equal(initialBalance.minus(maxStakePerUser));
+            stakingContractBalance.should.be.bignumber.equal(maxStakePerUser);
         });
     });
 
