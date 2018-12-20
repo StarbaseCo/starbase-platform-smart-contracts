@@ -1,6 +1,6 @@
 pragma solidity 0.4.24;
 
-// File: contracts\lib\Ownable.sol
+// File: contracts/lib/Ownable.sol
 
 /**
  * @title Ownable
@@ -32,7 +32,7 @@ contract Ownable {
      * @dev Throws if called by any account other than the owner.
      */
     modifier onlyOwner() {
-        require(isOwner());
+        require(isOwner(), "only owner is able call this function");
         _;
     }
 
@@ -73,7 +73,7 @@ contract Ownable {
     }
 }
 
-// File: contracts\Whitelist.sol
+// File: contracts/Whitelist.sol
 
 /**
  * @title Whitelist - crowdsale whitelist contract

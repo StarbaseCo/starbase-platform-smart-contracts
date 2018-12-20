@@ -1,6 +1,6 @@
 pragma solidity 0.4.24;
 
-// File: contracts\lib\Ownable.sol
+// File: contracts/lib/Ownable.sol
 
 /**
  * @title Ownable
@@ -32,7 +32,7 @@ contract Ownable {
      * @dev Throws if called by any account other than the owner.
      */
     modifier onlyOwner() {
-        require(isOwner());
+        require(isOwner(), "only owner is able call this function");
         _;
     }
 
@@ -73,7 +73,7 @@ contract Ownable {
     }
 }
 
-// File: contracts\lib\Pausable.sol
+// File: contracts/lib/Pausable.sol
 
 /**
  * @title Pausable
@@ -129,7 +129,7 @@ contract Pausable is Ownable {
     }
 }
 
-// File: contracts\lib\SafeMath.sol
+// File: contracts/lib/SafeMath.sol
 
 /**
  * @title SafeMath
@@ -177,7 +177,7 @@ library SafeMath {
   }
 }
 
-// File: contracts\lib\Crowdsale.sol
+// File: contracts/lib/Crowdsale.sol
 
 /**
  * @title Crowdsale - modified from zeppelin-solidity library
@@ -236,7 +236,7 @@ contract Crowdsale {
     }
 }
 
-// File: contracts\lib\FinalizableCrowdsale.sol
+// File: contracts/lib/FinalizableCrowdsale.sol
 
 /**
  * @title FinalizableCrowdsale
@@ -273,7 +273,7 @@ contract FinalizableCrowdsale is Crowdsale, Ownable {
   }
 }
 
-// File: contracts\lib\ERC20Plus.sol
+// File: contracts/lib/ERC20Plus.sol
 
 /**
  * @title ERC20 interface with additional functions
@@ -301,7 +301,7 @@ contract ERC20Plus {
 
 }
 
-// File: contracts\Whitelist.sol
+// File: contracts/Whitelist.sol
 
 /**
  * @title Whitelist - crowdsale whitelist contract
@@ -344,7 +344,7 @@ contract Whitelist is Ownable {
     }
 }
 
-// File: contracts\TokenSaleInterface.sol
+// File: contracts/TokenSaleInterface.sol
 
 /**
  * @title TokenSale contract interface
@@ -363,12 +363,13 @@ interface TokenSaleInterface {
         address _wallet,
         uint256 _softCap,
         uint256 _crowdsaleCap,
-        bool    _isWeiAccepted
+        bool    _isWeiAccepted,
+        bool    _isMinting
     )
     external;
 }
 
-// File: contracts\TokenSale.sol
+// File: contracts/TokenSale.sol
 
 /**
  * @title Token Sale contract - crowdsale of company tokens.
@@ -383,6 +384,7 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
     uint256 public starRate;
     address public tokenOwnerAfterSale;
     bool public isWeiAccepted;
+    bool public isMinting;
 
     // external contracts
     Whitelist public whitelist;
@@ -407,6 +409,7 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
      * @param _softCap Soft cap of the token sale
      * @param _crowdsaleCap Cap for the token sale
      * @param _isWeiAccepted Bool for acceptance of ether in token sale
+     * @param _isMinting Bool that indicates whether token sale mints ERC20 tokens on sale or simply transfers them
      */
     function init(
         uint256 _startTime,
@@ -420,7 +423,8 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
         address _wallet,
         uint256 _softCap,
         uint256 _crowdsaleCap,
-        bool    _isWeiAccepted
+        bool    _isWeiAccepted,
+        bool    _isMinting
     )
         external
     {
@@ -460,22 +464,20 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
         tokenOwnerAfterSale = _tokenOwnerAfterSale;
         starRate = _starRate;
         isWeiAccepted = _isWeiAccepted;
+        isMinting = _isMinting;
         _owner = tx.origin;
 
         softCap = _softCap.mul(10 ** 18);
         crowdsaleCap = _crowdsaleCap.mul(10 ** 18);
 
-        require(ERC20Plus(tokenOnSale).paused(), "Company token must be paused upon initialization!");
+        if (isMinting) {
+            require(ERC20Plus(tokenOnSale).paused(), "Company token must be paused upon initialization!");
+        }
         require(ERC20Plus(tokenOnSale).decimals() == 18, "Only sales for tokens with 18 decimals are supported!");
     }
 
     modifier isWhitelisted(address beneficiary) {
         require(whitelist.allowedAddresses(beneficiary), "Beneficiary not whitelisted!");
-        _;
-    }
-
-    modifier crowdsaleIsTokenOwner() {
-        require(tokenOnSale.owner() == address(this), "The token owner must be contract address!");
         _;
     }
 
@@ -532,10 +534,12 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
         payable
         whenNotPaused
         isWhitelisted(beneficiary)
-        crowdsaleIsTokenOwner
     {
         require(beneficiary != address(0));
         require(validPurchase() && tokensSold < crowdsaleCap);
+        if (isMinting) {
+            require(tokenOnSale.owner() == address(this), "The token owner must be contract address!");
+        }
 
         if (!isWeiAccepted) {
             require(msg.value == 0);
@@ -560,7 +564,7 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
             starRaised = starRaised.add(starAllocationToTokenSale);
 
             tokensSold = tokensSold.add(tokens);
-            tokenOnSale.mint(beneficiary, tokens);
+            sendPurchasedTokens(beneficiary, tokens);
             emit TokenPurchaseWithStar(msg.sender, beneficiary, starAllocationToTokenSale, tokens);
 
             // forward funds
@@ -593,13 +597,18 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
         weiRaised = weiRaised.add(weiAmount);
 
         tokensSold = tokensSold.add(tokens);
-        tokenOnSale.mint(beneficiary, tokens);
+        sendPurchasedTokens(beneficiary, tokens);
         emit TokenPurchase(msg.sender, beneficiary, weiAmount, tokens);
 
         wallet.transfer(weiAmount);
         if (weiRefund > 0) {
             msg.sender.transfer(weiRefund);
         }
+    }
+
+    // isMinting checker -- it either mints ERC20 token or transfers them
+    function sendPurchasedTokens(address _beneficiary, uint256 _tokens) internal {
+        isMinting ? tokenOnSale.mint(_beneficiary, _tokens) : tokenOnSale.transfer(_beneficiary, _tokens);
     }
 
     // check for softCap achievement
@@ -637,10 +646,13 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
         if (crowdsaleCap > tokensSold) {
             uint256 remainingTokens = crowdsaleCap.sub(tokensSold);
 
-            tokenOnSale.mint(wallet, remainingTokens);
+            sendPurchasedTokens(wallet, remainingTokens);
         }
 
-        tokenOnSale.transferOwnership(tokenOwnerAfterSale);
+        if (isMinting) {
+            tokenOnSale.transferOwnership(tokenOwnerAfterSale);
+        }
+
         super.finalization();
     }
 }

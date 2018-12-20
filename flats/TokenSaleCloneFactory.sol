@@ -1,6 +1,6 @@
 pragma solidity 0.4.24;
 
-// File: contracts\TokenSaleInterface.sol
+// File: contracts/TokenSaleInterface.sol
 
 /**
  * @title TokenSale contract interface
@@ -19,12 +19,13 @@ interface TokenSaleInterface {
         address _wallet,
         uint256 _softCap,
         uint256 _crowdsaleCap,
-        bool    _isWeiAccepted
+        bool    _isWeiAccepted,
+        bool    _isMinting
     )
     external;
 }
 
-// File: contracts\cloneFactory\CloneFactory.sol
+// File: contracts/cloneFactory/CloneFactory.sol
 
 /*
 The MIT License (MIT)
@@ -67,7 +68,7 @@ contract CloneFactory {
   }
 }
 
-// File: contracts\lib\Ownable.sol
+// File: contracts/lib/Ownable.sol
 
 /**
  * @title Ownable
@@ -99,7 +100,7 @@ contract Ownable {
      * @dev Throws if called by any account other than the owner.
      */
     modifier onlyOwner() {
-        require(isOwner());
+        require(isOwner(), "only owner is able call this function");
         _;
     }
 
@@ -140,7 +141,7 @@ contract Ownable {
     }
 }
 
-// File: contracts\cloneFactory\TokenSaleCloneFactory.sol
+// File: contracts/cloneFactory/TokenSaleCloneFactory.sol
 
 contract TokenSaleCloneFactory is Ownable, CloneFactory {
     // TokenSale contract address for cloning purposes
@@ -215,7 +216,8 @@ contract TokenSaleCloneFactory is Ownable, CloneFactory {
         address _wallet,
         uint256 _softCap,
         uint256 _crowdsaleCap,
-        bool    _isWeiAccepted
+        bool    _isWeiAccepted,
+        bool    _isMinting
     )
         public
     {
@@ -232,7 +234,8 @@ contract TokenSaleCloneFactory is Ownable, CloneFactory {
             _wallet,
             _softCap,
             _crowdsaleCap,
-            _isWeiAccepted
+            _isWeiAccepted,
+            _isMinting
         );
 
         register(tokenSale);
