@@ -77,7 +77,8 @@ contract TokenSaleCloneFactory is Ownable, CloneFactory {
         address _wallet,
         uint256 _softCap,
         uint256 _crowdsaleCap,
-        bool    _isWeiAccepted
+        bool    _isWeiAccepted,
+        bool    _isMinting
     )
         public
     {
@@ -94,7 +95,8 @@ contract TokenSaleCloneFactory is Ownable, CloneFactory {
             _wallet,
             _softCap,
             _crowdsaleCap,
-            _isWeiAccepted
+            _isWeiAccepted,
+            _isMinting
         );
 
         register(tokenSale);

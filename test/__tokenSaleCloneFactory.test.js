@@ -23,6 +23,7 @@ contract(
     const softCap = new BigNumber(200000); // 200 000
     const crowdsaleCap = new BigNumber(20000000); // 20M
     const isWeiAcceptedDefaultValue = true;
+    const isMinting = true;
 
     beforeEach(async () => {
       startTime = latestTime() + 20; // crowdsale starts in 20 seconds
@@ -95,7 +96,8 @@ contract(
           wallet,
           softCap,
           crowdsaleCap,
-          isWeiAcceptedDefaultValue
+          isWeiAcceptedDefaultValue,
+          isMinting        
         );
 
         expect(tokenSaleTx).to.exist;
@@ -114,6 +116,7 @@ contract(
           softCap,
           crowdsaleCap,
           isWeiAcceptedDefaultValue,
+          isMinting,
           { from: owner }
         );
 
@@ -143,6 +146,7 @@ contract(
           softCap,
           crowdsaleCap,
           isWeiAcceptedDefaultValue,
+          isMinting,
           { from: owner }
         );
 
@@ -163,6 +167,7 @@ contract(
           softCap,
           crowdsaleCap,
           isWeiAcceptedDefaultValue,
+          isMinting,
           { from: owner }
         );
 

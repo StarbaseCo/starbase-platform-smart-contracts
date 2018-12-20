@@ -18,7 +18,8 @@ interface TokenSaleInterface {
         address _wallet,
         uint256 _softCap,
         uint256 _crowdsaleCap,
-        bool    _isWeiAccepted
+        bool    _isWeiAccepted,
+        bool    _isMinting
     )
     external;
 }
