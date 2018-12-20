@@ -241,7 +241,7 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
         }
     }
 
-    // based on isMinting function either mints ERC20 token or transfer them
+    // isMinting checker -- it either mints ERC20 token or transfers them
     function sendPurchasedTokens(address _beneficiary, uint256 _tokens) internal {
         isMinting ? tokenOnSale.mint(_beneficiary, _tokens) : tokenOnSale.transfer(_beneficiary, _tokens);
     }
