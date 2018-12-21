@@ -1,6 +1,6 @@
 pragma solidity 0.4.24;
 
-// File: contracts/TokenSaleInterface.sol
+// File: contracts\TokenSaleInterface.sol
 
 /**
  * @title TokenSale contract interface
@@ -25,7 +25,7 @@ interface TokenSaleInterface {
     external;
 }
 
-// File: contracts/cloneFactory/CloneFactory.sol
+// File: contracts\cloneFactory\CloneFactory.sol
 
 /*
 The MIT License (MIT)
@@ -68,7 +68,7 @@ contract CloneFactory {
   }
 }
 
-// File: contracts/lib/Ownable.sol
+// File: contracts\lib\Ownable.sol
 
 /**
  * @title Ownable
@@ -141,7 +141,7 @@ contract Ownable {
     }
 }
 
-// File: contracts/cloneFactory/TokenSaleCloneFactory.sol
+// File: contracts\cloneFactory\TokenSaleCloneFactory.sol
 
 contract TokenSaleCloneFactory is Ownable, CloneFactory {
     // TokenSale contract address for cloning purposes
@@ -203,6 +203,7 @@ contract TokenSaleCloneFactory is Ownable, CloneFactory {
      * @param _softCap Soft cap of the token sale
      * @param _crowdsaleCap Cap for the token sale
      * @param _isWeiAccepted Bool for acceptance of ether in token sale
+     * @param _isMinting Bool for indication if new tokens are minted or existing ones are transferred
      */
     function create
     (
