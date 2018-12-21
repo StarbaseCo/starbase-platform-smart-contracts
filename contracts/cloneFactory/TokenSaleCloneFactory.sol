@@ -64,6 +64,7 @@ contract TokenSaleCloneFactory is Ownable, CloneFactory {
      * @param _softCap Soft cap of the token sale
      * @param _crowdsaleCap Cap for the token sale
      * @param _isWeiAccepted Bool for acceptance of ether in token sale
+     * @param _isMinting Bool for indication if new tokens are minted or existing ones are transferred
      */
     function create
     (
