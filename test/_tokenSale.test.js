@@ -6,7 +6,7 @@ const Whitelist = artifacts.require("./Whitelist.sol");
 
 const { should, ensuresException } = require("./helpers/utils");
 const { latestTime, duration, increaseTimeTo } = require("./helpers/timer");
-const expect = require("chai").expect;
+const { expect } = require("chai");
 
 const BigNumber = web3.BigNumber;
 
@@ -19,36 +19,45 @@ contract("TokenSale", ([owner, wallet, buyer, buyer2, user1, fakeWallet]) => {
 
   const softCap = new BigNumber(200000); // 200 000
   const crowdsaleCap = new BigNumber(20000000); // 20M
+  const isWeiAccepted = true;
+  const isMinting = true;
 
   let startTime, endTime;
   let crowdsale, token, star, whitelist;
   let crowdsaleTokensLeftover;
 
-  const newCrowdsale = async (rate, starRate, isWeiAccepted = true) => {
+  const newCrowdsale = async ({
+    rate,
+    starRate,
+    isMinting = true,
+    isWeiAccepted = true,
+  }) => {
     startTime = latestTime() + 15; // crowdsale starts in seconds into the future
     endTime = startTime + duration.days(70); // 70 days
 
     whitelist = await Whitelist.new();
     star = await MintableToken.new();
     token = await CompanyToken.new("Example Token", "EXT");
-    const tokenSaleLibrary = await TokenSale.new();
 
+    const tokenSaleLibrary = await TokenSale.new();
     const tokenSaleFactory = await TokenSaleCloneFactory.new(
       tokenSaleLibrary.address,
       star.address
     );
+
     const tx = await tokenSaleFactory.create(
       startTime,
       endTime,
       whitelist.address,
       token.address,
-      (await token.owner()),
+      isMinting ? (await token.owner()) : 0x0,
       rate,
       starRate,
       wallet,
       softCap,
       crowdsaleCap,
-      isWeiAccepted
+      isWeiAccepted,
+      isMinting
     );
 
     const event = tx.logs.find(
@@ -56,24 +65,19 @@ contract("TokenSale", ([owner, wallet, buyer, buyer2, user1, fakeWallet]) => {
     );
 
     crowdsale = TokenSale.at(event.args.instantiation);
+    if (!isMinting) {
+      await token.mint(crowdsale.address, crowdsaleCap.mul(1e18).mul(2));
+      await token.unpause()
+    }
   };
 
   beforeEach("initialize contract", async () => {
-    await newCrowdsale(rate, starRate);
+    await newCrowdsale({ rate, starRate });
   });
-
-  afterEach(
-    "check for invariant: total token supply <= total token cap",
-    async () => {
-      expect(await crowdsale.tokensSold()).to.be.bignumber.most(
-        await crowdsale.crowdsaleCap()
-      );
-    }
-  );
 
   it("deployment fails when both starRate and rate are zero", async () => {
     try {
-      await newCrowdsale(0, 0);
+      await newCrowdsale({ rate: 0, starRate: 0 });
       assert.fail();
     } catch (error) {
       ensuresException(error);
@@ -81,12 +85,12 @@ contract("TokenSale", ([owner, wallet, buyer, buyer2, user1, fakeWallet]) => {
   });
 
   it("deployment succeds when either starRate or rate are set", async () => {
-    await newCrowdsale(rate, 0);
+    await newCrowdsale({ rate, starRate: 0 });
     // deployment without starRate
     (await crowdsale.starRate()).should.be.bignumber.eq(0);
 
     // deployment without rate
-    await newCrowdsale(0, starRate, false);
+    await newCrowdsale({rate: 0, starRate, isWeiAccepted: false });
     (await crowdsale.rate()).should.be.bignumber.eq(0);
   });
 
@@ -163,7 +167,8 @@ contract("TokenSale", ([owner, wallet, buyer, buyer2, user1, fakeWallet]) => {
         fakeWallet,
         softCap,
         crowdsaleCap,
-        false
+        isWeiAccepted,
+        isMinting
       );
       assert.fail();
     } catch (error) {
@@ -269,7 +274,7 @@ contract("TokenSale", ([owner, wallet, buyer, buyer2, user1, fakeWallet]) => {
     });
 
     it("requires rate to be set when Wei is accepted", async () => {
-      await newCrowdsale(0, starRate, false);
+      await newCrowdsale({ rate: 0, starRate, isWeiAccepted: false });
 
       try {
         await crowdsale.setIsWeiAccepted(true, 0, { from: owner });
@@ -396,397 +401,421 @@ contract("TokenSale", ([owner, wallet, buyer, buyer2, user1, fakeWallet]) => {
     });
   });
 
-  describe("token purchases", () => {
-    beforeEach("initialize contract", async () => {
-      await whitelist.addManyToWhitelist([buyer, buyer2]);
-      await token.transferOwnership(crowdsale.address);
+  const itFunctionsAsExpected = async ({ isMinting }) => {
+    if (isMinting) {
+      afterEach(
+        "check for invariant: total token supply <= total token cap",
+        async () => {
+          expect(await crowdsale.tokensSold()).to.be.bignumber.most(
+            await crowdsale.crowdsaleCap()
+          );
+        }
+      );
+    }
 
-      await star.mint(buyer, 10e18);
-      await star.mint(user1, 10e18);
-    });
-
-    it("cannot buy with empty beneficiary address", async () => {
-      await increaseTimeTo(latestTime() + duration.days(52));
-
-      await star.approve(crowdsale.address, 5e18, { from: buyer });
-
-      try {
-        await crowdsale.buyTokens("0x00", { from: buyer });
-        assert.fail();
-      } catch (e) {
-        ensuresException(e);
-      }
-
-      const buyerBalance = await token.balanceOf(buyer);
-      buyerBalance.should.be.bignumber.equal(0);
-    });
-
-    it("allows ONLY whitelisted addresses to purchase tokens", async () => {
-      await increaseTimeTo(latestTime() + duration.days(52));
-
-      await star.approve(crowdsale.address, 5e18, { from: buyer });
-      // user1 is not whitelisted
-      await star.approve(crowdsale.address, 5e18, { from: user1 });
-
-      try {
-        await crowdsale.buyTokens(user1, { from: user1 });
-        assert.fail();
-      } catch (e) {
-        ensuresException(e);
-      }
-
-      const userBalance = await token.balanceOf(user1);
-      userBalance.should.be.bignumber.equal(0);
-
-      // purchase occurrence
-      await crowdsale.buyTokens(buyer, { from: buyer });
-
-      const buyerBalance = await token.balanceOf(buyer);
-      buyerBalance.should.be.bignumber.equal(50e18);
-    });
-
-    it("allows ONLY STAR tokens to purchase tokens at first", async () => {
-      await crowdsale.setIsWeiAccepted(false, 0, { from: owner });
-      await increaseTimeTo(latestTime() + duration.days(22));
-
-      await star.approve(crowdsale.address, 5e18, { from: buyer });
-
-      try {
-        await crowdsale.buyTokens(buyer, { from: owner, value });
-        assert.fail();
-      } catch (e) {
-        ensuresException(e);
-      }
-
-      // purchase happens
-      await crowdsale.buyTokens(buyer, { from: owner });
-
-      // only the STAR purchase
-      const buyerBalance = await token.balanceOf(buyer);
-      buyerBalance.should.be.bignumber.equal(50e18);
-    });
-
-    it("cannot buy tokens by sending star transaction to contract", async () => {
-      await increaseTimeTo(latestTime() + duration.days(52));
-
-      await whitelist.addManyToWhitelist([user1]);
-      await star.approve(crowdsale.address, 5e18, { from: user1 });
-
-      try {
-        await crowdsale.sendTransaction({ from: user1 });
-        assert.fail();
-      } catch (e) {
-        ensuresException(e);
-      }
-
-      const buyerBalance = await token.balanceOf(buyer);
-      buyerBalance.should.be.bignumber.equal(0);
-    });
-
-    it("cannot buy tokens by sending wei when isWeiAccepted is disabled", async () => {
-      await crowdsale.setIsWeiAccepted(false, 0, { from: owner });
-      await increaseTimeTo(latestTime() + duration.days(22));
-      await whitelist.addManyToWhitelist([user1]);
-
-      try {
-        await crowdsale.buyTokens(user1, { from: user1, value });
-        assert.fail();
-      } catch (e) {
-        ensuresException(e);
-      }
-
-      const userBalance = await token.balanceOf(user1);
-      userBalance.should.be.bignumber.equal(0);
-
-      // purchase occurence
-      await crowdsale.setIsWeiAccepted(true, 50, { from: owner });
-      await crowdsale.buyTokens(user1, { from: user1, value });
-
-      const buyerBalance = await token.balanceOf(user1);
-      buyerBalance.should.be.bignumber.equal(50e18);
-    });
-
-    it("buys tokens by sending wei when it is enabled", async () => {
-      await increaseTimeTo(latestTime() + duration.days(52));
-      await whitelist.addManyToWhitelist([user1]);
-
-      await crowdsale.buyTokens(user1, { from: user1, value });
-
-      const userBalance = await token.balanceOf(user1);
-      userBalance.should.be.bignumber.equal(50e18);
-
-      await crowdsale.buyTokens(user1, { from: user1, value });
-
-      const buyerBalance = await token.balanceOf(user1);
-      buyerBalance.should.be.bignumber.equal(100e18);
-    });
-
-    it("updates wei raised", async () => {
-      await increaseTimeTo(latestTime() + duration.days(52));
-      await whitelist.addManyToWhitelist([user1]);
-
-      await crowdsale.buyTokens(user1, { from: user1, value });
-
-      let weiRaised = await crowdsale.weiRaised();
-      weiRaised.should.be.bignumber.equal(1e18);
-
-      await crowdsale.buyTokens(user1, { from: user1, value });
-
-      weiRaised = await crowdsale.weiRaised();
-      weiRaised.should.be.bignumber.equal(2e18);
-    });
-
-    it("does NOT buy tokens when crowdsale is paused", async () => {
-      await increaseTimeTo(latestTime() + duration.days(52));
-
-      await star.approve(crowdsale.address, 5e18, { from: buyer });
-
-      await crowdsale.pause();
-      let buyerBalance;
-
-      try {
-        await crowdsale.buyTokens(buyer, { from: buyer });
-        assert.fail();
-      } catch (e) {
-        ensuresException(e);
-      }
-
-      buyerBalance = await token.balanceOf(buyer);
-      buyerBalance.should.be.bignumber.equal(0);
-
-      await crowdsale.unpause();
-      await crowdsale.buyTokens(buyer, { from: buyer });
-
-      buyerBalance = await token.balanceOf(buyer);
-      buyerBalance.should.be.bignumber.equal(50e18);
-    });
-
-    it("does NOT allow purchase when token ownership does not currently belong to crowdsale contract", async () => {
-      await newCrowdsale(rate, starRate);
-      await whitelist.addManyToWhitelist([buyer, user1]);
-
-      await star.mint(buyer, 10e18);
-      await star.mint(user1, 10e18);
-
-      await star.approve(crowdsale.address, 5e18, { from: user1 });
-      await star.approve(crowdsale.address, 5e18, { from: buyer });
-
-      await increaseTimeTo(latestTime() + duration.days(52));
-
-      try {
-        await crowdsale.buyTokens(buyer, {
-          from: buyer
+    describe("crowdsale finalization", function() {
+      beforeEach(async () => {
+        crowdsaleTokensLeftover = 10;
+  
+        await newCrowdsale({
+          rate: crowdsaleCap.sub(crowdsaleTokensLeftover),
+          starRate: crowdsaleCap.sub(crowdsaleTokensLeftover),
+          isMinting
         });
-        assert.fail();
-      } catch (e) {
-        ensuresException(e);
+        await whitelist.addManyToWhitelist([buyer]);
+        await token.transferOwnership(crowdsale.address);
+  
+        await star.mint(buyer, 1e18);
+  
+        await increaseTimeTo(latestTime() + duration.days(52));
+  
+        await star.approve(crowdsale.address, 1e18, { from: buyer });
+        await crowdsale.buyTokens(buyer, { from: buyer });
+  
+        await increaseTimeTo(latestTime() + duration.days(30));
+  
+        await crowdsale.finalize();
+      });
+  
+      it("shows that crowdsale is finalized", async function() {
+        const isCrowdsaleFinalized = await crowdsale.isFinalized();
+        isCrowdsaleFinalized.should.be.true;
+      });
+  
+      if (isMinting) {
+        it("returns token ownership to next owner", async function() {
+          const tokenOwnerAfterSale = await crowdsale.tokenOwnerAfterSale();
+          const tokenOwner = await token.owner();
+          tokenOwner.should.be.equal(tokenOwnerAfterSale);
+        });
       }
+  
+      it("mints/transfers remaining crowdsale tokens to wallet", async function() {  
+        const walletTokenBalance = await token.balanceOf(wallet);
+  
+        let remainingTokens = new BigNumber(crowdsaleTokensLeftover * 1e18)
+        if (!isMinting) remainingTokens = remainingTokens.add(crowdsaleCap * 1e18)
 
-      const buyerBalance = await token.balanceOf(buyer);
-      buyerBalance.should.be.bignumber.equal(0);
+        walletTokenBalance.should.be.bignumber.equal(remainingTokens);
+      });
+    });
 
-      await token.transferOwnership(crowdsale.address);
-
-      await crowdsale.buyTokens(user1, {
-        from: user1
+    describe("token purchases", () => {
+      beforeEach("initialize contract", async () => {
+        await whitelist.addManyToWhitelist([buyer, buyer2]);
+        await token.transferOwnership(crowdsale.address);
+  
+        await star.mint(buyer, 10e18);
+        await star.mint(user1, 10e18);
       });
 
-      const userBalance = await token.balanceOf(user1);
-      userBalance.should.be.bignumber.equal(50e18);
-    });
-
-    it("updates STAR raised", async () => {
-      await increaseTimeTo(latestTime() + duration.days(52));
-
-      await star.approve(crowdsale.address, 8e18, { from: buyer });
-
-      // puchase occurence
-      await crowdsale.buyTokens(buyer, { from: owner });
-
-      const buyerBalance = await token.balanceOf(buyer);
-      buyerBalance.should.be.bignumber.equal(80e18);
-
-      const starRaised = await crowdsale.starRaised();
-      starRaised.should.be.bignumber.equal(8e18);
-    });
-
-    it("sends STAR raised to wallet", async () => {
-      await newCrowdsale(crowdsaleCap, crowdsaleCap);
-      await whitelist.addManyToWhitelist([buyer]);
-      await token.transferOwnership(crowdsale.address);
-      await star.mint(buyer, 10e18);
-      await star.approve(crowdsale.address, 1, { from: buyer });
-
-      await increaseTimeTo(latestTime() + duration.days(34));
-
-      await crowdsale.buyTokens(buyer, { from: buyer });
-
-      const buyerBalance = await token.balanceOf(buyer);
-      buyerBalance.should.be.bignumber.equal(crowdsaleCap);
-
-      const walletBalance = await star.balanceOf(wallet);
-      walletBalance.should.be.bignumber.equal(1);
-    });
-
-    it("mints tokens up to crowdsale cap when buying with wei and sends remaining wei back to the buyer", async () => {
-      await newCrowdsale(crowdsaleCap, crowdsaleCap);
-      await whitelist.addManyToWhitelist([buyer]);
-      await token.transferOwnership(crowdsale.address);
-
-      await increaseTimeTo(latestTime() + duration.days(52));
-
-      const buyerWeiBalanceBeforePurchase = web3.eth.getBalance(buyer);
-
-      await crowdsale.buyTokens(buyer, { from: buyer, value: value * 3 });
-
-      const buyerBalance = await token.balanceOf(buyer);
-      buyerBalance.should.be.bignumber.equal(crowdsaleCap.mul(1e18));
-
-      const buyerWeiBalanceAfterPurchase = web3.eth.getBalance(buyer);
-
-      buyerWeiBalanceAfterPurchase
-        .toNumber()
-        .should.be.approximately(
-          buyerWeiBalanceBeforePurchase.toNumber() - 1e18,
-          1e17
-        );
-
-      try {
-        await crowdsale.buyTokens(buyer, { value, from: buyer });
-        assert.fail();
-      } catch (e) {
-        ensuresException(e);
-      }
-    });
-
-    it("transfers received wei to wallet", async () => {
-      let walletBalanceBefore = await web3.eth.getBalance(wallet);
-
-      await increaseTimeTo(latestTime() + duration.days(52));
-      await whitelist.addManyToWhitelist([user1]);
-
-      await crowdsale.buyTokens(user1, { from: user1, value });
-
-      let walletBalanceAfter = await web3.eth.getBalance(wallet);
-
-      expect(walletBalanceAfter).to.be.bignumber.least(
-        walletBalanceBefore.plus(value)
-      );
-    });
-
-    it("only mints tokens up to crowdsale cap", async () => {
-      await newCrowdsale(crowdsaleCap, crowdsaleCap);
-      await whitelist.addManyToWhitelist([buyer]);
-      await token.transferOwnership(crowdsale.address);
-      await star.mint(buyer, 10e18);
-      await star.approve(crowdsale.address, 2e18, { from: buyer });
-
-      await increaseTimeTo(latestTime() + duration.days(34));
-
-      await crowdsale.buyTokens(buyer, { from: buyer });
-
-      let buyerBalance = await token.balanceOf(buyer);
-      buyerBalance.should.be.bignumber.equal(crowdsaleCap * 1e18);
-
-      try {
-        await crowdsale.buyTokens(buyer, { from: buyer });
-        assert.fail();
-      } catch (error) {
-        ensuresException(error);
-      }
-
-      buyerBalance = await token.balanceOf(buyer);
-      buyerBalance.should.be.bignumber.equal(crowdsaleCap * 1e18);
-    });
-
-    it("checks when soft cap is reached", async () => {
-      await newCrowdsale(softCap, softCap);
-      await whitelist.addManyToWhitelist([buyer]);
-      await token.transferOwnership(crowdsale.address);
-      await star.mint(buyer, 10e18);
-      await star.approve(crowdsale.address, 1e18, { from: buyer });
-
-      await increaseTimeTo(latestTime() + duration.days(34));
-
-      let hasReachedSoftCap = await crowdsale.hasReachedSoftCap();
-      hasReachedSoftCap.should.be.false;
-
-      await crowdsale.buyTokens(buyer, { from: buyer });
-
-      hasReachedSoftCap = await crowdsale.hasReachedSoftCap();
-      hasReachedSoftCap.should.be.true;
-    });
+      if (isMinting) {
+        it("does NOT allow purchase when token ownership does not currently belong to crowdsale contract", async () => {
+          await newCrowdsale({ rate, starRate, isMinting });
+          await whitelist.addManyToWhitelist([buyer, user1]);
     
-    it("ends crowdsale when all tokens are sold", async () => {
-      await newCrowdsale(crowdsaleCap, crowdsaleCap);
-      await whitelist.addManyToWhitelist([buyer]);
-      await token.transferOwnership(crowdsale.address);
-      await star.mint(buyer, 10e18);
-      await star.approve(crowdsale.address, 1e18, { from: buyer });
-
-      await increaseTimeTo(latestTime() + duration.days(34));
-
-      await crowdsale.buyTokens(buyer, { from: buyer });
-
-      const hasEnded = await crowdsale.hasEnded();
-      hasEnded.should.be.true;
+          await star.mint(buyer, 10e18);
+          await star.mint(user1, 10e18);
+    
+          await star.approve(crowdsale.address, 5e18, { from: user1 });
+          await star.approve(crowdsale.address, 5e18, { from: buyer });
+    
+          await increaseTimeTo(latestTime() + duration.days(52));
+    
+          try {
+            await crowdsale.buyTokens(buyer, {
+              from: buyer
+            });
+            assert.fail();
+          } catch (e) {
+            ensuresException(e);
+          }
+    
+          const buyerBalance = await token.balanceOf(buyer);
+          buyerBalance.should.be.bignumber.equal(0);
+    
+          await token.transferOwnership(crowdsale.address);
+    
+          await crowdsale.buyTokens(user1, {
+            from: user1
+          });
+    
+          const userBalance = await token.balanceOf(user1);
+          userBalance.should.be.bignumber.equal(50e18);
+        });
+      }
+  
+      it("cannot buy with empty beneficiary address", async () => {
+        await increaseTimeTo(latestTime() + duration.days(52));
+  
+        await star.approve(crowdsale.address, 5e18, { from: buyer });
+  
+        try {
+          await crowdsale.buyTokens("0x00", { from: buyer });
+          assert.fail();
+        } catch (e) {
+          ensuresException(e);
+        }
+  
+        const buyerBalance = await token.balanceOf(buyer);
+        buyerBalance.should.be.bignumber.equal(0);
+      });
+  
+      it("allows ONLY whitelisted addresses to purchase tokens", async () => {
+        await increaseTimeTo(latestTime() + duration.days(52));
+  
+        await star.approve(crowdsale.address, 5e18, { from: buyer });
+        // user1 is not whitelisted
+        await star.approve(crowdsale.address, 5e18, { from: user1 });
+  
+        try {
+          await crowdsale.buyTokens(user1, { from: user1 });
+          assert.fail();
+        } catch (e) {
+          ensuresException(e);
+        }
+  
+        const userBalance = await token.balanceOf(user1);
+        userBalance.should.be.bignumber.equal(0);
+  
+        // purchase occurrence
+        await crowdsale.buyTokens(buyer, { from: buyer });
+  
+        const buyerBalance = await token.balanceOf(buyer);
+        buyerBalance.should.be.bignumber.equal(50e18);
+      });
+  
+      it("allows ONLY STAR tokens to purchase tokens at first", async () => {
+        await crowdsale.setIsWeiAccepted(false, 0, { from: owner });
+        await increaseTimeTo(latestTime() + duration.days(22));
+  
+        await star.approve(crowdsale.address, 5e18, { from: buyer });
+  
+        try {
+          await crowdsale.buyTokens(buyer, { from: owner, value });
+          assert.fail();
+        } catch (e) {
+          ensuresException(e);
+        }
+  
+        // purchase happens
+        await crowdsale.buyTokens(buyer, { from: owner });
+  
+        // only the STAR purchase
+        const buyerBalance = await token.balanceOf(buyer);
+        buyerBalance.should.be.bignumber.equal(50e18);
+      });
+  
+      it("cannot buy tokens by sending star transaction to contract", async () => {
+        await increaseTimeTo(latestTime() + duration.days(52));
+  
+        await whitelist.addManyToWhitelist([user1]);
+        await star.approve(crowdsale.address, 5e18, { from: user1 });
+  
+        try {
+          await crowdsale.sendTransaction({ from: user1 });
+          assert.fail();
+        } catch (e) {
+          ensuresException(e);
+        }
+  
+        const buyerBalance = await token.balanceOf(buyer);
+        buyerBalance.should.be.bignumber.equal(0);
+      });
+  
+      it("cannot buy tokens by sending wei when isWeiAccepted is disabled", async () => {
+        await crowdsale.setIsWeiAccepted(false, 0, { from: owner });
+        await increaseTimeTo(latestTime() + duration.days(22));
+        await whitelist.addManyToWhitelist([user1]);
+  
+        try {
+          await crowdsale.buyTokens(user1, { from: user1, value });
+          assert.fail();
+        } catch (e) {
+          ensuresException(e);
+        }
+  
+        const userBalance = await token.balanceOf(user1);
+        userBalance.should.be.bignumber.equal(0);
+  
+        // purchase occurence
+        await crowdsale.setIsWeiAccepted(true, 50, { from: owner });
+        await crowdsale.buyTokens(user1, { from: user1, value });
+  
+        const buyerBalance = await token.balanceOf(user1);
+        buyerBalance.should.be.bignumber.equal(50e18);
+      });
+  
+      it("buys tokens by sending wei when it is enabled", async () => {
+        await increaseTimeTo(latestTime() + duration.days(52));
+        await whitelist.addManyToWhitelist([user1]);
+  
+        await crowdsale.buyTokens(user1, { from: user1, value });
+  
+        const userBalance = await token.balanceOf(user1);
+        userBalance.should.be.bignumber.equal(50e18);
+  
+        await crowdsale.buyTokens(user1, { from: user1, value });
+  
+        const buyerBalance = await token.balanceOf(user1);
+        buyerBalance.should.be.bignumber.equal(100e18);
+      });
+  
+      it("updates wei raised", async () => {
+        await increaseTimeTo(latestTime() + duration.days(52));
+        await whitelist.addManyToWhitelist([user1]);
+  
+        await crowdsale.buyTokens(user1, { from: user1, value });
+  
+        let weiRaised = await crowdsale.weiRaised();
+        weiRaised.should.be.bignumber.equal(1e18);
+  
+        await crowdsale.buyTokens(user1, { from: user1, value });
+  
+        weiRaised = await crowdsale.weiRaised();
+        weiRaised.should.be.bignumber.equal(2e18);
+      });
+  
+      it("does NOT buy tokens when crowdsale is paused", async () => {
+        await increaseTimeTo(latestTime() + duration.days(52));
+  
+        await star.approve(crowdsale.address, 5e18, { from: buyer });
+  
+        await crowdsale.pause();
+        let buyerBalance;
+  
+        try {
+          await crowdsale.buyTokens(buyer, { from: buyer });
+          assert.fail();
+        } catch (e) {
+          ensuresException(e);
+        }
+  
+        buyerBalance = await token.balanceOf(buyer);
+        buyerBalance.should.be.bignumber.equal(0);
+  
+        await crowdsale.unpause();
+        await crowdsale.buyTokens(buyer, { from: buyer });
+  
+        buyerBalance = await token.balanceOf(buyer);
+        buyerBalance.should.be.bignumber.equal(50e18);
+      });
+  
+      it("updates STAR raised", async () => {
+        await increaseTimeTo(latestTime() + duration.days(52));
+  
+        await star.approve(crowdsale.address, 8e18, { from: buyer });
+  
+        // purchase occurence
+        await crowdsale.buyTokens(buyer, { from: owner });
+  
+        const buyerBalance = await token.balanceOf(buyer);
+        buyerBalance.should.be.bignumber.equal(80e18);
+  
+        const starRaised = await crowdsale.starRaised();
+        starRaised.should.be.bignumber.equal(8e18);
+      });
+  
+      it("sends STAR raised to wallet", async () => {
+        await newCrowdsale({ rate: crowdsaleCap, starRate: crowdsaleCap, isMinting });
+        await whitelist.addManyToWhitelist([buyer]);
+        await token.transferOwnership(crowdsale.address);
+        await star.mint(buyer, 10e18);
+        await star.approve(crowdsale.address, 1, { from: buyer });
+  
+        await increaseTimeTo(latestTime() + duration.days(34));
+  
+        await crowdsale.buyTokens(buyer, { from: buyer });
+  
+        const buyerBalance = await token.balanceOf(buyer);
+        buyerBalance.should.be.bignumber.equal(crowdsaleCap);
+  
+        const walletBalance = await star.balanceOf(wallet);
+        walletBalance.should.be.bignumber.equal(1);
+      });
+  
+      it("sells tokens up to crowdsale cap when buying with wei and sends remaining wei back to the buyer", async () => {
+        await newCrowdsale({ rate: crowdsaleCap, starRate: crowdsaleCap, isMinting });
+        await whitelist.addManyToWhitelist([buyer]);
+        await token.transferOwnership(crowdsale.address);
+  
+        await increaseTimeTo(latestTime() + duration.days(52));
+  
+        const buyerWeiBalanceBeforePurchase = web3.eth.getBalance(buyer);
+  
+        await crowdsale.buyTokens(buyer, { from: buyer, value: value * 3 });
+        const buyerBalance = await token.balanceOf(buyer);
+        buyerBalance.should.be.bignumber.equal(crowdsaleCap.mul(1e18));
+  
+        const buyerWeiBalanceAfterPurchase = web3.eth.getBalance(buyer);
+  
+        buyerWeiBalanceAfterPurchase
+          .toNumber()
+          .should.be.approximately(
+            buyerWeiBalanceBeforePurchase.toNumber() - 1e18,
+            1e17
+          );
+  
+        try {
+          await crowdsale.buyTokens(buyer, { value, from: buyer });
+          assert.fail();
+        } catch (e) {
+          ensuresException(e);
+        }
+      });
+  
+      it("transfers received wei to wallet", async () => {
+        let walletBalanceBefore = await web3.eth.getBalance(wallet);
+  
+        await increaseTimeTo(latestTime() + duration.days(52));
+        await whitelist.addManyToWhitelist([user1]);
+  
+        await crowdsale.buyTokens(user1, { from: user1, value });
+  
+        let walletBalanceAfter = await web3.eth.getBalance(wallet);
+  
+        expect(walletBalanceAfter).to.be.bignumber.least(
+          walletBalanceBefore.plus(value)
+        );
+      });
+  
+      it("only sells tokens up to crowdsale cap", async () => {
+        await newCrowdsale({ rate: crowdsaleCap, starRate: crowdsaleCap, isMinting });
+        await whitelist.addManyToWhitelist([buyer]);
+        await token.transferOwnership(crowdsale.address);
+        await star.mint(buyer, 10e18);
+        await star.approve(crowdsale.address, 2e18, { from: buyer });
+  
+        await increaseTimeTo(latestTime() + duration.days(34));
+  
+        await crowdsale.buyTokens(buyer, { from: buyer });
+  
+        let buyerBalance = await token.balanceOf(buyer);
+        buyerBalance.should.be.bignumber.equal(crowdsaleCap * 1e18);
+  
+        try {
+          await crowdsale.buyTokens(buyer, { from: buyer });
+          assert.fail();
+        } catch (error) {
+          ensuresException(error);
+        }
+  
+        buyerBalance = await token.balanceOf(buyer);
+        buyerBalance.should.be.bignumber.equal(crowdsaleCap * 1e18);
+      });
+  
+      it("checks when soft cap is reached", async () => {
+        await newCrowdsale({ rate: softCap, starRate: softCap, isMinting });
+        await whitelist.addManyToWhitelist([buyer]);
+        await token.transferOwnership(crowdsale.address);
+        await star.mint(buyer, 10e18);
+        await star.approve(crowdsale.address, 1e18, { from: buyer });
+  
+        await increaseTimeTo(latestTime() + duration.days(34));
+  
+        let hasReachedSoftCap = await crowdsale.hasReachedSoftCap();
+        hasReachedSoftCap.should.be.false;
+  
+        await crowdsale.buyTokens(buyer, { from: buyer });
+  
+        hasReachedSoftCap = await crowdsale.hasReachedSoftCap();
+        hasReachedSoftCap.should.be.true;
+      });
+      
+      it("ends crowdsale when all tokens are sold", async () => {
+        await newCrowdsale({ rate: crowdsaleCap, starRate: crowdsaleCap, isMinting });
+        await whitelist.addManyToWhitelist([buyer]);
+        await token.transferOwnership(crowdsale.address);
+        await star.mint(buyer, 10e18);
+        await star.approve(crowdsale.address, 1e18, { from: buyer });
+  
+        await increaseTimeTo(latestTime() + duration.days(34));
+  
+        await crowdsale.buyTokens(buyer, { from: buyer });
+  
+        const hasEnded = await crowdsale.hasEnded();
+        hasEnded.should.be.true;
+      });
+  
+      it("ends crowdsale when all tokens are sold with wei", async () => {
+        await newCrowdsale({ rate: crowdsaleCap, starRate: crowdsaleCap, isMinting });
+        await whitelist.addManyToWhitelist([buyer]);
+        await token.transferOwnership(crowdsale.address);
+  
+        await increaseTimeTo(latestTime() + duration.days(54));
+        await crowdsale.buyTokens(buyer, { from: buyer, value });
+  
+        const hasEnded = await crowdsale.hasEnded();
+        hasEnded.should.be.true;
+      });
     });
+  };
 
-    it("ends crowdsale when all tokens are sold with wei", async () => {
-      await newCrowdsale(crowdsaleCap, crowdsaleCap);
-      await whitelist.addManyToWhitelist([buyer]);
-      await token.transferOwnership(crowdsale.address);
-
-      await increaseTimeTo(latestTime() + duration.days(54));
-      await crowdsale.buyTokens(buyer, { from: buyer, value });
-
-      const hasEnded = await crowdsale.hasEnded();
-      hasEnded.should.be.true;
-    });
+  describe("TokenSale is minting tokens", async () => {
+    itFunctionsAsExpected({ isMinting: true })
   });
 
-  describe("crowdsale finalization", function() {
-    beforeEach(async () => {
-      crowdsaleTokensLeftover = 10;
-
-      await newCrowdsale(
-        crowdsaleCap.sub(crowdsaleTokensLeftover),
-        crowdsaleCap.sub(crowdsaleTokensLeftover)
-      );
-      await whitelist.addManyToWhitelist([buyer]);
-      await token.transferOwnership(crowdsale.address);
-
-      await star.mint(buyer, 1e18);
-
-      await increaseTimeTo(latestTime() + duration.days(52));
-
-      await star.approve(crowdsale.address, 1e18, { from: buyer });
-      await crowdsale.buyTokens(buyer, { from: buyer });
-
-      await increaseTimeTo(latestTime() + duration.days(30));
-
-      await crowdsale.finalize();
-    });
-
-    it("shows that crowdsale is finalized", async function() {
-      const isCrowdsaleFinalized = await crowdsale.isFinalized();
-      isCrowdsaleFinalized.should.be.true;
-    });
-
-    it("returns token ownership to next owner", async function() {
-      const tokenOwnerAfterSale = await crowdsale.tokenOwnerAfterSale();
-      const tokenOwner = await token.owner();
-      tokenOwner.should.be.equal(tokenOwnerAfterSale);
-    });
-
-    it("mints remaining crowdsale tokens to wallet", async function() {
-      const buyerBalance = await token.balanceOf(buyer);
-
-      const walletTokenBalance = await token.balanceOf(wallet);
-
-      walletTokenBalance.should.be.bignumber.equal(
-        crowdsaleTokensLeftover * 1e18
-      );
-    });
+  describe("TokenSale transferring tokens", async () => {
+    itFunctionsAsExpected({ isMinting: false })
   });
 });
