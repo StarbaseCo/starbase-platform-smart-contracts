@@ -161,7 +161,7 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
     }
 
     /**
-     * @dev function that allows token purchases with STAR
+     * @dev function that allows token purchases with STAR or ETH
      * @param beneficiary Address of the purchaser
      */
     function buyTokens(address beneficiary)
@@ -188,7 +188,7 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
             // calculate token amount to be created
             uint256 tokens = starAllocationToTokenSale.mul(starRate);
 
-            //remainder logic
+            // remainder logic
             if (tokensSold.add(tokens) > crowdsaleCap) {
                 tokens = crowdsaleCap.sub(tokensSold);
 
@@ -220,7 +220,7 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
         // calculate token amount to be created
         uint256 tokens = weiAmount.mul(rate);
 
-        //remainder logic
+        // remainder logic
         if (tokensSold.add(tokens) > crowdsaleCap) {
             tokens = crowdsaleCap.sub(tokensSold);
             weiAmount = tokens.div(rate);
