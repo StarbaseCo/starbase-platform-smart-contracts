@@ -2,9 +2,8 @@ pragma solidity 0.4.24;
 
 import "../TokenSaleInterface.sol";
 import "./CloneFactory.sol";
-import "../lib/Ownable.sol";
 
-contract TokenSaleCloneFactory is Ownable, CloneFactory {
+contract TokenSaleCloneFactory is CloneFactory {
     // TokenSale contract address for cloning purposes
     address public libraryAddress;
     address public starToken;
@@ -27,15 +26,6 @@ contract TokenSaleCloneFactory is Ownable, CloneFactory {
         );
         libraryAddress = _libraryAddress;
         starToken = _starToken;
-    }
-
-   /**
-    * @dev Have the option of updating the TokenSale contract for cloning.
-    * @param _libraryAddress Address for new contract
-    */
-    function setLibraryAddress(address _libraryAddress) external onlyOwner {
-        require(_libraryAddress != address(0), "_libraryAddress should not be empty!");
-        libraryAddress = _libraryAddress;
     }
 
     /**

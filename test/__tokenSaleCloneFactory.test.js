@@ -1,4 +1,3 @@
-const { ensuresException } = require("./helpers/utils");
 const { latestTime, duration } = require("./helpers/timer");
 const TokenSaleCloneFactory = artifacts.require("./TokenSaleCloneFactory.sol");
 const TokenSale = artifacts.require("./TokenSale.sol");
@@ -9,11 +8,10 @@ const BigNumber = web3.BigNumber;
 
 contract(
   "TokenSaleCloneFactory",
-  ([owner, wallet, otherAddress, whitelist]) => {
+  ([owner, wallet, _, whitelist]) => {
     let tokenSaleCloneFactory,
       tokenSale,
       starToken,
-      newTokenSale,
       companyToken,
       tokenOwnerAfterSale,
       startTime,
@@ -37,50 +35,6 @@ contract(
       );
       companyToken = await CompanyToken.new("Example Token", "EXT");
       tokenOwnerAfterSale = await companyToken.owner();
-    });
-
-    describe("#setLibraryAddress", () => {
-      beforeEach(async () => {
-        newTokenSale = await TokenSale.new();
-      });
-
-      it("does NOT allow a NON owner to set new library address", async () => {
-        try {
-          await tokenSaleCloneFactory.setLibraryAddress(newTokenSale.address, {
-            from: otherAddress
-          });
-          assert.fail();
-        } catch (e) {
-          ensuresException(e);
-        }
-
-        const libraryAddress = await tokenSaleCloneFactory.libraryAddress();
-        libraryAddress.should.be.equal(tokenSale.address);
-      });
-
-      it("does NOT allow owner to set an empty address as a library address", async () => {
-        try {
-          await tokenSaleCloneFactory.setLibraryAddress(
-            "0x0000000000000000000000000000000000000000",
-            { from: owner }
-          );
-          assert.fail();
-        } catch (e) {
-          ensuresException(e);
-        }
-
-        const libraryAddress = await tokenSaleCloneFactory.libraryAddress();
-        libraryAddress.should.be.equal(tokenSale.address);
-      });
-
-      it("allows owner to set new library address", async () => {
-        await tokenSaleCloneFactory.setLibraryAddress(newTokenSale.address, {
-          from: owner
-        });
-
-        const libraryAddress = await tokenSaleCloneFactory.libraryAddress();
-        libraryAddress.should.be.equal(newTokenSale.address);
-      });
     });
 
     describe("tokenSale clone factory contract deployment", () => {
