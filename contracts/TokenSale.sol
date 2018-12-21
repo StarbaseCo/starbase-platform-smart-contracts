@@ -278,15 +278,13 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
      * @dev finalizes crowdsale
      */
     function finalization() internal {
-        if (crowdsaleCap > tokensSold) {
-            uint256 remainingTokens = crowdsaleCap.sub(tokensSold);
+        uint256 remainingTokens = isMinting ? crowdsaleCap.sub(tokensSold) : tokenOnSale.balanceOf(address(this));
 
+        if (remainingTokens > 0) {
             sendPurchasedTokens(wallet, remainingTokens);
         }
 
-        if (isMinting) {
-            tokenOnSale.transferOwnership(tokenOwnerAfterSale);
-        }
+        if (isMinting) tokenOnSale.transferOwnership(tokenOwnerAfterSale);
 
         super.finalization();
     }
