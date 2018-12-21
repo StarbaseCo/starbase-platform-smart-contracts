@@ -50,7 +50,7 @@ contract("TokenSale", ([owner, wallet, buyer, buyer2, user1, fakeWallet]) => {
       endTime,
       whitelist.address,
       token.address,
-      (await token.owner()),
+      isMinting ? (await token.owner()) : 0x0,
       rate,
       starRate,
       wallet,
