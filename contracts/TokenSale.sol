@@ -108,10 +108,10 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
             require(tokenOwnerAfterSale != address(0), "TokenOwnerAftersale cannot be empty when minting tokens!");
             require(ERC20Plus(tokenOnSale).paused(), "Company token must be paused upon initialization!");
         } else {
-            require(tokenOwnerAfterSale == address(0), "TokenOwnerAftersale cannot be empty when minting tokens!");
+            require(tokenOwnerAfterSale == address(0), "TokenOwnerAftersale must be empty when minting tokens!");
         }
 
-        require(ERC20Plus(tokenOnSale).decimals() == 18, "Only sales for tokens with 18 decimals are supported!");        
+        require(ERC20Plus(tokenOnSale).decimals() == 18, "Only sales for tokens with 18 decimals are supported!");
     }
 
     modifier isWhitelisted(address beneficiary) {
