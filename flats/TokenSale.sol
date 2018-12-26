@@ -1,6 +1,6 @@
 pragma solidity 0.4.24;
 
-// File: contracts\lib\Ownable.sol
+// File: contracts/lib/Ownable.sol
 
 /**
  * @title Ownable
@@ -73,7 +73,7 @@ contract Ownable {
     }
 }
 
-// File: contracts\lib\Pausable.sol
+// File: contracts/lib/Pausable.sol
 
 /**
  * @title Pausable
@@ -129,7 +129,7 @@ contract Pausable is Ownable {
     }
 }
 
-// File: contracts\lib\SafeMath.sol
+// File: contracts/lib/SafeMath.sol
 
 /**
  * @title SafeMath
@@ -177,7 +177,7 @@ library SafeMath {
   }
 }
 
-// File: contracts\lib\Crowdsale.sol
+// File: contracts/lib/Crowdsale.sol
 
 /**
  * @title Crowdsale - modified from zeppelin-solidity library
@@ -236,7 +236,7 @@ contract Crowdsale {
     }
 }
 
-// File: contracts\lib\FinalizableCrowdsale.sol
+// File: contracts/lib/FinalizableCrowdsale.sol
 
 /**
  * @title FinalizableCrowdsale
@@ -273,7 +273,7 @@ contract FinalizableCrowdsale is Crowdsale, Ownable {
   }
 }
 
-// File: contracts\lib\ERC20Plus.sol
+// File: contracts/lib/ERC20Plus.sol
 
 /**
  * @title ERC20 interface with additional functions
@@ -301,7 +301,7 @@ contract ERC20Plus {
 
 }
 
-// File: contracts\Whitelist.sol
+// File: contracts/Whitelist.sol
 
 /**
  * @title Whitelist - crowdsale whitelist contract
@@ -344,7 +344,7 @@ contract Whitelist is Ownable {
     }
 }
 
-// File: contracts\TokenSaleInterface.sol
+// File: contracts/TokenSaleInterface.sol
 
 /**
  * @title TokenSale contract interface
@@ -369,7 +369,7 @@ interface TokenSaleInterface {
     external;
 }
 
-// File: contracts\TokenSale.sol
+// File: contracts/TokenSale.sol
 
 /**
  * @title Token Sale contract - crowdsale of company tokens.
@@ -473,10 +473,10 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
             require(tokenOwnerAfterSale != address(0), "TokenOwnerAftersale cannot be empty when minting tokens!");
             require(ERC20Plus(tokenOnSale).paused(), "Company token must be paused upon initialization!");
         } else {
-            require(tokenOwnerAfterSale == address(0), "TokenOwnerAftersale cannot be empty when minting tokens!");
+            require(tokenOwnerAfterSale == address(0), "TokenOwnerAftersale must be empty when minting tokens!");
         }
 
-        require(ERC20Plus(tokenOnSale).decimals() == 18, "Only sales for tokens with 18 decimals are supported!");        
+        require(ERC20Plus(tokenOnSale).decimals() == 18, "Only sales for tokens with 18 decimals are supported!");
     }
 
     modifier isWhitelisted(address beneficiary) {
