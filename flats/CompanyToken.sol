@@ -1,6 +1,6 @@
 pragma solidity 0.4.24;
 
-// File: contracts\lib\ERC20Basic.sol
+// File: contracts/lib/ERC20Basic.sol
 
 /**
  * @title ERC20Basic
@@ -14,7 +14,7 @@ contract ERC20Basic {
   event Transfer(address indexed from, address indexed to, uint256 value);
 }
 
-// File: contracts\lib\SafeMath.sol
+// File: contracts/lib/SafeMath.sol
 
 /**
  * @title SafeMath
@@ -62,7 +62,7 @@ library SafeMath {
   }
 }
 
-// File: contracts\lib\BasicToken.sol
+// File: contracts/lib/BasicToken.sol
 
 /**
  * @title Basic token
@@ -109,7 +109,7 @@ contract BasicToken is ERC20Basic {
 
 }
 
-// File: contracts\lib\ERC20.sol
+// File: contracts/lib/ERC20.sol
 
 /**
  * @title ERC20 interface
@@ -127,7 +127,7 @@ contract ERC20 {
     event Transfer(address indexed from, address indexed to, uint256 value);
 }
 
-// File: contracts\lib\StandardToken.sol
+// File: contracts/lib/StandardToken.sol
 
 /**
  * @title Standard ERC20 token
@@ -224,7 +224,7 @@ contract StandardToken is ERC20, BasicToken {
 
 }
 
-// File: contracts\lib\Ownable.sol
+// File: contracts/lib/Ownable.sol
 
 /**
  * @title Ownable
@@ -297,7 +297,7 @@ contract Ownable {
     }
 }
 
-// File: contracts\lib\MintableToken.sol
+// File: contracts/lib/MintableToken.sol
 
 /**
  * @title Mintable token
@@ -342,7 +342,7 @@ contract MintableToken is StandardToken, Ownable {
   }
 }
 
-// File: contracts\lib\Pausable.sol
+// File: contracts/lib/Pausable.sol
 
 /**
  * @title Pausable
@@ -398,7 +398,7 @@ contract Pausable is Ownable {
     }
 }
 
-// File: contracts\lib\PausableToken.sol
+// File: contracts/lib/PausableToken.sol
 
 /**
  * @title Pausable token
@@ -427,7 +427,7 @@ contract PausableToken is StandardToken, Pausable {
   }
 }
 
-// File: contracts\CompanyToken.sol
+// File: contracts/CompanyToken.sol
 
 /**
  * @title CompanyToken contract - ERC20 compatible token contract with customized token parameters.
