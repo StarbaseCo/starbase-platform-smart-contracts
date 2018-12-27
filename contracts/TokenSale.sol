@@ -85,6 +85,8 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
             "Parameter variables cannot be empty!"
         );
 
+        require(_softCap < _crowdsaleCap, "SoftCap should be smaller than crowdsaleCap!");
+
         if (_isWeiAccepted) {
             require(_rate > 0, "Set a rate for Wei, when it is accepted for purchases!");
         } else {
