@@ -38,11 +38,9 @@ contract FundsSplitter {
     }
 
     /**
-     * @dev fallback function that diverts funds sent to the contract to both client and starbase
+     * @dev fallback function that accepts funds
      */
-    function() public payable {
-        splitFunds(msg.value);
-    }
+    function() public payable { }
 
     /**
      * @dev splits star that are allocated to contract
@@ -57,10 +55,9 @@ contract FundsSplitter {
 
     /**
      * @dev core fund splitting functionality as part of the funds are sent to client and part to starbase
-     * @param value Eth amount to be split
      */
-    function splitFunds(uint256 value) internal {
-        uint256 starbaseShare = value.mul(starbasePercentage).div(100);
+    function splitFunds() public payable {
+        uint256 starbaseShare = msg.value.mul(starbasePercentage).div(100);
 
         starbase.transfer(starbaseShare);
         client.transfer(address(this).balance); // remaining ether to client
