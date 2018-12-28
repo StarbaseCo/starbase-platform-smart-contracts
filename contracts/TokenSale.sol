@@ -246,12 +246,13 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
         tokensSold = tokensSold.add(tokens);
         sendPurchasedTokens(beneficiary, tokens);
         emit TokenPurchase(msg.sender, beneficiary, weiAmount, tokens);
+
+        address(wallet).transfer(weiAmount);
+        wallet.splitFunds();
         
         if (weiRefund > 0) {
             msg.sender.transfer(weiRefund);
         }
-
-        wallet.splitFunds();
     }
 
     // isMinting checker -- it either mints ERC20 token or transfers them

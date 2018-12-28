@@ -57,7 +57,7 @@ contract FundsSplitter {
      * @dev core fund splitting functionality as part of the funds are sent to client and part to starbase
      */
     function splitFunds() public payable {
-        uint256 starbaseShare = msg.value.mul(starbasePercentage).div(100);
+        uint256 starbaseShare = address(this).balance.mul(starbasePercentage).div(100);
 
         starbase.transfer(starbaseShare);
         client.transfer(address(this).balance); // remaining ether to client
