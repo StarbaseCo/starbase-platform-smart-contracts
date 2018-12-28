@@ -5,6 +5,7 @@ import "./lib/FinalizableCrowdsale.sol";
 import "./lib/ERC20Plus.sol";
 import "./Whitelist.sol";
 import "./TokenSaleInterface.sol";
+import "./FundsSplitterInterface.sol";
 
 /**
  * @title Token Sale contract - crowdsale of company tokens.
@@ -24,6 +25,8 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
     // external contracts
     Whitelist public whitelist;
     ERC20Plus public starToken;
+    FundsSplitterInterface public wallet;
+
     // The token being sold
     ERC20Plus public tokenOnSale;
 
@@ -40,7 +43,7 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
      * @param _companyToken ERC20 contract address that has minting capabilities
      * @param _rate The token rate per ETH
      * @param _starRate The token rate per STAR
-     * @param _wallet Multisig wallet that will hold the crowdsale funds.
+     * @param _wallet FundsSplitter wallet that redirects funds to client and Starbase.
      * @param _softCap Soft cap of the token sale
      * @param _crowdsaleCap Cap for the token sale
      * @param _isWeiAccepted Bool for acceptance of ether in token sale
@@ -71,7 +74,8 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
             starRate == 0 &&
             tokenOnSale == address(0) &&
             softCap == 0 &&
-            crowdsaleCap == 0,
+            crowdsaleCap == 0 &&
+            wallet == address(0),
             "Global variables should not have been set before!"
         );
 
@@ -81,9 +85,12 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
             !(_rate == 0 && _starRate == 0) &&
             _companyToken != address(0) &&
             _softCap != 0 &&
-            _crowdsaleCap != 0,
+            _crowdsaleCap != 0 &&
+            _wallet != 0,
             "Parameter variables cannot be empty!"
         );
+
+        require(_softCap < _crowdsaleCap, "SoftCap should be smaller than crowdsaleCap!");
 
         if (_isWeiAccepted) {
             require(_rate > 0, "Set a rate for Wei, when it is accepted for purchases!");
@@ -91,10 +98,11 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
             require(_rate == 0, "Only set a rate for Wei, when it is accepted for purchases!");
         }
 
-        initCrowdsale(_startTime, _endTime, _rate, _wallet);
+        initCrowdsale(_startTime, _endTime, _rate);
         tokenOnSale = ERC20Plus(_companyToken);
         whitelist = Whitelist(_whitelist);
         starToken = ERC20Plus(_starToken);
+        wallet = FundsSplitterInterface(_wallet);
         tokenOwnerAfterSale = _tokenOwnerAfterSale;
         starRate = _starRate;
         isWeiAccepted = _isWeiAccepted;
@@ -207,6 +215,7 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
 
             // forward funds
             starToken.transferFrom(beneficiary, wallet, starAllocationToTokenSale);
+            wallet.splitStarFunds();
         }
     }
 
@@ -238,7 +247,9 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
         sendPurchasedTokens(beneficiary, tokens);
         emit TokenPurchase(msg.sender, beneficiary, weiAmount, tokens);
 
-        wallet.transfer(weiAmount);
+        address(wallet).transfer(weiAmount);
+        wallet.splitFunds();
+        
         if (weiRefund > 0) {
             msg.sender.transfer(weiRefund);
         }

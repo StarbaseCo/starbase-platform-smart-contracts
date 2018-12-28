@@ -19,11 +19,12 @@ contract("FundsSplitter", ([_, client, starbase]) => {
   });
 
   describe("#splitFunds", () => {
-    it("split funds between client and starbase", async () => {
+    it("split existing funds between client and starbase", async () => {
         const clientBalanceBefore = await web3.eth.getBalance(client);
         const starbaseBalanceBefore = await web3.eth.getBalance(starbase);
 
         await fundsSplitter.sendTransaction({ from: _, value: 20e18 });
+        await fundsSplitter.splitFunds({ from: _ });
 
         const clientBalanceAfter = await web3.eth.getBalance(client);
         const starbaseBalanceAfter = await web3.eth.getBalance(starbase);
@@ -34,6 +35,22 @@ contract("FundsSplitter", ([_, client, starbase]) => {
         starbaseBalanceDifference.should.be.bignumber.equal(2e18);
         clientBalanceDifference.should.be.bignumber.equal(18e18);
     });
+
+    it("split new funds between client and starbase", async () => {
+      const clientBalanceBefore = await web3.eth.getBalance(client);
+      const starbaseBalanceBefore = await web3.eth.getBalance(starbase);
+
+      await fundsSplitter.splitFunds({ from: _, value: 20e18 });
+
+      const clientBalanceAfter = await web3.eth.getBalance(client);
+      const starbaseBalanceAfter = await web3.eth.getBalance(starbase);
+
+      const clientBalanceDifference = clientBalanceAfter.minus(clientBalanceBefore);
+      const starbaseBalanceDifference = starbaseBalanceAfter.minus(starbaseBalanceBefore);
+
+      starbaseBalanceDifference.should.be.bignumber.equal(2e18);
+      clientBalanceDifference.should.be.bignumber.equal(18e18);
+  });
   });
 
   describe("#splitStarFunds", () => {

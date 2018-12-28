@@ -13,9 +13,6 @@ contract Crowdsale {
     uint256 public startTime;
     uint256 public endTime;
 
-    // address where funds are collected
-    address public wallet;
-
     // how many token units a buyer gets per wei
     uint256 public rate;
 
@@ -30,29 +27,21 @@ contract Crowdsale {
     // amount amount of tokens purchased
     event TokenPurchase(address indexed purchaser, address indexed beneficiary, uint256 value, uint256 amount);
 
-    function initCrowdsale(uint256 _startTime, uint256 _endTime, uint256 _rate, address _wallet) public {
+    function initCrowdsale(uint256 _startTime, uint256 _endTime, uint256 _rate) public {
         require(
-            startTime == 0 && endTime == 0 && rate == 0 && wallet == address(0),
+            startTime == 0 && endTime == 0 && rate == 0,
             "Global variables must be empty when initializing crowdsale!"
         );
         require(_startTime >= now, "_startTime must be more than current time!");
         require(_endTime >= _startTime, "_endTime must be more than _startTime!");
-        require(_wallet != address(0), "_wallet parameter must not be empty!");
 
         startTime = _startTime;
         endTime = _endTime;
         rate = _rate;
-        wallet = _wallet;
     }
 
     // @return true if crowdsale event has ended
     function hasEnded() public view returns (bool) {
         return now > endTime;
-    }
-
-    // send ether to the fund collection wallet
-    // override to create custom fund forwarding mechanisms
-    function forwardFunds() internal {
-        wallet.transfer(msg.value);
     }
 }
