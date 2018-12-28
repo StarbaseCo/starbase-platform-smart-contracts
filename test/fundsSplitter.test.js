@@ -3,7 +3,6 @@ const MintableToken = artifacts.require("./MintableToken.sol");
 
 contract("FundsSplitter", ([_, client, starbase]) => {
   let token, tokenOnSale, fundsSplitter;
-
   const starbasePercentageNumber = 10;
 
   beforeEach(async () => {

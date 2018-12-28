@@ -246,7 +246,7 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
         tokensSold = tokensSold.add(tokens);
         sendPurchasedTokens(beneficiary, tokens);
         emit TokenPurchase(msg.sender, beneficiary, weiAmount, tokens);
-        
+
         if (weiRefund > 0) {
             msg.sender.transfer(weiRefund);
         }

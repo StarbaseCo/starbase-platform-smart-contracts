@@ -37,10 +37,10 @@ contract FundsSplitter {
         tokenOnSale = _tokenOnSale;
     }
 
-    /**
-     * @dev fallback function that accepts funds
-     */
-    function() public payable { }
+    // /**
+    //  * @dev fallback function that accepts funds
+    //  */
+    // function() public payable { }
 
     /**
      * @dev splits star that are allocated to contract
@@ -57,6 +57,7 @@ contract FundsSplitter {
      * @dev core fund splitting functionality as part of the funds are sent to client and part to starbase
      */
     function splitFunds() public payable {
+        // require(msg.value > 0, "Value must be included");
         uint256 starbaseShare = msg.value.mul(starbasePercentage).div(100);
 
         starbase.transfer(starbaseShare);
