@@ -1,6 +1,6 @@
 pragma solidity 0.4.24;
 
-// File: contracts/lib/Ownable.sol
+// File: contracts\lib\Ownable.sol
 
 /**
  * @title Ownable
@@ -73,7 +73,7 @@ contract Ownable {
     }
 }
 
-// File: contracts/lib/Pausable.sol
+// File: contracts\lib\Pausable.sol
 
 /**
  * @title Pausable
@@ -129,7 +129,7 @@ contract Pausable is Ownable {
     }
 }
 
-// File: contracts/lib/SafeMath.sol
+// File: contracts\lib\SafeMath.sol
 
 /**
  * @title SafeMath
@@ -177,7 +177,7 @@ library SafeMath {
   }
 }
 
-// File: contracts/lib/Crowdsale.sol
+// File: contracts\lib\Crowdsale.sol
 
 /**
  * @title Crowdsale - modified from zeppelin-solidity library
@@ -191,9 +191,6 @@ contract Crowdsale {
     // start and end timestamps where investments are allowed (both inclusive)
     uint256 public startTime;
     uint256 public endTime;
-
-    // address where funds are collected
-    address public wallet;
 
     // how many token units a buyer gets per wei
     uint256 public rate;
@@ -209,34 +206,26 @@ contract Crowdsale {
     // amount amount of tokens purchased
     event TokenPurchase(address indexed purchaser, address indexed beneficiary, uint256 value, uint256 amount);
 
-    function initCrowdsale(uint256 _startTime, uint256 _endTime, uint256 _rate, address _wallet) public {
+    function initCrowdsale(uint256 _startTime, uint256 _endTime, uint256 _rate) public {
         require(
-            startTime == 0 && endTime == 0 && rate == 0 && wallet == address(0),
+            startTime == 0 && endTime == 0 && rate == 0,
             "Global variables must be empty when initializing crowdsale!"
         );
         require(_startTime >= now, "_startTime must be more than current time!");
         require(_endTime >= _startTime, "_endTime must be more than _startTime!");
-        require(_wallet != address(0), "_wallet parameter must not be empty!");
 
         startTime = _startTime;
         endTime = _endTime;
         rate = _rate;
-        wallet = _wallet;
     }
 
     // @return true if crowdsale event has ended
     function hasEnded() public view returns (bool) {
         return now > endTime;
     }
-
-    // send ether to the fund collection wallet
-    // override to create custom fund forwarding mechanisms
-    function forwardFunds() internal {
-        wallet.transfer(msg.value);
-    }
 }
 
-// File: contracts/lib/FinalizableCrowdsale.sol
+// File: contracts\lib\FinalizableCrowdsale.sol
 
 /**
  * @title FinalizableCrowdsale
@@ -273,7 +262,7 @@ contract FinalizableCrowdsale is Crowdsale, Ownable {
   }
 }
 
-// File: contracts/lib/ERC20Plus.sol
+// File: contracts\lib\ERC20Plus.sol
 
 /**
  * @title ERC20 interface with additional functions
@@ -301,7 +290,7 @@ contract ERC20Plus {
 
 }
 
-// File: contracts/Whitelist.sol
+// File: contracts\Whitelist.sol
 
 /**
  * @title Whitelist - crowdsale whitelist contract
@@ -344,7 +333,7 @@ contract Whitelist is Ownable {
     }
 }
 
-// File: contracts/TokenSaleInterface.sol
+// File: contracts\TokenSaleInterface.sol
 
 /**
  * @title TokenSale contract interface
@@ -369,7 +358,14 @@ interface TokenSaleInterface {
     external;
 }
 
-// File: contracts/TokenSale.sol
+// File: contracts\FundsSplitterInterface.sol
+
+contract FundsSplitterInterface {
+    function splitFunds() public payable;
+    function splitStarFunds() public;
+}
+
+// File: contracts\TokenSale.sol
 
 /**
  * @title Token Sale contract - crowdsale of company tokens.
@@ -389,6 +385,8 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
     // external contracts
     Whitelist public whitelist;
     ERC20Plus public starToken;
+    FundsSplitterInterface public wallet;
+
     // The token being sold
     ERC20Plus public tokenOnSale;
 
@@ -405,7 +403,7 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
      * @param _companyToken ERC20 contract address that has minting capabilities
      * @param _rate The token rate per ETH
      * @param _starRate The token rate per STAR
-     * @param _wallet Multisig wallet that will hold the crowdsale funds.
+     * @param _wallet FundsSplitter wallet that redirects funds to client and Starbase.
      * @param _softCap Soft cap of the token sale
      * @param _crowdsaleCap Cap for the token sale
      * @param _isWeiAccepted Bool for acceptance of ether in token sale
@@ -436,7 +434,8 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
             starRate == 0 &&
             tokenOnSale == address(0) &&
             softCap == 0 &&
-            crowdsaleCap == 0,
+            crowdsaleCap == 0 &&
+            wallet == address(0),
             "Global variables should not have been set before!"
         );
 
@@ -446,9 +445,12 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
             !(_rate == 0 && _starRate == 0) &&
             _companyToken != address(0) &&
             _softCap != 0 &&
-            _crowdsaleCap != 0,
+            _crowdsaleCap != 0 &&
+            _wallet != 0,
             "Parameter variables cannot be empty!"
         );
+
+        require(_softCap < _crowdsaleCap, "SoftCap should be smaller than crowdsaleCap!");
 
         if (_isWeiAccepted) {
             require(_rate > 0, "Set a rate for Wei, when it is accepted for purchases!");
@@ -456,10 +458,11 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
             require(_rate == 0, "Only set a rate for Wei, when it is accepted for purchases!");
         }
 
-        initCrowdsale(_startTime, _endTime, _rate, _wallet);
+        initCrowdsale(_startTime, _endTime, _rate);
         tokenOnSale = ERC20Plus(_companyToken);
         whitelist = Whitelist(_whitelist);
         starToken = ERC20Plus(_starToken);
+        wallet = FundsSplitterInterface(_wallet);
         tokenOwnerAfterSale = _tokenOwnerAfterSale;
         starRate = _starRate;
         isWeiAccepted = _isWeiAccepted;
@@ -572,6 +575,7 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
 
             // forward funds
             starToken.transferFrom(beneficiary, wallet, starAllocationToTokenSale);
+            wallet.splitStarFunds();
         }
     }
 
@@ -603,7 +607,9 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
         sendPurchasedTokens(beneficiary, tokens);
         emit TokenPurchase(msg.sender, beneficiary, weiAmount, tokens);
 
-        wallet.transfer(weiAmount);
+        address(wallet).transfer(weiAmount);
+        wallet.splitFunds();
+        
         if (weiRefund > 0) {
             msg.sender.transfer(weiRefund);
         }
