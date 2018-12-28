@@ -1,7 +1,7 @@
 const FundsSplitter = artifacts.require("./FundsSplitter.sol");
 const MintableToken = artifacts.require("./MintableToken.sol");
 
-contract.only("FundsSplitter", ([_, client, starbase]) => {
+contract("FundsSplitter", ([_, client, starbase]) => {
   let token, tokenOnSale, fundsSplitter;
 
   const starbasePercentageNumber = 10;

@@ -31,6 +31,8 @@ contract("TokenSale", ([owner, client, starbase, buyer, buyer2, user1, fakeWalle
   const newCrowdsale = async ({
     rate,
     starRate,
+    softCap = new BigNumber(200000),
+    crowdsaleCap = new BigNumber(20000000),
     isMinting = true,
     isWeiAccepted = true,
     isTransferringOwnership = true,
@@ -98,6 +100,24 @@ contract("TokenSale", ([owner, client, starbase, buyer, buyer2, user1, fakeWalle
     // deployment without rate
     await newCrowdsale({rate: 0, starRate, isWeiAccepted: false });
     (await crowdsale.rate()).should.be.bignumber.eq(0);
+  });
+
+  it("deployment suceeds when softcap is lower than crowdsale cap", async () => {
+    try {
+      await newCrowdsale({ rate, starRate, softCap: crowdsaleCap, crowdsaleCap: softCap });
+      assert.fail();
+    } catch (error) {
+      ensuresException(error);
+    }
+
+    await newCrowdsale({
+      rate,
+      starRate,
+      softCap,
+      crowdsaleCap
+    });
+
+    (await crowdsale.softCap()).should.be.bignumber.eq(softCap.mul(1e18));
   });
 
   it("has a normal crowdsale rate", async () => {
