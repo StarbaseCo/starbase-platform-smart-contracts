@@ -1,6 +1,6 @@
 pragma solidity 0.4.24;
 
-// File: contracts\lib\SafeMath.sol
+// File: contracts/lib/SafeMath.sol
 
 /**
  * @title SafeMath
@@ -48,7 +48,7 @@ library SafeMath {
   }
 }
 
-// File: contracts\lib\ERC20.sol
+// File: contracts/lib/ERC20.sol
 
 /**
  * @title ERC20 interface
@@ -66,7 +66,7 @@ contract ERC20 {
     event Transfer(address indexed from, address indexed to, uint256 value);
 }
 
-// File: contracts\FundsSplitter.sol
+// File: contracts/FundsSplitter.sol
 
 contract FundsSplitter {
     using SafeMath for uint256;
@@ -102,10 +102,10 @@ contract FundsSplitter {
         tokenOnSale = _tokenOnSale;
     }
 
-    /**
-     * @dev fallback function that accepts funds
-     */
-    function() public payable { }
+    // /**
+    //  * @dev fallback function that accepts funds
+    //  */
+    // function() public payable { }
 
     /**
      * @dev splits star that are allocated to contract
@@ -122,6 +122,7 @@ contract FundsSplitter {
      * @dev core fund splitting functionality as part of the funds are sent to client and part to starbase
      */
     function splitFunds() public payable {
+        // require(msg.value > 0, "Value must be included");
         uint256 starbaseShare = msg.value.mul(starbasePercentage).div(100);
 
         starbase.transfer(starbaseShare);
