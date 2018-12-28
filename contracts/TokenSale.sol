@@ -1,4 +1,4 @@
-pragma solidity 0.4.24;
+pragma solidity 0.4.25;
 
 import "./lib/Pausable.sol";
 import "./lib/FinalizableCrowdsale.sol";
@@ -249,7 +249,7 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
 
         address(wallet).transfer(weiAmount);
         wallet.splitFunds();
-        
+
         if (weiRefund > 0) {
             msg.sender.transfer(weiRefund);
         }

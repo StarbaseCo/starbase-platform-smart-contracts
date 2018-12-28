@@ -1,9 +1,9 @@
-pragma solidity 0.4.24;
+pragma solidity 0.4.25;
 
 /**
  * @title LinkedListLib
  * @author Darryl Morris (o0ragman0o) and Modular.network
- * 
+ *
  * Modified by Markus Waas (gorgos) and Starbase
  *
  * This utility library was forked from https://github.com/o0ragman0o/LibCLL
