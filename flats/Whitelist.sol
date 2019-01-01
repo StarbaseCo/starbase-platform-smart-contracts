@@ -1,6 +1,6 @@
 pragma solidity 0.4.25;
 
-// File: contracts/lib/Ownable.sol
+// File: contracts\lib\Ownable.sol
 
 /**
  * @title Ownable
@@ -73,7 +73,7 @@ contract Ownable {
     }
 }
 
-// File: contracts/Whitelist.sol
+// File: contracts\Whitelist.sol
 
 /**
  * @title Whitelist - crowdsale whitelist contract
