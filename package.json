@@ -7,13 +7,14 @@
         "test": "test"
     },
     "scripts": {
+        "flat:update": "npm run flat && git add flats && git commit -m \"update flats\"",
         "test": "bash scripts/run_test.sh",
         "flat": "bash scripts/flatten.sh",
         "remix": "bash scripts/flatten.sh && remixd -s ./flats"
     },
     "husky": {
         "hooks": {
-            "pre-push": "npm run flat && git add flats && git commit -m \"update flats\""
+            "pre-push": "npm run flat:update"
         }
     },
     "author": "Gustavo Guimaraes",
