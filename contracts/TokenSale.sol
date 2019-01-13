@@ -213,9 +213,7 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
             sendPurchasedTokens(beneficiary, tokens);
             emit TokenPurchaseWithStar(msg.sender, beneficiary, starAllocationToTokenSale, tokens);
 
-            // forward funds
-            starToken.transferFrom(beneficiary, wallet, starAllocationToTokenSale);
-            wallet.splitStarFunds();
+            starToken.transferFrom(beneficiary, this, starAllocationToTokenSale);
         }
     }
 
@@ -246,9 +244,6 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
         tokensSold = tokensSold.add(tokens);
         sendPurchasedTokens(beneficiary, tokens);
         emit TokenPurchase(msg.sender, beneficiary, weiAmount, tokens);
-
-        address(wallet).transfer(weiAmount);
-        wallet.splitFunds();
 
         if (weiRefund > 0) {
             msg.sender.transfer(weiRefund);
@@ -286,6 +281,26 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
      */
     function validPurchase() internal view returns (bool) {
         return now >= startTime && now <= endTime;
+    }
+
+    /**
+     * @dev forward funds
+     */
+    function forwardsFunds() public {
+        require(hasReachedSoftCap(), "Forwarding funds only possible once soft cap is reached!");
+        
+        uint256 starBalance = starToken.balanceOf(address(this));
+        uint256 ethBalance = address(this).balance;
+
+        if (starBalance > 0) {
+            starToken.transferFrom(this, wallet, starBalance);        
+            wallet.splitStarFunds();
+        }
+        
+        if (ethBalance > 0) {
+            address(wallet).transfer(ethBalance);
+            wallet.splitFunds();
+        }
     }
 
     /**
