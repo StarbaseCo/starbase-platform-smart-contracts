@@ -1,6 +1,6 @@
 pragma solidity 0.4.25;
 
-// File: contracts\lib\Ownable.sol
+// File: contracts/lib/Ownable.sol
 
 /**
  * @title Ownable
@@ -73,7 +73,7 @@ contract Ownable {
     }
 }
 
-// File: contracts\lib\Pausable.sol
+// File: contracts/lib/Pausable.sol
 
 /**
  * @title Pausable
@@ -129,7 +129,7 @@ contract Pausable is Ownable {
     }
 }
 
-// File: contracts\lib\SafeMath.sol
+// File: contracts/lib/SafeMath.sol
 
 /**
  * @title SafeMath
@@ -177,7 +177,7 @@ library SafeMath {
   }
 }
 
-// File: contracts\lib\Crowdsale.sol
+// File: contracts/lib/Crowdsale.sol
 
 /**
  * @title Crowdsale - modified from zeppelin-solidity library
@@ -225,7 +225,7 @@ contract Crowdsale {
     }
 }
 
-// File: contracts\lib\FinalizableCrowdsale.sol
+// File: contracts/lib/FinalizableCrowdsale.sol
 
 /**
  * @title FinalizableCrowdsale
@@ -262,7 +262,7 @@ contract FinalizableCrowdsale is Crowdsale, Ownable {
   }
 }
 
-// File: contracts\lib\ERC20Plus.sol
+// File: contracts/lib/ERC20Plus.sol
 
 /**
  * @title ERC20 interface with additional functions
@@ -290,7 +290,7 @@ contract ERC20Plus {
 
 }
 
-// File: contracts\Whitelist.sol
+// File: contracts/Whitelist.sol
 
 /**
  * @title Whitelist - crowdsale whitelist contract
@@ -333,7 +333,7 @@ contract Whitelist is Ownable {
     }
 }
 
-// File: contracts\TokenSaleInterface.sol
+// File: contracts/TokenSaleInterface.sol
 
 /**
  * @title TokenSale contract interface
@@ -358,7 +358,7 @@ interface TokenSaleInterface {
     external;
 }
 
-// File: contracts\FundsSplitterInterface.sol
+// File: contracts/FundsSplitterInterface.sol
 
 contract FundsSplitterInterface {
     function splitFunds() public payable;
@@ -573,9 +573,7 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
             sendPurchasedTokens(beneficiary, tokens);
             emit TokenPurchaseWithStar(msg.sender, beneficiary, starAllocationToTokenSale, tokens);
 
-            // forward funds
-            starToken.transferFrom(beneficiary, wallet, starAllocationToTokenSale);
-            wallet.splitStarFunds();
+            starToken.transferFrom(beneficiary, this, starAllocationToTokenSale);
         }
     }
 
@@ -606,9 +604,6 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
         tokensSold = tokensSold.add(tokens);
         sendPurchasedTokens(beneficiary, tokens);
         emit TokenPurchase(msg.sender, beneficiary, weiAmount, tokens);
-
-        address(wallet).transfer(weiAmount);
-        wallet.splitFunds();
 
         if (weiRefund > 0) {
             msg.sender.transfer(weiRefund);
@@ -646,6 +641,26 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
      */
     function validPurchase() internal view returns (bool) {
         return now >= startTime && now <= endTime;
+    }
+
+    /**
+     * @dev forward funds
+     */
+    function forwardsFunds() public {
+        require(hasReachedSoftCap(), "Forwarding funds only possible once soft cap is reached!");
+        
+        uint256 starBalance = starToken.balanceOf(address(this));
+        uint256 ethBalance = address(this).balance;
+
+        if (starBalance > 0) {
+            starToken.transferFrom(this, wallet, starBalance);        
+            wallet.splitStarFunds();
+        }
+        
+        if (ethBalance > 0) {
+            address(wallet).transfer(ethBalance);
+            wallet.splitFunds();
+        }
     }
 
     /**
