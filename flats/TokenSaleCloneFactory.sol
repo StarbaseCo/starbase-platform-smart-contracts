@@ -1,6 +1,6 @@
 pragma solidity 0.4.25;
 
-// File: contracts\TokenSaleInterface.sol
+// File: contracts/TokenSaleInterface.sol
 
 /**
  * @title TokenSale contract interface
@@ -25,7 +25,7 @@ interface TokenSaleInterface {
     external;
 }
 
-// File: contracts\cloneFactory\CloneFactory.sol
+// File: contracts/cloneFactory/CloneFactory.sol
 
 /*
 The MIT License (MIT)

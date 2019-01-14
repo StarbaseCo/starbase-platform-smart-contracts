@@ -1,6 +1,6 @@
 pragma solidity 0.4.25;
 
-// File: contracts\lib\SafeMath.sol
+// File: contracts/lib/SafeMath.sol
 
 /**
  * @title SafeMath
@@ -48,7 +48,7 @@ library SafeMath {
   }
 }
 
-// File: contracts\lib\ERC20.sol
+// File: contracts/lib/ERC20.sol
 
 /**
  * @title ERC20 interface
