@@ -1,6 +1,6 @@
 pragma solidity 0.4.25;
 
-// File: contracts\lib\Ownable.sol
+// File: contracts/lib/Ownable.sol
 
 /**
  * @title Ownable

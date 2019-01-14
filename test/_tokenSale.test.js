@@ -51,6 +51,8 @@ contract("TokenSale", ([owner, client, starbase, buyer, buyer2, user1, fakeWalle
       star.address
     );
 
+    const adjustedStarRate = new BigNumber(starRate).mul(1000)
+
     const tx = await tokenSaleFactory.create(
       startTime,
       endTime,
@@ -58,7 +60,7 @@ contract("TokenSale", ([owner, client, starbase, buyer, buyer2, user1, fakeWalle
       token.address,
       isMinting ? (await token.owner()) : 0x0,
       rate,
-      starRate,
+      adjustedStarRate,
       wallet,
       softCap,
       crowdsaleCap,
@@ -127,7 +129,8 @@ contract("TokenSale", ([owner, client, starbase, buyer, buyer2, user1, fakeWalle
 
   it("has a normal crowdsale starRate", async () => {
     const crowdsaleStarRate = await crowdsale.starRate();
-    crowdsaleStarRate.toNumber().should.equal(starRate.toNumber());
+    const adjustedStarRate = starRate.mul(1000);
+    crowdsaleStarRate.toNumber().should.equal(adjustedStarRate.toNumber());
   });
 
   it("has a whitelist contract", async () => {
