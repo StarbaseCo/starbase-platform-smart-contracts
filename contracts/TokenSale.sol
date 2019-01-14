@@ -84,7 +84,6 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
             _starToken != address(0) &&
             !(_rate == 0 && _starRate == 0) &&
             _companyToken != address(0) &&
-            _softCap != 0 &&
             _crowdsaleCap != 0 &&
             _wallet != 0,
             "Parameter variables cannot be empty!"
@@ -181,14 +180,15 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
         whenNotPaused
         isWhitelisted(beneficiary)
     {
-        require(beneficiary != address(0));
-        require(validPurchase() && tokensSold < crowdsaleCap);
+        require(beneficiary != address(0), "Purchaser address cant be zero!");
+        require(validPurchase(), "TokenSale over!");
+        require(tokensSold < crowdsaleCap, "All tokens sold!");
         if (isMinting) {
             require(tokenOnSale.owner() == address(this), "The token owner must be contract address!");
         }
 
         if (!isWeiAccepted) {
-            require(msg.value == 0);
+            require(msg.value == 0, "Only purchases with STAR are allowed!");
         } else if (msg.value > 0) {
             buyTokensWithWei(beneficiary);
         }
@@ -213,7 +213,13 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
             sendPurchasedTokens(beneficiary, tokens);
             emit TokenPurchaseWithStar(msg.sender, beneficiary, starAllocationToTokenSale, tokens);
 
-            starToken.transferFrom(beneficiary, this, starAllocationToTokenSale);
+            if (softCap > 0) {
+                starToken.transferFrom(beneficiary, this, starAllocationToTokenSale);
+            } else {
+                // forward funds
+                starToken.transferFrom(beneficiary, wallet, starAllocationToTokenSale);
+                wallet.splitStarFunds();
+            }
         }
     }
 
@@ -245,9 +251,13 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
         sendPurchasedTokens(beneficiary, tokens);
         emit TokenPurchase(msg.sender, beneficiary, weiAmount, tokens);
 
-        if (weiRefund > 0) {
-            msg.sender.transfer(weiRefund);
+        if (softCap == 0) {
+            // forward funds
+            address(wallet).transfer(weiAmount);	
+            wallet.splitFunds();
         }
+
+        if (weiRefund > 0) msg.sender.transfer(weiRefund);
     }
 
     // isMinting checker -- it either mints ERC20 token or transfers them
@@ -258,9 +268,7 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
     // check for softCap achievement
     // @return true when softCap is reached
     function hasReachedSoftCap() public view returns (bool) {
-        if (tokensSold >= softCap) {
-            return true;
-        }
+        if (tokensSold >= softCap) return true;
 
         return false;
     }
@@ -268,9 +276,7 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
     // override Crowdsale#hasEnded to add cap logic
     // @return true if crowdsale event has ended
     function hasEnded() public view returns (bool) {
-        if (tokensSold >= crowdsaleCap) {
-            return true;
-        }
+        if (tokensSold >= crowdsaleCap) return true;
 
         return super.hasEnded();
     }
@@ -309,10 +315,7 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
     function finalization() internal {
         uint256 remainingTokens = isMinting ? crowdsaleCap.sub(tokensSold) : tokenOnSale.balanceOf(address(this));
 
-        if (remainingTokens > 0) {
-            sendPurchasedTokens(wallet, remainingTokens);
-        }
-
+        if (remainingTokens > 0) sendPurchasedTokens(wallet, remainingTokens);
         if (isMinting) tokenOnSale.transferOwnership(tokenOwnerAfterSale);
 
         super.finalization();
