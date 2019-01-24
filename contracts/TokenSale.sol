@@ -198,12 +198,14 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
         if (starAllocationToTokenSale > 0) {
             // calculate token amount to be created
             uint256 tokens = starAllocationToTokenSale.mul(starRate);
+            uint256 starRefund;
 
             // remainder logic
             if (tokensSold.add(tokens) > crowdsaleCap) {
                 tokens = crowdsaleCap.sub(tokensSold);
 
                 starAllocationToTokenSale = tokens.div(starRate);
+                starRefund = starToken.allowance(beneficiary, this).sub(starAllocationToTokenSale);
             }
 
             // update state
@@ -213,7 +215,7 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
             sendPurchasedTokens(beneficiary, tokens);
             emit TokenPurchaseWithStar(msg.sender, beneficiary, starAllocationToTokenSale, tokens);
 
-            forwardsStarFunds(beneficiary, starAllocationToTokenSale);
+            forwardsStarFunds(beneficiary, starAllocationToTokenSale, starRefund);
         }
     }
 
@@ -225,7 +227,7 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
         internal
     {
         uint256 weiAmount = msg.value;
-        uint256 weiRefund = 0;
+        uint256 weiRefund;
 
         // calculate token amount to be created
         uint256 tokens = weiAmount.mul(rate);
@@ -245,9 +247,7 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
         sendPurchasedTokens(beneficiary, tokens);
         emit TokenPurchase(msg.sender, beneficiary, weiAmount, tokens);
 
-        forwardsWeiFunds(weiAmount);
-
-        if (weiRefund > 0) msg.sender.transfer(weiRefund);
+        forwardsWeiFunds(weiAmount, weiRefund);
     }
 
     // isMinting checker -- it either mints ERC20 token or transfers them
@@ -282,22 +282,26 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
     /**
      * @dev forward wei funds
      */
-    function forwardsWeiFunds(uint256 _value) internal {
+    function forwardsWeiFunds(uint256 _weiAmount, uint256 _weiRefund) internal {
         if (softCap == 0 || (softCap > 0 && hasReachedSoftCap())) {
-            uint256 ethBalance = address(this).balance;
-            uint256 amountToSend = _value;
-            if (ethBalance > 0) amountToSend = amountToSend.add(ethBalance);
-
             // forward funds
-            address(wallet).transfer(amountToSend);
+            address(wallet).transfer(_weiAmount);
             wallet.splitFunds();
+
+            if (_weiRefund > 0) msg.sender.transfer(_weiRefund);
+
+            // when there is still balance left send to wallet contract
+            if (address(this).balance > 0) {
+                address(wallet).transfer(address(this).balance);
+                wallet.splitFunds();
+            }
         }
     }
 
     /**
      * @dev forward wei funds
      */
-    function forwardsStarFunds(address _beneficiary, uint256 _value) internal {
+    function forwardsStarFunds(address _beneficiary, uint256 _value, uint256 _starRefund) internal {
         uint256 amountToSend = _value;
 
         if (softCap > 0 && !hasReachedSoftCap()) {
@@ -310,25 +314,9 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
             starToken.transferFrom(_beneficiary, wallet, amountToSend);
             wallet.splitStarFunds();
         }
-    }
 
-    /**
-     * @dev forward funds
-     */
-    function forwardsFunds(address beneficiary, uint256 value) public {
-        require(hasReachedSoftCap(), "Forwarding funds only possible once soft cap is reached!");
-
-        uint256 starBalance = starToken.balanceOf(address(this));
-        uint256 ethBalance = address(this).balance;
-
-        if (starBalance > 0) {
-            starToken.transfer(wallet, starBalance);
-            wallet.splitStarFunds();
-        }
-
-        if (ethBalance > 0) {
-            address(wallet).transfer(ethBalance);
-            wallet.splitFunds();
+        if (_starRefund > 0) {
+            starToken.transfer(_beneficiary, starToken.balanceOf(address(this)));
         }
     }
 

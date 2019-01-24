@@ -698,143 +698,569 @@ contract("TokenSale", ([owner, client, starbase, buyer, buyer2, user1, fakeWalle
         starRaised.should.be.bignumber.equal(8e18);
       });
 
-      it("transfers token sale STAR funds between client and starbase", async () => {
-        await newCrowdsale({ rate: softCap, starRate: softCap, isMinting });
-        await whitelist.addManyToWhitelist([buyer]);
-        await star.mint(buyer, 3e15);
-        await star.approve(crowdsale.address, 3e15, { from: buyer });
+      describe("with soft cap", () => {
+        describe('not reaching the softcap', () => {
+          beforeEach(async () => {
+            await newCrowdsale({
+              softCap,
+              rate: softCap,
+              starRate: softCap,
+              isMinting
+            });
+            await whitelist.addManyToWhitelist([buyer]);
+          })
 
-        await increaseTimeTo(latestTime() + duration.days(34));
+          it("does NOT transfer ETH funds between client and starbase", async () => {
+            const clientBalanceBefore = await web3.eth.getBalance(client);
+            const starbaseBalanceBefore = await web3.eth.getBalance(starbase);
 
-        const clientBalanceBefore = await star.balanceOf(client);
-        const starbaseBalanceBefore = await star.balanceOf(starbase);
+            await increaseTimeTo(latestTime() + duration.days(52));
+            await whitelist.addManyToWhitelist([user1]);
+            await crowdsale.buyTokens(user1, {
+              from: user1,
+              value: 3e15
+            });
 
-        await crowdsale.buyTokens(buyer, { from: buyer });
+            const clientBalanceAfter = await web3.eth.getBalance(client);
+            const starbaseBalanceAfter = await web3.eth.getBalance(starbase);
+            const tokenSaleBalance = await web3.eth.getBalance(crowdsale.address);
 
-        const clientBalanceAfter = await star.balanceOf(client);
-        const starbaseBalanceAfter = await star.balanceOf(starbase);
+            clientBalanceAfter.should.be.bignumber.equal(clientBalanceBefore);
+            starbaseBalanceAfter.should.be.bignumber.equal(starbaseBalanceBefore);
+            tokenSaleBalance.should.be.bignumber.equal(3e15);
+          });
 
-        const clientBalanceDifference = clientBalanceAfter.minus(clientBalanceBefore);
-        const starbaseBalanceDifference = starbaseBalanceAfter.minus(starbaseBalanceBefore);
+          it("does NOT transfer STAR funds between client and starbase", async () => {
+            await star.mint(buyer, 3e15);
+            await star.approve(crowdsale.address, 3e15, {
+              from: buyer
+            });
 
-        starbaseBalanceDifference.should.be.bignumber.equal(0.3e15);
-        clientBalanceDifference.should.be.bignumber.equal(2.7e15);
+            await increaseTimeTo(latestTime() + duration.days(34));
+
+            const clientBalanceBefore = await star.balanceOf(client);
+            const starbaseBalanceBefore = await star.balanceOf(starbase);
+
+            await crowdsale.buyTokens(buyer, { from: buyer });
+
+            const clientBalanceAfter = await star.balanceOf(client);
+            const starbaseBalanceAfter = await star.balanceOf(starbase);
+            const tokenSaleBalance = await star.balanceOf(crowdsale.address);
+
+            clientBalanceAfter.should.be.bignumber.equal(clientBalanceBefore);
+            starbaseBalanceAfter.should.be.bignumber.equal(starbaseBalanceBefore);
+            tokenSaleBalance.should.be.bignumber.equal(3e15);
+          });
+        })
+
+        describe('reaching the softcap', () => {
+          beforeEach(async () => {
+            await newCrowdsale({
+              softCap,
+              rate: crowdsaleCap,
+              starRate: crowdsaleCap,
+              isMinting
+            });
+            await whitelist.addManyToWhitelist([buyer, user1]);
+          })
+
+          it("transfers token sale STAR funds between client and starbase", async () => {
+            await star.mint(buyer, 1e18);
+            await star.approve(crowdsale.address, 1e18, {
+              from: buyer
+            });
+
+            await increaseTimeTo(latestTime() + duration.days(34));
+
+            const clientBalanceBefore = await star.balanceOf(client);
+            const starbaseBalanceBefore = await star.balanceOf(starbase);
+
+            await crowdsale.buyTokens(buyer, { from: buyer });
+
+            const clientBalanceAfter = await star.balanceOf(client);
+            const starbaseBalanceAfter = await star.balanceOf(starbase);
+
+            const clientBalanceDifference = clientBalanceAfter.minus(clientBalanceBefore);
+            const starbaseBalanceDifference = starbaseBalanceAfter.minus(starbaseBalanceBefore);
+
+            starbaseBalanceDifference.should.be.bignumber.equal(1e17);
+            clientBalanceDifference.should.be.bignumber.equal(9e17);
+          });
+
+          it("transfers STAR funds between client and starbase once starCap is reached", async () => {
+            await star.mint(buyer, 10004e15);
+            await star.approve(crowdsale.address, 3e15, {
+              from: buyer
+            });
+
+            await increaseTimeTo(latestTime() + duration.days(34));
+
+            const clientBalanceBefore = await star.balanceOf(client);
+            const starbaseBalanceBefore = await star.balanceOf(starbase);
+
+            await crowdsale.buyTokens(buyer, { from: buyer });
+
+            let clientBalanceAfter = await star.balanceOf(client);
+            let starbaseBalanceAfter = await star.balanceOf(starbase);
+            let tokenSaleBalance = await star.balanceOf(crowdsale.address);
+
+            clientBalanceAfter.should.be.bignumber.equal(clientBalanceBefore);
+            starbaseBalanceAfter.should.be.bignumber.equal(starbaseBalanceBefore);
+            tokenSaleBalance.should.be.bignumber.equal(3e15);
+
+            // still has not reached cap
+            await star.approve(crowdsale.address, 1e15, {
+              from: buyer
+            });
+            await crowdsale.buyTokens(buyer, { from: buyer });
+
+            clientBalanceAfter = await star.balanceOf(client);
+            starbaseBalanceAfter = await star.balanceOf(starbase);
+            tokenSaleBalance = await star.balanceOf(crowdsale.address);
+
+            clientBalanceAfter.should.be.bignumber.equal(clientBalanceBefore);
+            starbaseBalanceAfter.should.be.bignumber.equal(starbaseBalanceBefore);
+            tokenSaleBalance.should.be.bignumber.equal(4e15);
+
+            // reaches soft cap and goes over crowdsale cap
+            await star.approve(crowdsale.address, 1e18, {
+              from: buyer
+            });
+            await crowdsale.buyTokens(buyer, { from: buyer });
+
+            clientBalanceAfter = await star.balanceOf(client);
+            starbaseBalanceAfter = await star.balanceOf(starbase);
+            tokenSaleBalance = await star.balanceOf(crowdsale.address);
+
+            const clientBalanceDifference = clientBalanceAfter.minus(clientBalanceBefore);
+            const starbaseBalanceDifference = starbaseBalanceAfter.minus(starbaseBalanceBefore);
+
+            starbaseBalanceDifference.should.be.bignumber.equal(1e17);
+            clientBalanceDifference.should.be.bignumber.equal(9e17);
+            tokenSaleBalance.should.be.bignumber.equal(0);
+          });
+
+          it("transfers token sale ETH funds between client and starbase", async () => {
+            const clientBalanceBefore = await web3.eth.getBalance(client);
+            const starbaseBalanceBefore = await web3.eth.getBalance(starbase);
+
+            await increaseTimeTo(latestTime() + duration.days(34));
+            await crowdsale.buyTokens(user1, {
+              from: user1,
+              value
+            });
+
+            const clientBalanceAfter = await web3.eth.getBalance(client);
+            const starbaseBalanceAfter = await web3.eth.getBalance(starbase);
+
+            const clientBalanceDifference = clientBalanceAfter.minus(clientBalanceBefore);
+            const starbaseBalanceDifference = starbaseBalanceAfter.minus(starbaseBalanceBefore);
+
+            starbaseBalanceDifference.should.be.bignumber.equal(1e17);
+            clientBalanceDifference.should.be.bignumber.equal(9e17);
+          });
+
+          it("transfers ETH funds in contract between client and starbase once softCap is reached", async () => {
+            const clientBalanceBefore = await web3.eth.getBalance(client);
+            const starbaseBalanceBefore = await web3.eth.getBalance(starbase);
+
+            await increaseTimeTo(latestTime() + duration.days(52));
+            await whitelist.addManyToWhitelist([user1]);
+            await crowdsale.buyTokens(user1, {
+              from: user1,
+              value: 3e15
+            });
+
+            let clientBalanceAfter = await web3.eth.getBalance(client);
+            let starbaseBalanceAfter = await web3.eth.getBalance(starbase);
+            let tokenSaleBalance = await web3.eth.getBalance(crowdsale.address);
+
+            clientBalanceAfter.should.be.bignumber.equal(clientBalanceBefore);
+            starbaseBalanceAfter.should.be.bignumber.equal(starbaseBalanceBefore);
+            tokenSaleBalance.should.be.bignumber.equal(3e15);
+
+            // still has not reached soft cap
+            await crowdsale.buyTokens(user1, {
+              from: user1,
+              value: 1e15
+            });
+
+            clientBalanceAfter = await web3.eth.getBalance(client);
+            starbaseBalanceAfter = await web3.eth.getBalance(starbase);
+            tokenSaleBalance = await web3.eth.getBalance(crowdsale.address);
+
+            clientBalanceAfter.should.be.bignumber.equal(clientBalanceBefore);
+            starbaseBalanceAfter.should.be.bignumber.equal(starbaseBalanceBefore);
+            tokenSaleBalance.should.be.bignumber.equal(4e15);
+
+            // goes over soft cap and crowdsale cap
+            await crowdsale.buyTokens(user1, {
+              from: user1,
+              value: 1e18
+            });
+
+            clientBalanceAfter = await web3.eth.getBalance(client);
+            starbaseBalanceAfter = await web3.eth.getBalance(starbase);
+            tokenSaleBalance = await web3.eth.getBalance(crowdsale.address);
+
+            const clientBalanceDifference = clientBalanceAfter.minus(clientBalanceBefore);
+            const starbaseBalanceDifference = starbaseBalanceAfter.minus(starbaseBalanceBefore);
+
+            starbaseBalanceDifference.should.be.bignumber.equal(1e17);
+            clientBalanceDifference.should.be.bignumber.equal(9e17);
+            tokenSaleBalance.should.be.bignumber.equal(0);
+          });
+
+          it("sells tokens up to crowdsale cap when buying with wei and sends remaining wei back to the buyer", async () => {
+            await increaseTimeTo(latestTime() + duration.days(52));
+
+            const buyerWeiBalanceBeforePurchase = web3.eth.getBalance(buyer);
+
+            await crowdsale.buyTokens(buyer, {
+              from: buyer,
+              value: value * 3
+            });
+            const buyerBalance = await token.balanceOf(buyer);
+            buyerBalance.should.be.bignumber.equal(crowdsaleCap.mul(1e18));
+
+            const buyerWeiBalanceAfterPurchase = web3.eth.getBalance(buyer);
+
+            buyerWeiBalanceAfterPurchase
+              .toNumber()
+              .should.be.approximately(
+                buyerWeiBalanceBeforePurchase.toNumber() - 1e18,
+                1e17
+              );
+
+            try {
+              await crowdsale.buyTokens(buyer, { value, from: buyer });
+              assert.fail();
+            } catch (e) {
+              ensuresException(e);
+            }
+          });
+
+          it("only sells tokens up to crowdsale cap", async () => {
+            await star.mint(buyer, 10e18);
+            await star.approve(crowdsale.address, 2e18, {
+              from: buyer
+            });
+
+            await increaseTimeTo(latestTime() + duration.days(34));
+
+            await crowdsale.buyTokens(buyer, { from: buyer });
+
+            let buyerBalance = await token.balanceOf(buyer);
+            buyerBalance.should.be.bignumber.equal(crowdsaleCap * 1e18);
+
+            try {
+              await crowdsale.buyTokens(buyer, { from: buyer });
+              assert.fail();
+            } catch (error) {
+              ensuresException(error);
+            }
+
+            buyerBalance = await token.balanceOf(buyer);
+            buyerBalance.should.be.bignumber.equal(crowdsaleCap * 1e18);
+          });
+
+          it("checks when soft cap is reached", async () => {
+            await newCrowdsale({
+              rate: softCap,
+              starRate: softCap,
+              isMinting
+            });
+            await whitelist.addManyToWhitelist([buyer]);
+            await star.mint(buyer, 10e18);
+            await star.approve(crowdsale.address, 1e18, {
+              from: buyer
+            });
+
+            await increaseTimeTo(latestTime() + duration.days(34));
+
+            let hasReachedSoftCap = await crowdsale.hasReachedSoftCap();
+            hasReachedSoftCap.should.be.false;
+
+            await crowdsale.buyTokens(buyer, { from: buyer });
+
+            hasReachedSoftCap = await crowdsale.hasReachedSoftCap();
+            hasReachedSoftCap.should.be.true;
+          });
+
+          it("ends crowdsale when all tokens are sold", async () => {
+            await star.mint(buyer, 10e18);
+            await star.approve(crowdsale.address, 1e18, {
+              from: buyer
+            });
+
+            await increaseTimeTo(latestTime() + duration.days(34));
+
+            await crowdsale.buyTokens(buyer, { from: buyer });
+
+            const hasEnded = await crowdsale.hasEnded();
+            hasEnded.should.be.true;
+          });
+
+          it("ends crowdsale when all tokens are sold with wei", async () => {
+            await increaseTimeTo(latestTime() + duration.days(54));
+            await crowdsale.buyTokens(buyer, { from: buyer, value });
+
+            const hasEnded = await crowdsale.hasEnded();
+            hasEnded.should.be.true;
+          });
+        })
       });
 
-      it("sells tokens up to crowdsale cap when buying with wei and sends remaining wei back to the buyer", async () => {
-        await newCrowdsale({ rate: crowdsaleCap, starRate: crowdsaleCap, isMinting });
-        await whitelist.addManyToWhitelist([buyer]);
+      describe('without soft cap', () => {
+        beforeEach(async () => {
+          await newCrowdsale({
+            softCap: 0,
+            rate: crowdsaleCap,
+            starRate: crowdsaleCap,
+            isMinting
+          });
+          await whitelist.addManyToWhitelist([buyer, user1]);
+        })
 
-        await increaseTimeTo(latestTime() + duration.days(52));
+        it("transfers ETH funds between client and starbase", async () => {
+          const clientBalanceBefore = await web3.eth.getBalance(client);
+          const starbaseBalanceBefore = await web3.eth.getBalance(starbase);
 
-        const buyerWeiBalanceBeforePurchase = web3.eth.getBalance(buyer);
+          await increaseTimeTo(latestTime() + duration.days(52));
+          await whitelist.addManyToWhitelist([user1]);
+          await crowdsale.buyTokens(user1, {
+            from: user1,
+            value: 3e15
+          });
 
-        await crowdsale.buyTokens(buyer, { from: buyer, value: value * 3 });
-        const buyerBalance = await token.balanceOf(buyer);
-        buyerBalance.should.be.bignumber.equal(crowdsaleCap.mul(1e18));
+          const clientBalanceAfter = await web3.eth.getBalance(client);
+          const starbaseBalanceAfter = await web3.eth.getBalance(starbase);
+          const tokenSaleBalance = await web3.eth.getBalance(crowdsale.address);
 
-        const buyerWeiBalanceAfterPurchase = web3.eth.getBalance(buyer);
+          const clientBalanceDifference = clientBalanceAfter.minus(clientBalanceBefore);
+          const starbaseBalanceDifference = starbaseBalanceAfter.minus(starbaseBalanceBefore);
 
-        buyerWeiBalanceAfterPurchase
-          .toNumber()
-          .should.be.approximately(
-            buyerWeiBalanceBeforePurchase.toNumber() - 1e18,
-            1e17
-          );
+          starbaseBalanceDifference.should.be.bignumber.equal(0.3e15);
+          clientBalanceDifference.should.be.bignumber.equal(2.7e15);
+          tokenSaleBalance.should.be.bignumber.equal(0);
+        });
 
-        try {
-          await crowdsale.buyTokens(buyer, { value, from: buyer });
-          assert.fail();
-        } catch (e) {
-          ensuresException(e);
-        }
-      });
+        it("transfers ETH funds in contract between client and starbase everytime", async () => {
+          const clientBalanceBefore = await web3.eth.getBalance(client);
+          const starbaseBalanceBefore = await web3.eth.getBalance(starbase);
 
-      it("transfers token sale ETH funds between client and starbase", async () => {
-        await newCrowdsale({ rate: crowdsaleCap, starRate: crowdsaleCap, isMinting });
+          await increaseTimeTo(latestTime() + duration.days(52));
+          await whitelist.addManyToWhitelist([user1]);
+          await crowdsale.buyTokens(user1, {
+            from: user1,
+            value: 3e15
+          });
 
-        const clientBalanceBefore = await web3.eth.getBalance(client);
-        const starbaseBalanceBefore = await web3.eth.getBalance(starbase);
+          let clientBalanceAfter = await web3.eth.getBalance(client);
+          let starbaseBalanceAfter = await web3.eth.getBalance(starbase);
+          let tokenSaleBalance = await web3.eth.getBalance(crowdsale.address);
 
-        await increaseTimeTo(latestTime() + duration.days(52));
-        await whitelist.addManyToWhitelist([user1]);
-        await crowdsale.buyTokens(user1, { from: user1, value: 3e15 });
+          let clientBalanceDifference = clientBalanceAfter.minus(clientBalanceBefore);
+          let starbaseBalanceDifference = starbaseBalanceAfter.minus(starbaseBalanceBefore);
 
-        const clientBalanceAfter = await web3.eth.getBalance(client);
-        const starbaseBalanceAfter = await web3.eth.getBalance(starbase);
+          clientBalanceDifference.should.be.bignumber.equal(2.7e15);
+          starbaseBalanceDifference.should.be.bignumber.equal(0.3e15);
+          tokenSaleBalance.should.be.bignumber.equal(0);
 
-        const clientBalanceDifference = clientBalanceAfter.minus(clientBalanceBefore);
-        const starbaseBalanceDifference = starbaseBalanceAfter.minus(starbaseBalanceBefore);
+          // continues transferrring eth funds
+          await crowdsale.buyTokens(user1, {
+            from: user1,
+            value: 1e15
+          });
 
-        starbaseBalanceDifference.should.be.bignumber.equal(0.3e15);
-        clientBalanceDifference.should.be.bignumber.equal(2.7e15);
-      });
+          clientBalanceAfter = await web3.eth.getBalance(client);
+          starbaseBalanceAfter = await web3.eth.getBalance(starbase);
+          tokenSaleBalance = await web3.eth.getBalance(crowdsale.address);
 
-      it("only sells tokens up to crowdsale cap", async () => {
-        await newCrowdsale({ rate: crowdsaleCap, starRate: crowdsaleCap, isMinting });
-        await whitelist.addManyToWhitelist([buyer]);
-        await star.mint(buyer, 10e18);
-        await star.approve(crowdsale.address, 2e18, { from: buyer });
+          clientBalanceDifference = clientBalanceAfter.minus(clientBalanceBefore);
+          starbaseBalanceDifference = starbaseBalanceAfter.minus(starbaseBalanceBefore);
 
-        await increaseTimeTo(latestTime() + duration.days(34));
+          clientBalanceDifference.should.be.bignumber.equal(3.6e15);
+          starbaseBalanceDifference.should.be.bignumber.equal(0.4e15);
+          tokenSaleBalance.should.be.bignumber.equal(0);
 
-        await crowdsale.buyTokens(buyer, { from: buyer });
+          // reaches crowdsale cap
+          await crowdsale.buyTokens(user1, {
+            from: user1,
+            value: 1e18
+          });
 
-        let buyerBalance = await token.balanceOf(buyer);
-        buyerBalance.should.be.bignumber.equal(crowdsaleCap * 1e18);
+          clientBalanceAfter = await web3.eth.getBalance(client);
+          starbaseBalanceAfter = await web3.eth.getBalance(starbase);
+          tokenSaleBalance = await web3.eth.getBalance(crowdsale.address);
 
-        try {
+          clientBalanceDifference = clientBalanceAfter.minus(clientBalanceBefore);
+          starbaseBalanceDifference = starbaseBalanceAfter.minus(starbaseBalanceBefore);
+
+          starbaseBalanceDifference.should.be.bignumber.equal(1e17);
+          clientBalanceDifference.should.be.bignumber.equal(9e17);
+          tokenSaleBalance.should.be.bignumber.equal(0);
+        });
+
+        it("transfers STAR funds between client and starbase", async () => {
+          await star.mint(buyer, 3e15);
+          await star.approve(crowdsale.address, 3e15, {
+            from: buyer
+          });
+
+          await increaseTimeTo(latestTime() + duration.days(34));
+
+          const clientBalanceBefore = await star.balanceOf(client);
+          const starbaseBalanceBefore = await star.balanceOf(starbase);
+
           await crowdsale.buyTokens(buyer, { from: buyer });
-          assert.fail();
-        } catch (error) {
-          ensuresException(error);
-        }
 
-        buyerBalance = await token.balanceOf(buyer);
-        buyerBalance.should.be.bignumber.equal(crowdsaleCap * 1e18);
-      });
+          const clientBalanceAfter = await star.balanceOf(client);
+          const starbaseBalanceAfter = await star.balanceOf(starbase);
+          const tokenSaleBalance = await star.balanceOf(crowdsale.address);
 
-      it("checks when soft cap is reached", async () => {
-        await newCrowdsale({ rate: softCap, starRate: softCap, isMinting });
-        await whitelist.addManyToWhitelist([buyer]);
-        await star.mint(buyer, 10e18);
-        await star.approve(crowdsale.address, 1e18, { from: buyer });
+          const clientBalanceDifference = clientBalanceAfter.minus(clientBalanceBefore);
+          const starbaseBalanceDifference = starbaseBalanceAfter.minus(starbaseBalanceBefore);
 
-        await increaseTimeTo(latestTime() + duration.days(34));
+          clientBalanceDifference.should.be.bignumber.equal(2.7e15);
+          starbaseBalanceDifference.should.be.bignumber.equal(0.3e15);
+          tokenSaleBalance.should.be.bignumber.equal(0);
+        });
 
-        let hasReachedSoftCap = await crowdsale.hasReachedSoftCap();
-        hasReachedSoftCap.should.be.false;
+        it("transfers STAR funds between client and starbase everytime", async () => {
+          await star.mint(buyer, 10004e15);
+          await star.approve(crowdsale.address, 3e15, {
+            from: buyer
+          });
 
-        await crowdsale.buyTokens(buyer, { from: buyer });
+          await increaseTimeTo(latestTime() + duration.days(34));
 
-        hasReachedSoftCap = await crowdsale.hasReachedSoftCap();
-        hasReachedSoftCap.should.be.true;
-      });
+          const clientBalanceBefore = await star.balanceOf(client);
+          const starbaseBalanceBefore = await star.balanceOf(starbase);
 
-      it("ends crowdsale when all tokens are sold", async () => {
-        await newCrowdsale({ rate: crowdsaleCap, starRate: crowdsaleCap, isMinting });
-        await whitelist.addManyToWhitelist([buyer]);
-        await star.mint(buyer, 10e18);
-        await star.approve(crowdsale.address, 1e18, { from: buyer });
+          await crowdsale.buyTokens(buyer, { from: buyer });
 
-        await increaseTimeTo(latestTime() + duration.days(34));
+          let clientBalanceAfter = await star.balanceOf(client);
+          let starbaseBalanceAfter = await star.balanceOf(starbase);
+          let tokenSaleBalance = await star.balanceOf(crowdsale.address);
 
-        await crowdsale.buyTokens(buyer, { from: buyer });
+          let clientBalanceDifference = clientBalanceAfter.minus(clientBalanceBefore);
+          let starbaseBalanceDifference = starbaseBalanceAfter.minus(starbaseBalanceBefore);
 
-        const hasEnded = await crowdsale.hasEnded();
-        hasEnded.should.be.true;
-      });
+          clientBalanceDifference.should.be.bignumber.equal(2.7e15);
+          starbaseBalanceDifference.should.be.bignumber.equal(0.3e15);
+          tokenSaleBalance.should.be.bignumber.equal(0);
 
-      it("ends crowdsale when all tokens are sold with wei", async () => {
-        await newCrowdsale({ rate: crowdsaleCap, starRate: crowdsaleCap, isMinting });
-        await whitelist.addManyToWhitelist([buyer]);
+          // continues to transfer
+          await star.approve(crowdsale.address, 1e15, {
+            from: buyer
+          });
+          await crowdsale.buyTokens(buyer, { from: buyer });
 
-        await increaseTimeTo(latestTime() + duration.days(54));
-        await crowdsale.buyTokens(buyer, { from: buyer, value });
+          clientBalanceAfter = await star.balanceOf(client);
+          starbaseBalanceAfter = await star.balanceOf(starbase);
+          tokenSaleBalance = await star.balanceOf(crowdsale.address);
 
-        const hasEnded = await crowdsale.hasEnded();
-        hasEnded.should.be.true;
-      });
+          clientBalanceDifference = clientBalanceAfter.minus(clientBalanceBefore);
+          starbaseBalanceDifference = starbaseBalanceAfter.minus(starbaseBalanceBefore);
+
+          clientBalanceDifference.should.be.bignumber.equal(3.6e15);
+          starbaseBalanceDifference.should.be.bignumber.equal(0.4e15);
+          tokenSaleBalance.should.be.bignumber.equal(0);
+
+          // reaches crowdsale cap
+          await star.approve(crowdsale.address, 1e18, {
+            from: buyer
+          });
+          await crowdsale.buyTokens(buyer, { from: buyer });
+
+          clientBalanceAfter = await star.balanceOf(client);
+          starbaseBalanceAfter = await star.balanceOf(starbase);
+          tokenSaleBalance = await star.balanceOf(crowdsale.address);
+
+          clientBalanceDifference = clientBalanceAfter.minus(clientBalanceBefore);
+          starbaseBalanceDifference = starbaseBalanceAfter.minus(starbaseBalanceBefore);
+
+          starbaseBalanceDifference.should.be.bignumber.equal(1e17);
+          clientBalanceDifference.should.be.bignumber.equal(9e17);
+          tokenSaleBalance.should.be.bignumber.equal(0);
+        });
+
+        it("sells tokens up to crowdsale cap when buying with wei and sends remaining wei back to the buyer", async () => {
+          await increaseTimeTo(latestTime() + duration.days(52));
+
+          const buyerWeiBalanceBeforePurchase = web3.eth.getBalance(buyer);
+
+          await crowdsale.buyTokens(buyer, {
+            from: buyer,
+            value: value * 3
+          });
+          const buyerBalance = await token.balanceOf(buyer);
+          buyerBalance.should.be.bignumber.equal(crowdsaleCap.mul(1e18));
+
+          const buyerWeiBalanceAfterPurchase = web3.eth.getBalance(buyer);
+
+          buyerWeiBalanceAfterPurchase
+            .toNumber()
+            .should.be.approximately(
+              buyerWeiBalanceBeforePurchase.toNumber() - 1e18,
+              1e17
+            );
+
+          try {
+            await crowdsale.buyTokens(buyer, { value, from: buyer });
+            assert.fail();
+          } catch (e) {
+            ensuresException(e);
+          }
+        });
+
+        it("only sells tokens up to crowdsale cap", async () => {
+          await star.mint(buyer, 10e18);
+          await star.approve(crowdsale.address, 2e18, {
+            from: buyer
+          });
+
+          await increaseTimeTo(latestTime() + duration.days(34));
+
+          await crowdsale.buyTokens(buyer, { from: buyer });
+
+          let buyerBalance = await token.balanceOf(buyer);
+          buyerBalance.should.be.bignumber.equal(crowdsaleCap * 1e18);
+
+          try {
+            await crowdsale.buyTokens(buyer, { from: buyer });
+            assert.fail();
+          } catch (error) {
+            ensuresException(error);
+          }
+
+          buyerBalance = await token.balanceOf(buyer);
+          buyerBalance.should.be.bignumber.equal(crowdsaleCap * 1e18);
+        });
+
+        it("ends crowdsale when all tokens are sold", async () => {
+          await star.mint(buyer, 10e18);
+          await star.approve(crowdsale.address, 1e18, {
+            from: buyer
+          });
+
+          await increaseTimeTo(latestTime() + duration.days(34));
+
+          await crowdsale.buyTokens(buyer, { from: buyer });
+
+          const hasEnded = await crowdsale.hasEnded();
+          hasEnded.should.be.true;
+        });
+
+        it("ends crowdsale when all tokens are sold with wei", async () => {
+          await increaseTimeTo(latestTime() + duration.days(54));
+          await crowdsale.buyTokens(buyer, { from: buyer, value });
+
+          const hasEnded = await crowdsale.hasEnded();
+          hasEnded.should.be.true;
+        });
+      })
     });
   };
 
