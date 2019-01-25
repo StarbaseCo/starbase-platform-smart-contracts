@@ -197,14 +197,14 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
         uint256 starAllocationToTokenSale = starToken.allowance(beneficiary, this);
         if (starAllocationToTokenSale > 0) {
             // calculate token amount to be created
-            uint256 tokens = starAllocationToTokenSale.mul(starRate);
+            uint256 tokens = starAllocationToTokenSale.mul(starRate).div(1000);
             uint256 starRefund;
 
             // remainder logic
             if (tokensSold.add(tokens) > crowdsaleCap) {
                 tokens = crowdsaleCap.sub(tokensSold);
 
-                starAllocationToTokenSale = tokens.div(starRate);
+                starAllocationToTokenSale = tokens.div(starRate).div(1000);
                 starRefund = starToken.allowance(beneficiary, this).sub(starAllocationToTokenSale);
             }
 
