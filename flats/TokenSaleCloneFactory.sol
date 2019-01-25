@@ -68,7 +68,7 @@ contract CloneFactory {
   }
 }
 
-// File: contracts\cloneFactory\TokenSaleCloneFactory.sol
+// File: contracts/cloneFactory/TokenSaleCloneFactory.sol
 
 contract TokenSaleCloneFactory is CloneFactory {
     // TokenSale contract address for cloning purposes

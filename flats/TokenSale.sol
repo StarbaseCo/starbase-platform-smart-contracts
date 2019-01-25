@@ -365,7 +365,7 @@ contract FundsSplitterInterface {
     function splitStarFunds() public;
 }
 
-// File: contracts\TokenSale.sol
+// File: contracts/TokenSale.sol
 
 /**
  * @title Token Sale contract - crowdsale of company tokens.
@@ -558,12 +558,14 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
         if (starAllocationToTokenSale > 0) {
             // calculate token amount to be created
             uint256 tokens = starAllocationToTokenSale.mul(starRate);
+            uint256 starRefund;
 
             // remainder logic
             if (tokensSold.add(tokens) > crowdsaleCap) {
                 tokens = crowdsaleCap.sub(tokensSold);
 
                 starAllocationToTokenSale = tokens.div(starRate);
+                starRefund = starToken.allowance(beneficiary, this).sub(starAllocationToTokenSale);
             }
 
             // update state
@@ -573,13 +575,7 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
             sendPurchasedTokens(beneficiary, tokens);
             emit TokenPurchaseWithStar(msg.sender, beneficiary, starAllocationToTokenSale, tokens);
 
-            if (softCap > 0) {
-                starToken.transferFrom(beneficiary, this, starAllocationToTokenSale);
-            } else {
-                // forward funds
-                starToken.transferFrom(beneficiary, wallet, starAllocationToTokenSale);
-                wallet.splitStarFunds();
-            }
+            forwardsStarFunds(beneficiary, starAllocationToTokenSale, starRefund);
         }
     }
 
@@ -591,7 +587,7 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
         internal
     {
         uint256 weiAmount = msg.value;
-        uint256 weiRefund = 0;
+        uint256 weiRefund;
 
         // calculate token amount to be created
         uint256 tokens = weiAmount.mul(rate);
@@ -611,13 +607,7 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
         sendPurchasedTokens(beneficiary, tokens);
         emit TokenPurchase(msg.sender, beneficiary, weiAmount, tokens);
 
-        if (softCap == 0) {
-            // forward funds
-            address(wallet).transfer(weiAmount);	
-            wallet.splitFunds();
-        }
-
-        if (weiRefund > 0) msg.sender.transfer(weiRefund);
+        forwardsWeiFunds(weiAmount, weiRefund);
     }
 
     // isMinting checker -- it either mints ERC20 token or transfers them
@@ -650,22 +640,43 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
     }
 
     /**
-     * @dev forward funds
+     * @dev forward wei funds
      */
-    function forwardsFunds() public {
-        require(hasReachedSoftCap(), "Forwarding funds only possible once soft cap is reached!");
-        
-        uint256 starBalance = starToken.balanceOf(address(this));
-        uint256 ethBalance = address(this).balance;
+    function forwardsWeiFunds(uint256 _weiAmount, uint256 _weiRefund) internal {
+        if (softCap == 0 || (softCap > 0 && hasReachedSoftCap())) {
+            // forward funds
+            address(wallet).transfer(_weiAmount);
+            wallet.splitFunds();
 
-        if (starBalance > 0) {
-            starToken.transfer(wallet, starBalance);        
+            if (_weiRefund > 0) msg.sender.transfer(_weiRefund);
+
+            // when there is still balance left send to wallet contract
+            if (address(this).balance > 0) {
+                address(wallet).transfer(address(this).balance);
+                wallet.splitFunds();
+            }
+        }
+    }
+
+    /**
+     * @dev forward wei funds
+     */
+    function forwardsStarFunds(address _beneficiary, uint256 _value, uint256 _starRefund) internal {
+        uint256 amountToSend = _value;
+
+        if (softCap > 0 && !hasReachedSoftCap()) {
+            starToken.transferFrom(_beneficiary, this, amountToSend);
+        } else {
+            uint256 starBalance = starToken.balanceOf(address(this));
+            if (starBalance > 0) amountToSend = amountToSend.add(starBalance);
+
+            // forward funds
+            starToken.transferFrom(_beneficiary, wallet, amountToSend);
             wallet.splitStarFunds();
         }
-        
-        if (ethBalance > 0) {
-            address(wallet).transfer(ethBalance);
-            wallet.splitFunds();
+
+        if (_starRefund > 0) {
+            starToken.transfer(_beneficiary, starToken.balanceOf(address(this)));
         }
     }
 
