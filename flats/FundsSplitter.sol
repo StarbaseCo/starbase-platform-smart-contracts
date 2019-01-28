@@ -66,7 +66,7 @@ contract ERC20 {
     event Transfer(address indexed from, address indexed to, uint256 value);
 }
 
-// File: contracts\FundsSplitter.sol
+// File: contracts/FundsSplitter.sol
 
 contract FundsSplitter {
     using SafeMath for uint256;

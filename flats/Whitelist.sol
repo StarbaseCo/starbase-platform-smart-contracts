@@ -73,7 +73,7 @@ contract Ownable {
     }
 }
 
-// File: contracts\Whitelist.sol
+// File: contracts/Whitelist.sol
 
 /**
  * @title Whitelist - crowdsale whitelist contract

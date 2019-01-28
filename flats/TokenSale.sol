@@ -365,7 +365,7 @@ contract FundsSplitterInterface {
     function splitStarFunds() public;
 }
 
-// File: contracts\TokenSale.sol
+// File: contracts/TokenSale.sol
 
 /**
  * @title Token Sale contract - crowdsale of company tokens.
@@ -401,6 +401,7 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
      * @param _whitelist contract containing the whitelisted addresses
      * @param _starToken STAR token contract address
      * @param _companyToken ERC20 contract address that has minting capabilities
+     * @param _tokenOwnerAfterSale Address that will pass the token ownership to. Only works when TokeSale mints tokens
      * @param _rate The token rate per ETH
      * @param _starRate The token rate per STAR
      * @param _wallet FundsSplitter wallet that redirects funds to client and Starbase.

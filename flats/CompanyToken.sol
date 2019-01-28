@@ -427,7 +427,7 @@ contract PausableToken is StandardToken, Pausable {
   }
 }
 
-// File: contracts\CompanyToken.sol
+// File: contracts/CompanyToken.sol
 
 /**
  * @title CompanyToken contract - ERC20 compatible token contract with customized token parameters.
