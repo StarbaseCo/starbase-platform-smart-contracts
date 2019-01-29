@@ -42,7 +42,7 @@ When it mints, the ownership from the deployed CompanyToken contract needs to be
 
 When it distributes already created tokens, these tokens must be sent to the TokenSale contract and the token contract must not be paused.
 
-A TokenSale is successful once the sales reach the `softCap`. A TokenSale wil not distribute token more than what was defined as the `crowdsaleCap`. Tokens are distributed on the go whether it is minted by the TokenSale or not. It is possible that a project has not reached the `softCap` but tokens were distributed by the TokenSale contract.
+A TokenSale is successful once the sales reach the `softCap`. A TokenSale will not distribute token more than what was defined as the `crowdsaleCap`. Tokens are distributed on the go whether it is minted by the TokenSale or not. As long as the project has not reached the `softCap`, tokens are not yet distributed by the TokenSale contract.
 
 Participation:
 
