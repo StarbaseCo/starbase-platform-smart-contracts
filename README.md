@@ -98,7 +98,7 @@ _endTime  = 1590898777  // time in unix timestamp
 _whitelist = "0xc99e045afdeb86ba44c153cf4498a3fada0bc6d6" // contract of a deployed whitelist contract
 _starToken = "0xd70A7A39EFB10cfE34FD79Ea8c06BdB1974C8828" // Starbase STAR token contract
 _companyToken =  "0xaee875686Ec9C7A29B29f4Cd48a55bdF816eb00c"  // the EC20 token deployed by the company and who has mint capability
-_tokenOwnerAfterSale "0xrbb875686Ec9C7A29B29f4Cd48a55bdF816eb00c" //Address that will pass the token ownership to. Only works when TokeSale mints tokens
+_tokenOwnerAfterSale "0xrbb875686Ec9C7A29B29f4Cd48a55bdF816eb00c" // Address that the TokenSale will pass the token ownership to after it's finished. Only works when TokenSale mints tokens, otherwise must be `0x0`.
 _rate = 100 // rate in ETH/company tokens. Here is if investor sends 1 ETH she receives 100 company tokens in return
 _starRate = 2 // rate STAR/company tokens. Here is upon sending of 1 STAR, investor receives 2 company tokens in return
 _wallet = "0xB01B468423Da913afD743c13f17B01c2cF26b3e8" // address where funds collets in the token sale will go to. Generally, it will be a FundsSpltter contract if not otherwise instructed.
