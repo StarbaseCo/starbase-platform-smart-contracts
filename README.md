@@ -76,7 +76,11 @@ Purchase flow using ETH is straighforward.
 
 ## Deployment
 
+Manual:
 Deployment with Remix is different, you need to have MetaMask installed and have the entire contract code at hand. To get the entire contract code use a tool such as [truffle-flattener](https://github.com/alcuadrado/truffle-flattener) to concatenate all smart contract code files into one. Or simply look in the `flats` folder in this repo which is updated regularly. Then go to Remix paste the entire code there and deploy the contracts according to Remix's UI.
+
+Automatic:
+Automatic deployments work via the non-public repo https://github.com/StarbaseCo/starbase-platform/tree/dev/tools using the `yarn ts:deploy` command
 
 ### Whitelist
 
