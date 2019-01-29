@@ -54,7 +54,7 @@ In case TokenSale mints and distributes token, the investor will not be able to 
 
 When the TokenSale distributes an ERC20 token, investors receive their tokens immediately.
 
-TokenSale also accepts payments in `ETH`. This occurs when when the `isWeiAccepted` is set on TokenSale deployment or during an ongoing sale by calling the `setIsWeiAccepted` function. This needs to be called by the `TokenSale` owner.
+TokenSale also accepts payments in `ETH`. This occurs when the `isWeiAccepted` is set on TokenSale deployment or during an ongoing sale by calling the `setIsWeiAccepted` function. This needs to be called by the `TokenSale` owner.
 
 When `isWeiAccepted` is triggered and investor sends ether in the transaction by calling `buyTokens`, the function will automatically call the contract internal function `buyTokensWithWei` which handles the purchase with wei/ether.
 
