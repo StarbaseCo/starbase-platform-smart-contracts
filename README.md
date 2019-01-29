@@ -11,7 +11,7 @@
 
 ## Overview
 
-The Starbase platform's smart contracts allow investors who hold STARs to participate in the crowdfunding events happening at the Starbase's web application. The smart contract receives STARs and/ or ETH and exchanges it for the token offered during the platform's sale event. There is also a whitelist smart contract where investors are able to be whitelisted prior and/or during the crowdsale. A staking mechanism is in the works and should allow users to stake STARs for getting bonus tokens offered during a sale.
+The Starbase platform's smart contracts allow investors who hold STARs to participate in the crowdfunding events happening at the Starbase's web application. The smart contract receives STARs and/or ETH and exchanges it for the token offered during the platform's sale event. There is also a whitelist smart contract where investors are able to be whitelisted prior and/or during the crowdsale. A staking mechanism is in the works and should allow users to stake STARs for getting bonus tokens offered during a sale. The FundsSplitter contract enables fair distribution of received funds between the client and Starbase.
 
 
 ## Implementation Details
