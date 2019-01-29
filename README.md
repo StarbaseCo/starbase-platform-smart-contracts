@@ -76,7 +76,7 @@ Purchase flow using ETH is straighforward.
 
 ## Deployment
 
-Deployment with Remix is different, you need to have metamask installed and have the entire contract code at hand. To get the entire contract code use a tool such as [truffle-flattener](https://github.com/alcuadrado/truffle-flattener) to concatenate all smart contract code files into one. Then go to Remix paster the entire code there and deploy the contracts according to Remix's UI.
+Deployment with Remix is different, you need to have MetaMask installed and have the entire contract code at hand. To get the entire contract code use a tool such as [truffle-flattener](https://github.com/alcuadrado/truffle-flattener) to concatenate all smart contract code files into one. Or simply look in the `flats` folder in this repo which is updated regularly. Then go to Remix paste the entire code there and deploy the contracts according to Remix's UI.
 
 ### Whitelist
 
