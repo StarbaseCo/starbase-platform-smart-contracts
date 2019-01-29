@@ -558,14 +558,12 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
         if (starAllocationToTokenSale > 0) {
             // calculate token amount to be created
             uint256 tokens = starAllocationToTokenSale.mul(starRatePer1000).div(1000);
-            uint256 starRefund;
 
             // remainder logic
             if (tokensSold.add(tokens) > crowdsaleCap) {
                 tokens = crowdsaleCap.sub(tokensSold);
 
                 starAllocationToTokenSale = tokens.div(starRatePer1000).div(1000);
-                starRefund = starToken.allowance(beneficiary, this).sub(starAllocationToTokenSale);
             }
 
             // update state
@@ -575,7 +573,7 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
             sendPurchasedTokens(beneficiary, tokens);
             emit TokenPurchaseWithStar(msg.sender, beneficiary, starAllocationToTokenSale, tokens);
 
-            forwardsStarFunds(beneficiary, starAllocationToTokenSale, starRefund);
+            forwardsStarFunds(beneficiary, starAllocationToTokenSale);
         }
     }
 
@@ -643,11 +641,7 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
      * @dev forward wei funds
      */
     function forwardsWeiFunds(uint256 _weiAmount, uint256 _weiRefund) internal {
-        if (softCap == 0 || (softCap > 0 && hasReachedSoftCap())) {
-            // forward funds
-            address(wallet).transfer(_weiAmount);
-            wallet.splitFunds();
-
+        if (softCap == 0 || hasReachedSoftCap()) {
             if (_weiRefund > 0) msg.sender.transfer(_weiRefund);
 
             // when there is still balance left send to wallet contract
@@ -659,24 +653,19 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
     }
 
     /**
-     * @dev forward wei funds
+     * @dev forward star funds
      */
-    function forwardsStarFunds(address _beneficiary, uint256 _value, uint256 _starRefund) internal {
-        uint256 amountToSend = _value;
-
+    function forwardsStarFunds(address _beneficiary, uint256 _value) internal {
         if (softCap > 0 && !hasReachedSoftCap()) {
-            starToken.transferFrom(_beneficiary, this, amountToSend);
+            starToken.transferFrom(_beneficiary, address(this), _value);
         } else {
-            uint256 starBalance = starToken.balanceOf(address(this));
-            if (starBalance > 0) amountToSend = amountToSend.add(starBalance);
-
             // forward funds
-            starToken.transferFrom(_beneficiary, wallet, amountToSend);
-            wallet.splitStarFunds();
-        }
+            starToken.transferFrom(_beneficiary, wallet, _value);
+            // this is so that STAR is not locked in contract forever in the event someone transfers STAR to contract by accident
+            uint256 starBalance = starToken.balanceOf(address(this));
+            if (starBalance > 0) starToken.transfer(wallet, starBalance);
 
-        if (_starRefund > 0) {
-            starToken.transfer(_beneficiary, starToken.balanceOf(address(this)));
+            wallet.splitStarFunds();
         }
     }
 
