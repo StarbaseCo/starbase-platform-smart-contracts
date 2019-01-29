@@ -21,7 +21,7 @@ The Starbase platform's smart contracts allow investors who hold STARs to partic
 This contract creates a token with customized name, symbol and decimals. Upon its creation, the token transfer functionality is paused, that is to say no one is able to trade them. This is possible to be reverted only by the token contract owner - who is the Ethereum address that deployed the token mold contract.
 For this contract to work with `TokenSale.sol`, its ownership needs to be passed on to `TokenSale` contract instance that will manage the token sale.
 
-Note: TokenSale does not need to have this smart contract to operate. It accepts any ERC20 smart contract
+Note: TokenSale does not need to have this smart contract to operate. It accepts any ERC20 smart contract with 18 decimals. For minting new tokens: TokenSale must have token contract ownership and token contract must be paused. For transferring existing tokens: Token contract must not be paused.
 
 -   Whitelist.sol
 
