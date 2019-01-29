@@ -105,7 +105,7 @@ _wallet = "0xB01B468423Da913afD743c13f17B01c2cF26b3e8" // address where funds co
 _softCap = 200 // soft cap of the token sale. It tells the frontend application that a sale has been successful
 _crowdsaleCap = 1000  // cap for the number of tokens to be minted. Here it is only 1000 tokens that will be sold in the token sale
 _isWeiAccepted = true // Bool for acceptance of ether in token sale
-_isMinting false // Bool that indicates whether token sale mints ERC20 tokens on sale or simply transfers them
+_isMinting = false // Bool that indicates whether token sale mints new ERC20 tokens on sale or simply transfers existing ones
 ```
 
 ## Gas consumption
