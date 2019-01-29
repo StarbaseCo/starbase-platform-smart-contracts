@@ -29,7 +29,7 @@ It allows the addition and/or removal of addresses to the whitelist registry. Bo
 
 -   FundsSplitter.sol
 
-Contract that splits TokenSale funds between Starbase and client. Once deployed, it can serve as `wallet` parameter from the TokenSale contract by adding its the FundsSplitter address in as the `wallet` parameter in the TokenSale `init` function.
+Contract that splits TokenSale funds between Starbase and client. Once deployed, it can serve as `wallet` parameter from the TokenSale contract by adding its address in as the `wallet` parameter in the TokenSale `init` function.
 
 
 -   TokenSale.sol
