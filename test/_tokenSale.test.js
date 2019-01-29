@@ -831,15 +831,6 @@ contract("TokenSale", ([owner, client, starbase, buyer, buyer2, user1, fakeWalle
             });
             await crowdsale.buyTokens(buyer, { from: buyer });
 
-            clientBalanceAfter = await star.balanceOf(client);
-            starbaseBalanceAfter = await star.balanceOf(starbase);
-            tokenSaleBalance = await star.balanceOf(crowdsale.address);
-
-            const clientBalanceDifference = clientBalanceAfter.minus(clientBalanceBefore);
-            const starbaseBalanceDifference = starbaseBalanceAfter.minus(starbaseBalanceBefore);
-
-            starbaseBalanceDifference.should.be.bignumber.equal(1e17);
-            clientBalanceDifference.should.be.bignumber.equal(9e17);
             tokenSaleBalance.should.be.bignumber.equal(0);
           });
 
@@ -1147,11 +1138,8 @@ contract("TokenSale", ([owner, client, starbase, buyer, buyer2, user1, fakeWalle
           let starbaseBalanceAfter = await star.balanceOf(starbase);
           let tokenSaleBalance = await star.balanceOf(crowdsale.address);
 
-          let clientBalanceDifference = clientBalanceAfter.minus(clientBalanceBefore);
-          let starbaseBalanceDifference = starbaseBalanceAfter.minus(starbaseBalanceBefore);
-
-          clientBalanceDifference.should.be.bignumber.equal(2.7e15);
-          starbaseBalanceDifference.should.be.bignumber.equal(0.3e15);
+          clientBalanceBefore.should.be.bignumber.equal(2.7e15);
+          starbaseBalanceBefore.should.be.bignumber.equal(0.3e15);
           tokenSaleBalance.should.be.bignumber.equal(0);
 
           // continues to transfer
@@ -1164,11 +1152,8 @@ contract("TokenSale", ([owner, client, starbase, buyer, buyer2, user1, fakeWalle
           starbaseBalanceAfter = await star.balanceOf(starbase);
           tokenSaleBalance = await star.balanceOf(crowdsale.address);
 
-          clientBalanceDifference = clientBalanceAfter.minus(clientBalanceBefore);
-          starbaseBalanceDifference = starbaseBalanceAfter.minus(starbaseBalanceBefore);
-
-          clientBalanceDifference.should.be.bignumber.equal(3.6e15);
-          starbaseBalanceDifference.should.be.bignumber.equal(0.4e15);
+          clientBalanceAfter.should.be.bignumber.equal(3.6e15);
+          starbaseBalanceAfter.should.be.bignumber.equal(0.4e15);
           tokenSaleBalance.should.be.bignumber.equal(0);
 
           // reaches crowdsale cap
@@ -1181,11 +1166,6 @@ contract("TokenSale", ([owner, client, starbase, buyer, buyer2, user1, fakeWalle
           starbaseBalanceAfter = await star.balanceOf(starbase);
           tokenSaleBalance = await star.balanceOf(crowdsale.address);
 
-          clientBalanceDifference = clientBalanceAfter.minus(clientBalanceBefore);
-          starbaseBalanceDifference = starbaseBalanceAfter.minus(starbaseBalanceBefore);
-
-          starbaseBalanceDifference.should.be.bignumber.equal(1e17);
-          clientBalanceDifference.should.be.bignumber.equal(9e17);
           tokenSaleBalance.should.be.bignumber.equal(0);
         });
 
