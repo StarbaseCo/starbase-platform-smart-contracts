@@ -40,7 +40,7 @@ This tokenSale allows for the minting of tokens on the fly or the distribution o
 
 When it mints, the ownership from the deployed CompanyToken contract needs to be passed on to TokenSale contract. This is accomplished via the `transferOwnership` function found in the zeppelin-solidity's `Ownable.sol` contract.
 
-When it distributes already created tokens, these tokens must be sent to the TokenSale contract.
+When it distributes already created tokens, these tokens must be sent to the TokenSale contract and the token contract must not be paused.
 
 A TokenSale is successful once the sales reach the `softCap`. A TokenSale wil not distribute token more than what was defined as the `crowdsaleCap`. Tokens are distributed on the go whether it is minted by the TokenSale or not. It is possible that a project has not reached the `softCap` but tokens were distributed by the TokenSale contract.
 
