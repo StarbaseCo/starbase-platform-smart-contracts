@@ -13,7 +13,7 @@ interface TokenSaleInterface {
         address _companyToken,
         address _tokenOwnerAfterSale,
         uint256 _rate,
-        uint256 _starRate,
+        uint256 _starRatePer1000,
         address _wallet,
         uint256 _softCap,
         uint256 _crowdsaleCap,

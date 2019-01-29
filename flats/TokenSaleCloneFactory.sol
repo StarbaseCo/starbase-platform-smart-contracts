@@ -15,7 +15,7 @@ interface TokenSaleInterface {
         address _companyToken,
         address _tokenOwnerAfterSale,
         uint256 _rate,
-        uint256 _starRate,
+        uint256 _starRatePer1000,
         address _wallet,
         uint256 _softCap,
         uint256 _crowdsaleCap,
@@ -116,7 +116,7 @@ contract TokenSaleCloneFactory is CloneFactory {
      * @param _companyToken ERC20 CompanyToken contract address
      * @param _tokenOwnerAfterSale Token on sale owner address after sale is finished
      * @param _rate The token rate per ETH
-     * @param _starRate The token rate per STAR
+     * @param _starRatePer1000 The token rate per STAR
      * @param _wallet Multisig wallet that will hold the crowdsale funds.
      * @param _softCap Soft cap of the token sale
      * @param _crowdsaleCap Cap for the token sale
@@ -131,7 +131,7 @@ contract TokenSaleCloneFactory is CloneFactory {
         address _companyToken,
         address _tokenOwnerAfterSale,
         uint256 _rate,
-        uint256 _starRate,
+        uint256 _starRatePer1000,
         address _wallet,
         uint256 _softCap,
         uint256 _crowdsaleCap,
@@ -149,7 +149,7 @@ contract TokenSaleCloneFactory is CloneFactory {
             _companyToken,
             _tokenOwnerAfterSale,
             _rate,
-            _starRate,
+            _starRatePer1000,
             _wallet,
             _softCap,
             _crowdsaleCap,

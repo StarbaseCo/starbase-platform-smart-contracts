@@ -12,7 +12,7 @@ const { expect } = require("chai");
 const BigNumber = web3.BigNumber;
 
 contract("TokenSale", ([owner, client, starbase, buyer, buyer2, user1, fakeWallet]) => {
-  const starRate = new BigNumber(10);
+  const starRatePer1000 = new BigNumber(10);
   const newStarRate = new BigNumber(20);
   const rate = new BigNumber(50);
   const newRate = new BigNumber(60);
@@ -30,7 +30,7 @@ contract("TokenSale", ([owner, client, starbase, buyer, buyer2, user1, fakeWalle
 
   const newCrowdsale = async ({
     rate,
-    starRate,
+    starRatePer1000,
     softCap = new BigNumber(200000),
     crowdsaleCap = new BigNumber(20000000),
     isMinting = true,
@@ -51,7 +51,7 @@ contract("TokenSale", ([owner, client, starbase, buyer, buyer2, user1, fakeWalle
       star.address
     );
 
-    const adjustedStarRate = new BigNumber(starRate).mul(1000)
+    const adjustedStarRate = new BigNumber(starRatePer1000).mul(1000)
 
     const tx = await tokenSaleFactory.create(
       startTime,
@@ -82,31 +82,31 @@ contract("TokenSale", ([owner, client, starbase, buyer, buyer2, user1, fakeWalle
   };
 
   beforeEach("initialize contract", async () => {
-    await newCrowdsale({ rate, starRate });
+    await newCrowdsale({ rate, starRatePer1000 });
   });
 
-  it("deployment fails when both starRate and rate are zero", async () => {
+  it("deployment fails when both starRatePer1000 and rate are zero", async () => {
     try {
-      await newCrowdsale({ rate: 0, starRate: 0 });
+      await newCrowdsale({ rate: 0, starRatePer1000: 0 });
       assert.fail();
     } catch (error) {
       ensuresException(error);
     }
   });
 
-  it("deployment succeds when either starRate or rate are set", async () => {
-    await newCrowdsale({ rate, starRate: 0 });
-    // deployment without starRate
-    (await crowdsale.starRate()).should.be.bignumber.eq(0);
+  it("deployment succeds when either starRatePer1000 or rate are set", async () => {
+    await newCrowdsale({ rate, starRatePer1000: 0 });
+    // deployment without starRatePer1000
+    (await crowdsale.starRatePer1000()).should.be.bignumber.eq(0);
 
     // deployment without rate
-    await newCrowdsale({rate: 0, starRate, isWeiAccepted: false });
+    await newCrowdsale({rate: 0, starRatePer1000, isWeiAccepted: false });
     (await crowdsale.rate()).should.be.bignumber.eq(0);
   });
 
   it("deployment suceeds when softcap is lower than crowdsale cap", async () => {
     try {
-      await newCrowdsale({ rate, starRate, softCap: crowdsaleCap, crowdsaleCap: softCap });
+      await newCrowdsale({ rate, starRatePer1000, softCap: crowdsaleCap, crowdsaleCap: softCap });
       assert.fail();
     } catch (error) {
       ensuresException(error);
@@ -114,7 +114,7 @@ contract("TokenSale", ([owner, client, starbase, buyer, buyer2, user1, fakeWalle
 
     await newCrowdsale({
       rate,
-      starRate,
+      starRatePer1000,
       softCap,
       crowdsaleCap
     });
@@ -127,9 +127,9 @@ contract("TokenSale", ([owner, client, starbase, buyer, buyer2, user1, fakeWalle
     crowdsaleRate.toNumber().should.equal(rate.toNumber());
   });
 
-  it("has a normal crowdsale starRate", async () => {
-    const crowdsaleStarRate = await crowdsale.starRate();
-    const adjustedStarRate = starRate.mul(1000);
+  it("has a normal crowdsale starRatePer1000", async () => {
+    const crowdsaleStarRate = await crowdsale.starRatePer1000();
+    const adjustedStarRate = starRatePer1000.mul(1000);
     crowdsaleStarRate.toNumber().should.equal(adjustedStarRate.toNumber());
   });
 
@@ -191,7 +191,7 @@ contract("TokenSale", ([owner, client, starbase, buyer, buyer2, user1, fakeWalle
         token.address,
         (await token.owner()),
         rate,
-        starRate,
+        starRatePer1000,
         fakeWallet,
         softCap,
         crowdsaleCap,
@@ -248,8 +248,8 @@ contract("TokenSale", ([owner, client, starbase, buyer, buyer2, user1, fakeWalle
     });
   });
 
-  describe("changing starRate", () => {
-    it("does NOT allow anyone to change starRate other than the owner", async () => {
+  describe("changing starRatePer1000", () => {
+    it("does NOT allow anyone to change starRatePer1000 other than the owner", async () => {
       try {
         await crowdsale.setStarRate(newStarRate, { from: buyer });
         assert.fail();
@@ -257,11 +257,11 @@ contract("TokenSale", ([owner, client, starbase, buyer, buyer2, user1, fakeWalle
         ensuresException(e);
       }
 
-      const starRate = await crowdsale.starRate();
-      starRate.should.be.bignumber.equal(starRate);
+      const starRatePer1000 = await crowdsale.starRatePer1000();
+      starRatePer1000.should.be.bignumber.equal(starRatePer1000);
     });
 
-    it("cannot set a starRate that is zero", async () => {
+    it("cannot set a starRatePer1000 that is zero", async () => {
       const zeroStarRate = new BigNumber(0);
 
       try {
@@ -271,11 +271,11 @@ contract("TokenSale", ([owner, client, starbase, buyer, buyer2, user1, fakeWalle
         ensuresException(e);
       }
 
-      const starRate = await crowdsale.starRate();
-      starRate.should.be.bignumber.equal(starRate);
+      const starRatePer1000 = await crowdsale.starRatePer1000();
+      starRatePer1000.should.be.bignumber.equal(starRatePer1000);
     });
 
-    it("allows owner to change starRate", async () => {
+    it("allows owner to change starRatePer1000", async () => {
       const { logs } = await crowdsale.setStarRate(newStarRate, {
         from: owner
       });
@@ -283,8 +283,8 @@ contract("TokenSale", ([owner, client, starbase, buyer, buyer2, user1, fakeWalle
       const event = logs.find(e => e.event === "TokenStarRateChanged");
       should.exist(event);
 
-      const starRate = await crowdsale.starRate();
-      starRate.should.be.bignumber.equal(newStarRate);
+      const starRatePer1000 = await crowdsale.starRatePer1000();
+      starRatePer1000.should.be.bignumber.equal(newStarRate);
     });
   });
 
@@ -302,7 +302,7 @@ contract("TokenSale", ([owner, client, starbase, buyer, buyer2, user1, fakeWalle
     });
 
     it("requires rate to be set when Wei is accepted", async () => {
-      await newCrowdsale({ rate: 0, starRate, isWeiAccepted: false });
+      await newCrowdsale({ rate: 0, starRatePer1000, isWeiAccepted: false });
 
       try {
         await crowdsale.setIsWeiAccepted(true, 0, { from: owner });
@@ -447,7 +447,7 @@ contract("TokenSale", ([owner, client, starbase, buyer, buyer2, user1, fakeWalle
 
         await newCrowdsale({
           rate: crowdsaleCap.sub(crowdsaleTokensLeftover),
-          starRate: crowdsaleCap.sub(crowdsaleTokensLeftover),
+          starRatePer1000: crowdsaleCap.sub(crowdsaleTokensLeftover),
           isMinting
         });
         await whitelist.addManyToWhitelist([buyer]);
@@ -496,7 +496,7 @@ contract("TokenSale", ([owner, client, starbase, buyer, buyer2, user1, fakeWalle
 
       if (isMinting) {
         it("does NOT allow purchase when token ownership does not currently belong to crowdsale contract", async () => {
-          await newCrowdsale({ rate, starRate, isMinting, isTransferringOwnership: false });
+          await newCrowdsale({ rate, starRatePer1000, isMinting, isTransferringOwnership: false });
           await whitelist.addManyToWhitelist([buyer, user1]);
 
           await star.mint(buyer, 10e18);
@@ -707,7 +707,7 @@ contract("TokenSale", ([owner, client, starbase, buyer, buyer2, user1, fakeWalle
             await newCrowdsale({
               softCap,
               rate: softCap,
-              starRate: softCap,
+              starRatePer1000: softCap,
               isMinting
             });
             await whitelist.addManyToWhitelist([buyer]);
@@ -761,7 +761,7 @@ contract("TokenSale", ([owner, client, starbase, buyer, buyer2, user1, fakeWalle
             await newCrowdsale({
               softCap,
               rate: crowdsaleCap,
-              starRate: crowdsaleCap,
+              starRatePer1000: crowdsaleCap,
               isMinting
             });
             await whitelist.addManyToWhitelist([buyer, user1]);
@@ -831,6 +831,7 @@ contract("TokenSale", ([owner, client, starbase, buyer, buyer2, user1, fakeWalle
             });
             await crowdsale.buyTokens(buyer, { from: buyer });
 
+            tokenSaleBalance = await star.balanceOf(crowdsale.address);
             tokenSaleBalance.should.be.bignumber.equal(0);
           });
 
@@ -961,7 +962,7 @@ contract("TokenSale", ([owner, client, starbase, buyer, buyer2, user1, fakeWalle
           it("checks when soft cap is reached", async () => {
             await newCrowdsale({
               rate: softCap,
-              starRate: softCap,
+              starRatePer1000: softCap,
               isMinting
             });
             await whitelist.addManyToWhitelist([buyer]);
@@ -1010,7 +1011,7 @@ contract("TokenSale", ([owner, client, starbase, buyer, buyer2, user1, fakeWalle
           await newCrowdsale({
             softCap: 0,
             rate: crowdsaleCap,
-            starRate: crowdsaleCap,
+            starRatePer1000: crowdsaleCap,
             isMinting
           });
           await whitelist.addManyToWhitelist([buyer, user1]);
@@ -1128,18 +1129,14 @@ contract("TokenSale", ([owner, client, starbase, buyer, buyer2, user1, fakeWalle
           });
 
           await increaseTimeTo(latestTime() + duration.days(34));
-
-          const clientBalanceBefore = await star.balanceOf(client);
-          const starbaseBalanceBefore = await star.balanceOf(starbase);
-
           await crowdsale.buyTokens(buyer, { from: buyer });
 
           let clientBalanceAfter = await star.balanceOf(client);
           let starbaseBalanceAfter = await star.balanceOf(starbase);
           let tokenSaleBalance = await star.balanceOf(crowdsale.address);
 
-          clientBalanceBefore.should.be.bignumber.equal(2.7e15);
-          starbaseBalanceBefore.should.be.bignumber.equal(0.3e15);
+          clientBalanceAfter.should.be.bignumber.equal(2.7e15);
+          starbaseBalanceAfter.should.be.bignumber.equal(0.3e15);
           tokenSaleBalance.should.be.bignumber.equal(0);
 
           // continues to transfer
@@ -1162,10 +1159,7 @@ contract("TokenSale", ([owner, client, starbase, buyer, buyer2, user1, fakeWalle
           });
           await crowdsale.buyTokens(buyer, { from: buyer });
 
-          clientBalanceAfter = await star.balanceOf(client);
-          starbaseBalanceAfter = await star.balanceOf(starbase);
           tokenSaleBalance = await star.balanceOf(crowdsale.address);
-
           tokenSaleBalance.should.be.bignumber.equal(0);
         });
 
