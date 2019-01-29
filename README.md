@@ -72,7 +72,7 @@ Purchase flow using ETH is straighforward.
 
 2- whitelisted user sends ETH to TokenSale
 
-3- user received tokens.
+3- user receives tokens.
 
 ## Deployment
 
