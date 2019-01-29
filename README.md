@@ -50,7 +50,7 @@ In order for investors to participate in the crowdsale using STARs, they need fi
 
 Afterwards, the investor must trigger `buyTokens` within TokenSale, so the token purchase event goes through. The investor then receives purchased tokens right away (if soft cap is reached).
 
-In case TokenSale mints and distributes token, she will not be able to trade these tokens because token transfers are paused. Tokens need to be unpaused for the transfers to happen and this must be done most likely after the crowdsale is completed by the token owner. Token ownership after the crowdsale must be moved from the TokenSale contract to another Ethereum address, most likely the address of the project owner that is uses Starbase platform for its crowdfunding needs.
+In case TokenSale mints and distributes token, the investor will not be able to trade these tokens because token transfers are paused. Tokens need to be unpaused for the transfers to happen and this must be done most likely after the crowdsale is completed by the token owner. Token ownership after the crowdsale must be moved from the TokenSale contract to another Ethereum address, most likely the address of the project owner that is using the Starbase platform for its crowdfunding needs.
 
 When the TokenSale distributes an ERC20 token, investors receive their tokens immediately.
 
