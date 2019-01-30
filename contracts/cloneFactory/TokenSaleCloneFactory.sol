@@ -49,7 +49,7 @@ contract TokenSaleCloneFactory is CloneFactory {
      * @param _companyToken ERC20 CompanyToken contract address
      * @param _tokenOwnerAfterSale Token on sale owner address after sale is finished
      * @param _rate The token rate per ETH
-     * @param _starRatePer1000 The token rate per STAR
+     * @param _starRatePer1000 The token rate per 1/1000 STAR
      * @param _wallet Multisig wallet that will hold the crowdsale funds.
      * @param _softCap Soft cap of the token sale
      * @param _crowdsaleCap Cap for the token sale

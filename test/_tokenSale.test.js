@@ -104,7 +104,7 @@ contract("TokenSale", ([owner, client, starbase, buyer, buyer2, user1, fakeWalle
     (await crowdsale.rate()).should.be.bignumber.eq(0);
   });
 
-  it("deployment suceeds when softcap is lower than crowdsale cap", async () => {
+  it("deployment succeeds when softcap is lower than crowdsale cap", async () => {
     try {
       await newCrowdsale({ rate, starRatePer1000, softCap: crowdsaleCap, crowdsaleCap: softCap });
       assert.fail();

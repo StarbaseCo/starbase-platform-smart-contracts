@@ -43,7 +43,7 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
      * @param _companyToken ERC20 contract address that has minting capabilities
      * @param _tokenOwnerAfterSale Address that this TokenSale will pass the token ownership to after it's finished. Only works when TokenSale mints tokens, otherwise must be `0x0`.
      * @param _rate The token rate per ETH
-     * @param _starRatePer1000 The token rate per STAR
+     * @param _starRatePer1000 The token rate per 1/1000 STAR
      * @param _wallet FundsSplitter wallet that redirects funds to client and Starbase.
      * @param _softCap Soft cap of the token sale
      * @param _crowdsaleCap Cap for the token sale
@@ -302,7 +302,7 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
         } else {
             // forward funds
             starToken.transferFrom(_beneficiary, wallet, _value);
-            // this is so that STAR is not locked in contract forever in the event someone transfers STAR to contract by accident
+            // transfer STAR from previous purchases to wallet once soft cap is reached
             uint256 starBalance = starToken.balanceOf(address(this));
             if (starBalance > 0) starToken.transfer(wallet, starBalance);
 
