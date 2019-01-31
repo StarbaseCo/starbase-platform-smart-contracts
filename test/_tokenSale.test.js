@@ -37,9 +37,6 @@ contract("TokenSale", ([owner, client, starbase, buyer, buyer2, user1, fakeWalle
     isWeiAccepted = true,
     isTransferringOwnership = true,
   }) => {
-    startTime = latestTime() + 15; // crowdsale starts in seconds into the future
-    endTime = startTime + duration.days(70); // 70 days
-
     whitelist = await Whitelist.new();
     star = await MintableToken.new();
     token = await CompanyToken.new("Example Token", "EXT");
@@ -52,6 +49,9 @@ contract("TokenSale", ([owner, client, starbase, buyer, buyer2, user1, fakeWalle
     );
 
     const adjustedStarRate = new BigNumber(starRatePer1000).mul(1000)
+
+    startTime = latestTime() + duration.seconds(15); // crowdsale starts in 15 seconds into the future
+    endTime = startTime + duration.days(70); // 70 days
 
     const tx = await tokenSaleFactory.create(
       startTime,
@@ -753,6 +753,74 @@ contract("TokenSale", ([owner, client, starbase, buyer, buyer2, user1, fakeWalle
             clientBalanceAfter.should.be.bignumber.equal(clientBalanceBefore);
             starbaseBalanceAfter.should.be.bignumber.equal(starbaseBalanceBefore);
             tokenSaleBalance.should.be.bignumber.equal(3e15);
+          });
+
+          it('allows users to withdraw invested ETH when sale failed', async () => {
+            await whitelist.addManyToWhitelist([buyer]);
+            await increaseTimeTo(latestTime() + duration.days(1));
+            const ethValue = new BigNumber(10000);
+            const scBalanceBeforeBuying = await web3.eth.getBalance(crowdsale.address);
+            await crowdsale.buyTokens(buyer, {
+              from: buyer,
+              value: ethValue
+            });
+            const scBalanceAfterBuying = await web3.eth.getBalance(crowdsale.address);
+            await increaseTimeTo(latestTime() + duration.days(80));
+
+            scBalanceAfterBuying.should.be.bignumber.equal(scBalanceBeforeBuying.add(ethValue));
+
+            const userEthBalanceBeforeWithdraw = await web3.eth.getBalance(buyer);
+            const receipt = await crowdsale.withdrawUserFunds({ from: buyer });
+            const userEthBalanceAfterWithdraw = await web3.eth.getBalance(buyer);
+
+            const ethUserInvestment = await crowdsale.ethInvestments(buyer)
+            const scBalanceAfterWithdraw = await web3.eth.getBalance(crowdsale.address);
+
+            scBalanceAfterWithdraw.should.be.bignumber.equal(scBalanceAfterBuying.minus(ethValue))
+
+            const tx = await web3.eth.getTransaction(receipt.tx);
+            const gasUsed = new BigNumber(receipt.receipt.gasUsed);
+            const gasPrice = new BigNumber(tx.gasPrice);
+            const gasCosts = gasUsed.mul(gasPrice);
+
+            const expectedUserBalanceAfterWithdraw = userEthBalanceBeforeWithdraw
+              .add(ethValue)
+              .minus(gasCosts)
+
+            ethUserInvestment.should.be.bignumber.equal(ethValue)
+            userEthBalanceAfterWithdraw.should.be.bignumber.equal(
+              expectedUserBalanceAfterWithdraw
+            );
+          });
+
+          it('allows users to withdraw invested STAR when sale failed', async () => {
+            const starInvestValue = 3e15;
+            await star.mint(buyer, starInvestValue + 100);
+            await star.approve(crowdsale.address, starInvestValue, {
+              from: buyer
+            });
+
+            const scBalanceBeforeBuying = await star.balanceOf(crowdsale.address);
+
+            await increaseTimeTo(latestTime() + duration.days(34));
+            await crowdsale.buyTokens(buyer, { from: buyer });
+            await increaseTimeTo(latestTime() + duration.days(80));
+
+            const scBalanceAfterBuying = await star.balanceOf(crowdsale.address);
+            scBalanceAfterBuying.should.be.bignumber.equal(scBalanceBeforeBuying.add(starInvestValue));
+
+            const userStarBalanceBeforeWithdraw = await star.balanceOf(buyer);
+            await crowdsale.withdrawUserFunds({ from: buyer });
+            const userStarBalanceAfterWithdraw = await star.balanceOf(buyer);
+
+            const scBalanceAfterWithdraw = await star.balanceOf(crowdsale.address);
+            scBalanceAfterWithdraw.should.be.bignumber.equal(scBalanceAfterBuying.minus(starInvestValue))
+
+            const starUserInvestment = await crowdsale.starInvestments(buyer)
+            starUserInvestment.should.be.bignumber.equal(starInvestValue)
+            userStarBalanceAfterWithdraw.should.be.bignumber.equal(
+              userStarBalanceBeforeWithdraw.add(starInvestValue)
+            );
           });
         })
 
