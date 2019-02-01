@@ -81,6 +81,29 @@ contract("TokenSale", ([owner, client, starbase, buyer, buyer2, user1, fakeWalle
     }
   };
 
+  const itTransfersEthCorrectly = () => {
+    it('transfers ETH correctly to client and starbase', async() => {
+      const clientBalanceBefore = await web3.eth.getBalance(client);
+      const starbaseBalanceBefore = await web3.eth.getBalance(starbase);
+      const value = new BigNumber(10e15);
+  
+      await increaseTimeTo(latestTime() + duration.days(34));
+      await crowdsale.buyTokens(user1, {
+          from: user1,
+          value
+      });
+  
+      const clientBalanceAfter = await web3.eth.getBalance(client);
+      const starbaseBalanceAfter = await web3.eth.getBalance(starbase);
+  
+      const clientBalanceDifference = clientBalanceAfter.minus(clientBalanceBefore);
+      const starbaseBalanceDifference = starbaseBalanceAfter.minus(starbaseBalanceBefore);
+  
+      starbaseBalanceDifference.should.be.bignumber.equal(value.mul(starbasePercentageNumber).div(100));
+      clientBalanceDifference.should.be.bignumber.equal(value.mul(100 - starbasePercentageNumber).div(100));
+    });
+  }
+
   beforeEach("initialize contract", async () => {
     await newCrowdsale({ rate, starRatePer1000 });
   });
@@ -903,25 +926,7 @@ contract("TokenSale", ([owner, client, starbase, buyer, buyer2, user1, fakeWalle
             tokenSaleBalance.should.be.bignumber.equal(0);
           });
 
-          it("transfers token sale ETH funds between client and starbase", async () => {
-            const clientBalanceBefore = await web3.eth.getBalance(client);
-            const starbaseBalanceBefore = await web3.eth.getBalance(starbase);
-
-            await increaseTimeTo(latestTime() + duration.days(34));
-            await crowdsale.buyTokens(user1, {
-              from: user1,
-              value
-            });
-
-            const clientBalanceAfter = await web3.eth.getBalance(client);
-            const starbaseBalanceAfter = await web3.eth.getBalance(starbase);
-
-            const clientBalanceDifference = clientBalanceAfter.minus(clientBalanceBefore);
-            const starbaseBalanceDifference = starbaseBalanceAfter.minus(starbaseBalanceBefore);
-
-            starbaseBalanceDifference.should.be.bignumber.equal(1e17);
-            clientBalanceDifference.should.be.bignumber.equal(9e17);
-          });
+          itTransfersEthCorrectly();
 
           it("transfers ETH funds in contract between client and starbase once softCap is reached", async () => {
             const clientBalanceBefore = await web3.eth.getBalance(client);
@@ -1085,28 +1090,7 @@ contract("TokenSale", ([owner, client, starbase, buyer, buyer2, user1, fakeWalle
           await whitelist.addManyToWhitelist([buyer, user1]);
         })
 
-        it("transfers ETH funds between client and starbase", async () => {
-          const clientBalanceBefore = await web3.eth.getBalance(client);
-          const starbaseBalanceBefore = await web3.eth.getBalance(starbase);
-
-          await increaseTimeTo(latestTime() + duration.days(52));
-          await whitelist.addManyToWhitelist([user1]);
-          await crowdsale.buyTokens(user1, {
-            from: user1,
-            value: 3e15
-          });
-
-          const clientBalanceAfter = await web3.eth.getBalance(client);
-          const starbaseBalanceAfter = await web3.eth.getBalance(starbase);
-          const tokenSaleBalance = await web3.eth.getBalance(crowdsale.address);
-
-          const clientBalanceDifference = clientBalanceAfter.minus(clientBalanceBefore);
-          const starbaseBalanceDifference = starbaseBalanceAfter.minus(starbaseBalanceBefore);
-
-          starbaseBalanceDifference.should.be.bignumber.equal(0.3e15);
-          clientBalanceDifference.should.be.bignumber.equal(2.7e15);
-          tokenSaleBalance.should.be.bignumber.equal(0);
-        });
+        itTransfersEthCorrectly();
 
         it("transfers ETH funds in contract between client and starbase everytime", async () => {
           const clientBalanceBefore = await web3.eth.getBalance(client);
