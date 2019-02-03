@@ -390,6 +390,10 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
     // The token being sold
     ERC20Plus public tokenOnSale;
 
+    // Keep track of user investments
+    mapping (address => uint256) public ethInvestments;
+    mapping (address => uint256) public starInvestments;
+
     event TokenRateChanged(uint256 previousRate, uint256 newRate);
     event TokenStarRateChanged(uint256 previousStarRate, uint256 newStarRate);
     event TokenPurchaseWithStar(address indexed purchaser, address indexed beneficiary, uint256 value, uint256 amount);
@@ -569,6 +573,7 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
 
             // update state
             starRaised = starRaised.add(starAllocationToTokenSale);
+            starInvestments[msg.sender] = starInvestments[msg.sender].add(starAllocationToTokenSale);
 
             tokensSold = tokensSold.add(tokens);
             sendPurchasedTokens(beneficiary, tokens);
@@ -601,12 +606,13 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
 
         // update state
         weiRaised = weiRaised.add(weiAmount);
+        ethInvestments[msg.sender] = ethInvestments[msg.sender].add(weiAmount);
 
         tokensSold = tokensSold.add(tokens);
         sendPurchasedTokens(beneficiary, tokens);
         emit TokenPurchase(msg.sender, beneficiary, weiAmount, tokens);
 
-        forwardsWeiFunds(weiAmount, weiRefund);
+        forwardsWeiFunds(weiRefund);
     }
 
     // isMinting checker -- it either mints ERC20 token or transfers them
@@ -641,7 +647,7 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
     /**
      * @dev forward wei funds
      */
-    function forwardsWeiFunds(uint256 _weiAmount, uint256 _weiRefund) internal {
+    function forwardsWeiFunds(uint256 _weiRefund) internal {
         if (softCap == 0 || hasReachedSoftCap()) {
             if (_weiRefund > 0) msg.sender.transfer(_weiRefund);
 
@@ -668,6 +674,27 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
 
             wallet.splitStarFunds();
         }
+    }
+
+    /**
+     * @dev withdraw funds for failed sales
+     */
+    function withdrawUserFunds() public {
+        require(hasEnded(), "Can only withdraw funds for ended sales!");
+        require(
+            !hasReachedSoftCap(),
+            "Can only withdraw funds for sales that didn't reach soft cap!"
+        );
+
+        uint256 investedEthRefund = ethInvestments[msg.sender];
+        uint256 investedStarRefund = starInvestments[msg.sender];
+
+        // prevent reentrancy attack
+        ethInvestments[msg.sender] = 0;
+        starInvestments[msg.sender] = 0;
+
+        if (investedEthRefund > 0) msg.sender.transfer(investedEthRefund);
+        if (investedStarRefund > 0) starToken.transfer(msg.sender, investedStarRefund);
     }
 
     /**
