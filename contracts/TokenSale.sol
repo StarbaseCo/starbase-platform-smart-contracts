@@ -329,6 +329,10 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
         uint256 investedEthRefund = ethInvestments[msg.sender];
         uint256 investedStarRefund = starInvestments[msg.sender];
 
+        // prevent reentrancy attack
+        ethInvestments[msg.sender] = 0;
+        starInvestments[msg.sender] = 0;
+
         if (investedEthRefund > 0) msg.sender.transfer(investedEthRefund);
         if (investedStarRefund > 0) starToken.transfer(msg.sender, investedStarRefund);
     }
