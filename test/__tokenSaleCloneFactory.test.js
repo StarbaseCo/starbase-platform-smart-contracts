@@ -16,7 +16,7 @@ contract(
       tokenOwnerAfterSale,
       startTime,
       endTime;
-    const starRate = new BigNumber(10);
+    const starRatePer1000 = new BigNumber(10);
     const rate = new BigNumber(50);
     const softCap = new BigNumber(200000); // 200 000
     const crowdsaleCap = new BigNumber(20000000); // 20M
@@ -44,14 +44,14 @@ contract(
           endTime,
           whitelist,
           companyToken.address,
-          tokenOwnerAfterSale,  
+          tokenOwnerAfterSale,
           rate,
-          starRate,
+          starRatePer1000,
           wallet,
           softCap,
           crowdsaleCap,
           isWeiAcceptedDefaultValue,
-          isMinting        
+          isMinting
         );
 
         expect(tokenSaleTx).to.exist;
@@ -65,7 +65,7 @@ contract(
           companyToken.address,
           tokenOwnerAfterSale,
           rate,
-          starRate,
+          starRatePer1000,
           wallet,
           softCap,
           crowdsaleCap,
@@ -95,7 +95,7 @@ contract(
           companyToken.address,
           tokenOwnerAfterSale,
           rate,
-          starRate,
+          starRatePer1000,
           wallet,
           softCap,
           crowdsaleCap,
@@ -116,7 +116,7 @@ contract(
           companyToken.address,
           tokenOwnerAfterSale,
           rate,
-          starRate,
+          starRatePer1000,
           wallet,
           softCap,
           crowdsaleCap,

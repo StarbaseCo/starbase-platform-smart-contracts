@@ -21,8 +21,8 @@
     "author": "Gustavo Guimaraes",
     "license": "ISC",
     "devDependencies": {
-        "@babel/preset-env": "^7.2.3",
-        "bignumber.js": "^8.0.1",
+        "@babel/preset-env": "^7.3.1",
+        "bignumber.js": "^8.0.2",
         "chai": "^4.2.0",
         "chai-as-promised": "^7.1.1",
         "chai-bignumber": "^2.0.2",

@@ -104,7 +104,7 @@ _starToken = "0xd70A7A39EFB10cfE34FD79Ea8c06BdB1974C8828" // Starbase STAR token
 _companyToken =  "0xaee875686Ec9C7A29B29f4Cd48a55bdF816eb00c"  // the EC20 token deployed by the company and who has mint capability
 _tokenOwnerAfterSale "0xrbb875686Ec9C7A29B29f4Cd48a55bdF816eb00c" // Address that the TokenSale will pass the token ownership to after it's finished. Only works when TokenSale mints tokens, otherwise must be `0x0`.
 _rate = 100 // rate in ETH/company tokens. Here is if investor sends 1 ETH she receives 100 company tokens in return
-_starRate = 2 // rate STAR/company tokens. Here is upon sending of 1 STAR, investor receives 2 company tokens in return
+_starRatePer1000 = 2 // rate STAR/company tokens. Here is upon sending of 1 STAR, investor receives 2 company tokens in return
 _wallet = "0xB01B468423Da913afD743c13f17B01c2cF26b3e8" // address where funds collected in the TokenSale will go to. Generally, it will be a FundsSplitter contract if not otherwise specifically instructed incl. a slightly different TokenSale implementation.
 _softCap = 200 // soft cap of the token sale. It tells the frontend application that a sale has been successful
 _crowdsaleCap = 1000  // cap for the number of tokens to be minted. Here it is only 1000 tokens that will be sold in the token sale
