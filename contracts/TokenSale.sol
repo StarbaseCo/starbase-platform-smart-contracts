@@ -87,7 +87,8 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
         require(
             _whitelist != address(0) &&
             _starToken != address(0) &&
-            !(_rate == 0 && _starRatePer1000 == 0) &&
+            _starRatePer1000 != 0 &&
+            (_isWeiAccepted && _rate != 0 || !_isWeiAccepted) &&
             _companyToken != address(0) &&
             _crowdsaleCap != 0 &&
             _wallet != 0,
