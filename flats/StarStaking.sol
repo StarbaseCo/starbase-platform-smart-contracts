@@ -345,7 +345,7 @@ contract StarStakingInterface {
     event Staked(address indexed user, uint256 amount, uint256 addedStakingPoints);
 }
 
-// File: contracts/StarStaking.sol
+// File: contracts\StarStaking.sol
 
 contract StarStaking is StarStakingInterface, Lockable {
     using SafeMath for uint256;
