@@ -174,14 +174,26 @@ contract("TokenSale", ([owner, client, starbase, buyer, buyer2, user1, fakeWalle
     }
   });
 
-  it("deployment succeds when either starRatePer1000 or rate are set", async () => {
-    await newCrowdsale({ rate, starRatePer1000: 0 });
-    // deployment without starRatePer1000
-    (await crowdsale.starRatePer1000()).should.be.bignumber.eq(0);
+  it("deployment succeeds when either starRatePer1000 or rate are set", async () => {
+    const expectedError = "Parameter variables cannot be empty!";
+  
+    try {
+      await newCrowdsale({ rate, starRatePer1000: 0 });
+      assert.fail();
+    } catch (error) {
+      ensuresException(error, expectedError);
+    }
 
     // deployment without rate
-    await newCrowdsale({rate: 0, starRatePer1000, isWeiAccepted: false });
+    await newCrowdsale({ rate: 0, starRatePer1000, isWeiAccepted: false });
     (await crowdsale.rate()).should.be.bignumber.eq(0);
+
+    try {
+      await newCrowdsale({ rate: 0, starRatePer1000, isWeiAccepted: true });
+      assert.fail();
+    } catch (error) {
+      ensuresException(error, expectedError);
+    }
   });
 
   it("deployment succeeds when softcap is lower than crowdsale cap", async () => {
@@ -280,7 +292,8 @@ contract("TokenSale", ([owner, client, starbase, buyer, buyer2, user1, fakeWalle
       );
       assert.fail();
     } catch (error) {
-      ensuresException(error);
+      const expectedError = "Contract instance was initialized already!";
+      ensuresException(error,expectedError);
     }
 
     const crowdsaleWallet = await crowdsale.wallet();
