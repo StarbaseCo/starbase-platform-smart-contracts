@@ -329,6 +329,11 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
         uint256 investedEthRefund = ethInvestments[msg.sender];
         uint256 investedStarRefund = starInvestments[msg.sender];
 
+        require(
+            investedEthRefund > 0 || investedStarRefund > 0,
+            "You don't have any funds in the contract!"
+        );
+
         // prevent reentrancy attack
         ethInvestments[msg.sender] = 0;
         starInvestments[msg.sender] = 0;
