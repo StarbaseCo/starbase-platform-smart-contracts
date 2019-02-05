@@ -21,6 +21,7 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
     address public tokenOwnerAfterSale;
     bool public isWeiAccepted;
     bool public isMinting;
+    bool private isInitialized;
 
     // external contracts
     Whitelist public whitelist;
@@ -71,23 +72,14 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
     )
         external
     {
-        require(
-            whitelist == address(0) &&
-            starToken == address(0) &&
-            tokenOwnerAfterSale == address(0) &&
-            rate == 0 &&
-            starRatePer1000 == 0 &&
-            tokenOnSale == address(0) &&
-            softCap == 0 &&
-            crowdsaleCap == 0 &&
-            wallet == address(0),
-            "Global variables should not have been set before!"
-        );
+        require(!isInitialized, "Contract instance was initialized already!");
+        isInitialized = true;
 
         require(
             _whitelist != address(0) &&
             _starToken != address(0) &&
-            !(_rate == 0 && _starRatePer1000 == 0) &&
+            _starRatePer1000 != 0 &&
+            (_isWeiAccepted && _rate != 0 || !_isWeiAccepted) &&
             _companyToken != address(0) &&
             _crowdsaleCap != 0 &&
             _wallet != 0,
@@ -328,6 +320,11 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
 
         uint256 investedEthRefund = ethInvestments[msg.sender];
         uint256 investedStarRefund = starInvestments[msg.sender];
+
+        require(
+            investedEthRefund > 0 || investedStarRefund > 0,
+            "You don't have any funds in the contract!"
+        );
 
         // prevent reentrancy attack
         ethInvestments[msg.sender] = 0;

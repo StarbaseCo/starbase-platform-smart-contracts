@@ -14,8 +14,9 @@ function isException(error) {
     );
 }
 
-function ensuresException(error) {
+function ensuresException(error, expectedError) {
     assert(isException(error), error.toString());
+    if (expectedError !== undefined) assert(error.message.includes(expectedError))
 }
 
 module.exports = {
