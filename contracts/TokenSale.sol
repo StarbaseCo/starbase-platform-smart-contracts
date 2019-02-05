@@ -21,6 +21,7 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
     address public tokenOwnerAfterSale;
     bool public isWeiAccepted;
     bool public isMinting;
+    bool private isInitialized;
 
     // external contracts
     Whitelist public whitelist;
@@ -71,18 +72,8 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
     )
         external
     {
-        require(
-            whitelist == address(0) &&
-            starToken == address(0) &&
-            tokenOwnerAfterSale == address(0) &&
-            rate == 0 &&
-            starRatePer1000 == 0 &&
-            tokenOnSale == address(0) &&
-            softCap == 0 &&
-            crowdsaleCap == 0 &&
-            wallet == address(0),
-            "Global variables should not have been set before!"
-        );
+        require(!isInitialized, "Contract instance was initialized already!");
+        isInitialized = true;
 
         require(
             _whitelist != address(0) &&
