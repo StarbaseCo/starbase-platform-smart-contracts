@@ -437,55 +437,66 @@ contract StarStaking is StarStakingInterface, Lockable {
             amount = maxStakePerUser.sub(totalStakedFor[_user]);
         }
 
-        addStakingPoints(_user, amount);
-
-        if (topRanksCount == 0) {
-            topRanks.insert(HEAD, _user, NEXT);
-            topRanksCount++;
-        } else {
-            if (topRanksCount < topRanksMaxSize) {
-                require(_node != address(0), "Top ranks count below threshold, please provide suggested position!");
-            }
-
-            if (_node != address(0)) {
-                require(topRanks.nodeExists(_node), "Node for suggested position does not exist!");
-                sortedInsert(_user, _node);
-
-                if (topRanksCount < topRanksMaxSize) {
-                    topRanksCount++;
-                } else {
-                    topRanks.pop(PREV);
-                }
-            }
+        if (topRanksCount != 0) {
+            require(_node != HEAD, "Please provide suggested node position (from getSortedSpot())!");
+            require(topRanks.nodeExists(_node), "Node for suggested position does not exist!");
         }
+
+        addStakingPoints(_user, amount);
+        sortedInsert(_user, _node);
 
         require(token.transferFrom(msg.sender, address(this), amount), "Not enough funds for sender!");
         totalRaised = totalRaised.add(amount);
     }
 
-    function sortedInsert(address _user, address _node) internal {
-        uint256 newRankPoints = totalStakingPointsFor[_user];
-        uint256 replacedRankPoints = totalStakingPointsFor[_node];
-        address oneRankAbove = topRanks.list[_node][PREV];
-
-        if (oneRankAbove == HEAD && newRankPoints > replacedRankPoints) {
-            // first place
-            topRanks.insert(_node, _user, PREV);
-            return;
-        }
-
-        require(newRankPoints < replacedRankPoints, "Suggested position into top ranks too low!");
-
-        address oneRankBelow = topRanks.list[_node][NEXT];
-        if (oneRankBelow != HEAD) {
-            uint256 oneRankBelowPoints = totalStakingPointsFor[oneRankBelow];
-            require(newRankPoints > oneRankBelowPoints, "Suggested position into top ranks too high!");
-        }
-
-        topRanks.insert(_node, _user, NEXT);
+    function doesCorrectlyInsertAtFirstRank(
+        uint256 newRankPoints,
+        uint256 replacedRankPoints,
+        address oneRankAbove
+    ) private pure returns (bool) {
+        return oneRankAbove == HEAD && newRankPoints > replacedRankPoints;
     }
 
-    function addStakingPoints(address _user, uint256 _amount) internal {
+    function ensureCorrectInsertPosition(
+        uint256 newRankPoints,
+        uint256 replacedRankPoints,
+        uint256 oneRankBelowPoints
+    ) private pure {
+        require(newRankPoints < replacedRankPoints, "Suggested position into top ranks too low!");
+        require(newRankPoints > oneRankBelowPoints, "Suggested position into top ranks too high!");
+    }
+
+    function sortedInsert(address _user, address _node) private {
+        address oneRankAbove = topRanks.list[_node][PREV];
+        address oneRankBelow = topRanks.list[_node][NEXT];
+
+        uint256 newRankPoints = totalStakingPointsFor[_user];
+        uint256 replacedRankPoints = totalStakingPointsFor[_node];
+        uint256 oneRankBelowPoints = totalStakingPointsFor[oneRankBelow];
+
+        if (topRanksCount == 0) {
+            topRanks.insert(HEAD, _user, NEXT);
+        } else if (doesCorrectlyInsertAtFirstRank(newRankPoints, replacedRankPoints, oneRankAbove)) {
+            topRanks.insert(_node, _user, PREV);
+        } else {
+            ensureCorrectInsertPosition(
+                newRankPoints,
+                replacedRankPoints,
+                oneRankBelowPoints
+            );
+
+            topRanks.insert(_node, _user, NEXT);
+        }
+        
+        topRanksCount < topRanksMaxSize ? incrementTopRanksCount(): topRanks.pop(PREV);
+    }
+
+    function incrementTopRanksCount() private returns (address) {
+        topRanksCount = topRanksCount.add(1);
+        return HEAD;
+    }
+
+    function addStakingPoints(address _user, uint256 _amount) private {
         uint256 timeUntilEnd = closingTime.sub(now);
         uint256 addedStakingPoints = timeUntilEnd.mul(_amount);
 
