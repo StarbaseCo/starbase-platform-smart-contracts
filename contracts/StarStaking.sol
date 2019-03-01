@@ -30,6 +30,7 @@ contract StarStaking is StarStakingInterface, Lockable {
     uint256 public stakeSaleCap;
     uint256 public maxStakePerUser;
     uint256 public totalRaised;
+    address public tokenSaleWallet;
 
     modifier whenStakingOpen {
         require(now >= startTime, "Staking period not yet started!");
@@ -38,11 +39,20 @@ contract StarStaking is StarStakingInterface, Lockable {
         _;
     }
 
+    modifier isFinished {
+        require(now > closingTime, "Staking period not yet closed!");
+
+        _;
+    }
+
     /**
-     * @param _token Token that can be staked.
-     * @param _topRanksMaxSize Maximal size of the top ranks.
-     * @param _startTime Timestamp for the beginning of the staking event.
-     * @param _closingTime Timestamp of the end of staking event.
+     * @param _token Token that can be staked
+     * @param _topRanksMaxSize Maximal size of the top ranks
+     * @param _startTime Timestamp for the beginning of the staking event
+     * @param _closingTime Timestamp of the end of staking event
+     * @param _stakeSaleCap cap amount for total staking
+     * @param _maxStakePerUser maximum amount permitted per user
+     * @param _tokenSaleWallet TokenSale wallet where funds from the staking goes to upon finalization
      */
     constructor(
         ERC20 _token,
@@ -50,7 +60,8 @@ contract StarStaking is StarStakingInterface, Lockable {
         uint256 _startTime,
         uint256 _closingTime,
         uint256 _stakeSaleCap,
-        uint256 _maxStakePerUser
+        uint256 _maxStakePerUser,
+        address _tokenSaleWallet
     ) public {
         require(address(_token) != address(0), "Token address may must be defined!");
         require(_startTime < _closingTime, "Start time must be before closing time!");
@@ -58,6 +69,7 @@ contract StarStaking is StarStakingInterface, Lockable {
         require(_topRanksMaxSize > 0, "Top ranks size must be more than 0!");
         require(_stakeSaleCap > 0, "StakingSale cap should be higher than 0!");
         require(_maxStakePerUser > 0, "Max stake per user should be higher than 0!");
+        require(_tokenSaleWallet != address(0), "TokenSale wallet address may must be defined!");
 
         token = _token;
         startTime = _startTime;
@@ -66,6 +78,7 @@ contract StarStaking is StarStakingInterface, Lockable {
         topRanksMaxSize = _topRanksMaxSize;
         stakeSaleCap = _stakeSaleCap;
         maxStakePerUser = _maxStakePerUser;
+        tokenSaleWallet = _tokenSaleWallet;
     }
 
     /**
@@ -222,5 +235,20 @@ contract StarStaking is StarStakingInterface, Lockable {
         }
 
         return topRanksList;
+    }
+
+    /**
+     * @dev Gets the totalStaked of the specified address.
+     * @param _participant The address to query the total staked for.
+     * @return A uint256 representing the amount of stars staked for the passed address.
+     */
+    function totalStaked(address _participant) public view returns (uint256) {
+        return totalStakedFor[_participant];
+    }
+
+    function finalizeStaking() external isFinished {
+        uint256 allStakedStars = token.balanceOf(address(this));
+
+        token.transfer(tokenSaleWallet, allStakedStars);
     }
 }
