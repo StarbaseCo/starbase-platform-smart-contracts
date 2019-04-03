@@ -4,6 +4,7 @@ const CompanyToken = artifacts.require('./CompanyToken.sol')
 const MintableToken = artifacts.require('./MintableToken.sol')
 const Whitelist = artifacts.require('./Whitelist.sol')
 const FundsSplitter = artifacts.require('./FundsSplitter.sol')
+const StarEthRateContract = artifacts.require('./StarEthRate.sol')
 
 const { should, ensuresException } = require('./helpers/utils')
 const { latestTime, duration, increaseTimeTo } = require('./helpers/timer')
@@ -11,11 +12,13 @@ const { expect } = require('chai')
 
 const BigNumber = web3.BigNumber
 
-contract(
+contract.only(
   'TokenSale',
   ([owner, client, starbase, buyer, buyer2, user1, fakeWallet]) => {
-    const starRatePer1000 = new BigNumber(10)
-    const newStarRate = new BigNumber(20)
+    // starEthRate = 2 / 10
+    const starEthRate = new BigNumber(2)
+    const starEthRateDecimalCorrectionFactor = new BigNumber(10)
+
     const rate = new BigNumber(50)
     const newRate = new BigNumber(60)
     const value = 1e18
@@ -28,11 +31,10 @@ contract(
 
     let startTime, endTime, wallet
     let crowdsale, token, star, whitelist
-    let crowdsaleTokensLeftover
+    let crowdsaleTokensLeftover, starEthRateContract
 
     const newCrowdsale = async ({
-      rate,
-      starRatePer1000,
+      rate = new BigNumber(50),
       softCap = new BigNumber(200000),
       crowdsaleCap = new BigNumber(20000000),
       isMinting = true,
@@ -50,13 +52,15 @@ contract(
         token.address
       )
       wallet = fundsSplitter.address
+      starEthRateContract = await StarEthRateContract.new(
+        starEthRateDecimalCorrectionFactor,
+        starEthRate
+      )
       const tokenSaleLibrary = await TokenSale.new()
       const tokenSaleFactory = await TokenSaleCloneFactory.new(
         tokenSaleLibrary.address,
         star.address
       )
-
-      const adjustedStarRate = new BigNumber(starRatePer1000).mul(1000)
 
       startTime = latestTime() + duration.seconds(15) // crowdsale starts in 15 seconds into the future
       endTime = startTime + duration.days(70) // 70 days
@@ -68,7 +72,7 @@ contract(
         token.address,
         isMinting ? await token.owner() : 0x0,
         rate,
-        adjustedStarRate,
+        starEthRateContract.address,
         wallet,
         softCap,
         crowdsaleCap,
@@ -151,10 +155,10 @@ contract(
       })
     }
 
-    const endsTokenSaleWhenAreTokensAreSold = () => {
+    const endsTokenSaleWhenAllTokensAreSold = () => {
       it('ends crowdsale when all tokens are sold', async () => {
         await star.mint(buyer, 10e18)
-        await star.approve(crowdsale.address, 1e18, {
+        await star.approve(crowdsale.address, 1e26, {
           from: buyer,
         })
 
@@ -178,34 +182,23 @@ contract(
     }
 
     beforeEach('initialize contract', async () => {
-      await newCrowdsale({ rate, starRatePer1000 })
+      await newCrowdsale({ rate })
     })
 
-    it('deployment fails when both starRatePer1000 and rate are zero', async () => {
+    it('deployment fails when rate is zero', async () => {
       try {
-        await newCrowdsale({ rate: 0, starRatePer1000: 0 })
+        await newCrowdsale({ rate: 0 })
         assert.fail()
       } catch (error) {
         ensuresException(error)
       }
     })
 
-    it('deployment succeeds when either starRatePer1000 or rate are set', async () => {
+    it('deployment falis when rate is 0 and isWeiAccepted is true', async () => {
       const expectedError = 'Parameter variables cannot be empty!'
 
       try {
-        await newCrowdsale({ rate, starRatePer1000: 0 })
-        assert.fail()
-      } catch (error) {
-        ensuresException(error, expectedError)
-      }
-
-      // deployment without rate
-      await newCrowdsale({ rate: 0, starRatePer1000, isWeiAccepted: false })
-      ;(await crowdsale.rate()).should.be.bignumber.eq(0)
-
-      try {
-        await newCrowdsale({ rate: 0, starRatePer1000, isWeiAccepted: true })
+        await newCrowdsale({ rate: 0, isWeiAccepted: true })
         assert.fail()
       } catch (error) {
         ensuresException(error, expectedError)
@@ -216,7 +209,6 @@ contract(
       try {
         await newCrowdsale({
           rate,
-          starRatePer1000,
           softCap: crowdsaleCap,
           crowdsaleCap: softCap,
         })
@@ -227,7 +219,6 @@ contract(
 
       await newCrowdsale({
         rate,
-        starRatePer1000,
         softCap,
         crowdsaleCap,
       })
@@ -239,11 +230,14 @@ contract(
       crowdsaleRate.toNumber().should.equal(rate.toNumber())
     })
 
+    // TODO
+    /*
     it('has a normal crowdsale starRatePer1000', async () => {
       const crowdsaleStarRate = await crowdsale.starRatePer1000()
       const adjustedStarRate = starRatePer1000.mul(1000)
       crowdsaleStarRate.toNumber().should.equal(adjustedStarRate.toNumber())
     })
+    */
 
     it('has a whitelist contract', async () => {
       const whitelistContract = await crowdsale.whitelist()
@@ -303,7 +297,7 @@ contract(
           token.address,
           await token.owner(),
           rate,
-          starRatePer1000,
+          starEthRateContract.address,
           fakeWallet,
           softCap,
           crowdsaleCap,
@@ -358,102 +352,6 @@ contract(
 
         const rate = await crowdsale.rate()
         rate.should.be.bignumber.equal(newRate)
-      })
-    })
-
-    describe('changing starRatePer1000', () => {
-      it('does NOT allow anyone to change starRatePer1000 other than the owner', async () => {
-        try {
-          await crowdsale.setStarRate(newStarRate, { from: buyer })
-          assert.fail()
-        } catch (e) {
-          ensuresException(e)
-        }
-
-        const starRatePer1000 = await crowdsale.starRatePer1000()
-        starRatePer1000.should.be.bignumber.equal(starRatePer1000)
-      })
-
-      it('cannot set a starRatePer1000 that is zero', async () => {
-        const zeroStarRate = new BigNumber(0)
-
-        try {
-          await crowdsale.setStarRate(zeroStarRate, { from: owner })
-          assert.fail()
-        } catch (e) {
-          ensuresException(e)
-        }
-
-        const starRatePer1000 = await crowdsale.starRatePer1000()
-        starRatePer1000.should.be.bignumber.equal(starRatePer1000)
-      })
-
-      it('allows owner to change starRatePer1000', async () => {
-        const { logs } = await crowdsale.setStarRate(newStarRate, {
-          from: owner,
-        })
-
-        const event = logs.find(e => e.event === 'TokenStarRateChanged')
-        should.exist(event)
-
-        const starRatePer1000 = await crowdsale.starRatePer1000()
-        starRatePer1000.should.be.bignumber.equal(newStarRate)
-      })
-    })
-
-    describe('#isWeiAccepted', () => {
-      it('does NOT allow anyone to set isWeiAccepted other than the owner', async () => {
-        try {
-          await crowdsale.setIsWeiAccepted(false, 0, { from: buyer })
-          assert.fail()
-        } catch (e) {
-          ensuresException(e)
-        }
-
-        const isWeiAccepted = await crowdsale.isWeiAccepted()
-        isWeiAccepted.should.be.true
-      })
-
-      it('requires rate to be set when Wei is accepted', async () => {
-        await newCrowdsale({ rate: 0, starRatePer1000, isWeiAccepted: false })
-
-        try {
-          await crowdsale.setIsWeiAccepted(true, 0, { from: owner })
-          assert.fail()
-        } catch (e) {
-          ensuresException(e)
-        }
-
-        const isWeiAccepted = await crowdsale.isWeiAccepted()
-        isWeiAccepted.should.be.false
-      })
-
-      it('requires rate to be 0 when Wei is not accepted', async () => {
-        try {
-          await crowdsale.setIsWeiAccepted(false, 12, { from: owner })
-          assert.fail()
-        } catch (e) {
-          ensuresException(e)
-        }
-
-        const isWeiAccepted = await crowdsale.isWeiAccepted()
-        isWeiAccepted.should.be.true
-      })
-
-      it('allows owner to set isWeiAccepted', async () => {
-        await crowdsale.setIsWeiAccepted(false, 0, { from: owner })
-
-        let isWeiAccepted = await crowdsale.isWeiAccepted()
-        isWeiAccepted.should.be.false
-        let weiRate = await crowdsale.rate()
-        weiRate.should.be.bignumber.equal(0)
-
-        await crowdsale.setIsWeiAccepted(true, rate, { from: owner })
-
-        isWeiAccepted = await crowdsale.isWeiAccepted()
-        isWeiAccepted.should.be.true
-        weiRate = await crowdsale.rate()
-        weiRate.should.be.bignumber.equal(rate)
       })
     })
 
@@ -556,13 +454,12 @@ contract(
         )
       }
 
-      describe('crowdsale finalization', function() {
+      describe('crowdsale finalization', () => {
         beforeEach(async () => {
           crowdsaleTokensLeftover = 10
 
           await newCrowdsale({
-            rate: crowdsaleCap.sub(crowdsaleTokensLeftover),
-            starRatePer1000: crowdsaleCap.sub(crowdsaleTokensLeftover),
+            rate: crowdsaleCap.sub(crowdsaleTokensLeftover).mul(5),
             isMinting,
           })
           await whitelist.addManyToWhitelist([buyer])
@@ -578,20 +475,20 @@ contract(
           await crowdsale.finalize()
         })
 
-        it('shows that crowdsale is finalized', async function() {
+        it('shows that crowdsale is finalized', async () => {
           const isCrowdsaleFinalized = await crowdsale.isFinalized()
           isCrowdsaleFinalized.should.be.true
         })
 
         if (isMinting) {
-          it('returns token ownership to next owner', async function() {
+          it('returns token ownership to next owner', async () => {
             const tokenOwnerAfterSale = await crowdsale.tokenOwnerAfterSale()
             const tokenOwner = await token.owner()
             tokenOwner.should.be.equal(tokenOwnerAfterSale)
           })
         }
 
-        it('mints/transfers remaining crowdsale tokens to wallet', async function() {
+        it('mints/transfers remaining crowdsale tokens to wallet', async () => {
           const walletTokenBalance = await token.balanceOf(wallet)
 
           let remainingTokens = new BigNumber(crowdsaleTokensLeftover * 1e18)
@@ -614,14 +511,13 @@ contract(
           it('does NOT allow purchase when token ownership does not currently belong to crowdsale contract', async () => {
             await newCrowdsale({
               rate,
-              starRatePer1000,
               isMinting,
               isTransferringOwnership: false,
             })
             await whitelist.addManyToWhitelist([buyer, user1])
 
-            await star.mint(buyer, 10e18)
-            await star.mint(user1, 10e18)
+            await star.mint(buyer, 10e25)
+            await star.mint(user1, 10e25)
 
             await star.approve(crowdsale.address, 5e18, { from: user1 })
             await star.approve(crowdsale.address, 5e18, { from: buyer })
@@ -692,9 +588,12 @@ contract(
         })
 
         it('allows ONLY STAR tokens to purchase tokens at first', async () => {
-          await crowdsale.setIsWeiAccepted(false, 0, { from: owner })
+          await newCrowdsale({ rate, isWeiAccepted: false })
+          await whitelist.addManyToWhitelist([buyer])
+
           await increaseTimeTo(latestTime() + duration.days(22))
 
+          await star.mint(buyer, 5e18)
           await star.approve(crowdsale.address, 5e18, { from: buyer })
 
           try {
@@ -730,7 +629,7 @@ contract(
         })
 
         it('cannot buy tokens by sending wei when isWeiAccepted is disabled', async () => {
-          await crowdsale.setIsWeiAccepted(false, 0, { from: owner })
+          await newCrowdsale({ isWeiAccepted: false })
           await increaseTimeTo(latestTime() + duration.days(22))
           await whitelist.addManyToWhitelist([user1])
 
@@ -745,7 +644,9 @@ contract(
           userBalance.should.be.bignumber.equal(0)
 
           // purchase occurence
-          await crowdsale.setIsWeiAccepted(true, 50, { from: owner })
+          await newCrowdsale({ rate, isWeiAccepted: true })
+          await whitelist.addManyToWhitelist([user1])
+          await increaseTimeTo(latestTime() + duration.days(22))
           await crowdsale.buyTokens(user1, { from: user1, value })
 
           const buyerBalance = await token.balanceOf(user1)
@@ -828,7 +729,6 @@ contract(
               await newCrowdsale({
                 softCap,
                 rate: softCap,
-                starRatePer1000: softCap,
                 isMinting,
               })
               await whitelist.addManyToWhitelist([buyer])
@@ -1043,7 +943,6 @@ contract(
               await newCrowdsale({
                 softCap,
                 rate: crowdsaleCap,
-                starRatePer1000: crowdsaleCap,
                 isMinting,
               })
               await whitelist.addManyToWhitelist([buyer, user1])
@@ -1076,7 +975,7 @@ contract(
               clientBalanceDifference.should.be.bignumber.equal(9e17)
             })
 
-            it('transfers STAR funds between client and starbase once starCap is reached', async () => {
+            it('transfers STAR funds between client and starbase once softCap is reached', async () => {
               await star.mint(buyer, 10004e15)
               await star.approve(crowdsale.address, 3e15, {
                 from: buyer,
@@ -1192,8 +1091,7 @@ contract(
 
             it('checks when soft cap is reached', async () => {
               await newCrowdsale({
-                rate: softCap,
-                starRatePer1000: softCap,
+                rate: softCap * 5,
                 isMinting,
               })
               await whitelist.addManyToWhitelist([buyer])
@@ -1213,7 +1111,7 @@ contract(
               hasReachedSoftCap.should.be.true
             })
 
-            endsTokenSaleWhenAreTokensAreSold()
+            endsTokenSaleWhenAllTokensAreSold()
             endsCrowdsaleWhenAllTokensAreSoldWithWei()
           })
         })
@@ -1223,7 +1121,6 @@ contract(
             await newCrowdsale({
               softCap: 0,
               rate: crowdsaleCap,
-              starRatePer1000: crowdsaleCap,
               isMinting,
             })
             await whitelist.addManyToWhitelist([buyer, user1])
@@ -1342,7 +1239,7 @@ contract(
           })
 
           itSellsTokensUpToCrowdsaleCapInWeiWithRefund()
-          endsTokenSaleWhenAreTokensAreSold()
+          endsTokenSaleWhenAllTokensAreSold()
           endsCrowdsaleWhenAllTokensAreSoldWithWei()
         })
       })

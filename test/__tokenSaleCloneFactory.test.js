@@ -3,6 +3,7 @@ const TokenSaleCloneFactory = artifacts.require('./TokenSaleCloneFactory.sol')
 const TokenSale = artifacts.require('./TokenSale.sol')
 const CompanyToken = artifacts.require('./CompanyToken.sol')
 const StandardToken = artifacts.require('./StandardToken.sol')
+const StarEthRate = artifacts.require('./StarEthRate.sol')
 
 const BigNumber = web3.BigNumber
 
@@ -13,8 +14,10 @@ contract('TokenSaleCloneFactory', ([owner, wallet, _, whitelist]) => {
     companyToken,
     tokenOwnerAfterSale,
     startTime,
-    endTime
-  const starRatePer1000 = new BigNumber(10)
+    endTime,
+    starEthRate
+
+  const starEthRateDecimalCorrectionFactor = new BigNumber(1000000)
   const rate = new BigNumber(50)
   const softCap = new BigNumber(200000) // 200 000
   const crowdsaleCap = new BigNumber(20000000) // 20M
@@ -27,6 +30,10 @@ contract('TokenSaleCloneFactory', ([owner, wallet, _, whitelist]) => {
 
     starToken = await StandardToken.new()
     tokenSale = await TokenSale.new()
+    starEthRate = await StarEthRate.new(
+      starEthRateDecimalCorrectionFactor,
+      rate
+    )
     tokenSaleCloneFactory = await TokenSaleCloneFactory.new(
       tokenSale.address,
       starToken.address
@@ -44,7 +51,7 @@ contract('TokenSaleCloneFactory', ([owner, wallet, _, whitelist]) => {
         companyToken.address,
         tokenOwnerAfterSale,
         rate,
-        starRatePer1000,
+        starEthRate,
         wallet,
         softCap,
         crowdsaleCap,
@@ -63,7 +70,7 @@ contract('TokenSaleCloneFactory', ([owner, wallet, _, whitelist]) => {
         companyToken.address,
         tokenOwnerAfterSale,
         rate,
-        starRatePer1000,
+        starEthRate,
         wallet,
         softCap,
         crowdsaleCap,
@@ -93,7 +100,7 @@ contract('TokenSaleCloneFactory', ([owner, wallet, _, whitelist]) => {
         companyToken.address,
         tokenOwnerAfterSale,
         rate,
-        starRatePer1000,
+        starEthRate,
         wallet,
         softCap,
         crowdsaleCap,
@@ -114,7 +121,7 @@ contract('TokenSaleCloneFactory', ([owner, wallet, _, whitelist]) => {
         companyToken.address,
         tokenOwnerAfterSale,
         rate,
-        starRatePer1000,
+        starEthRate,
         wallet,
         softCap,
         crowdsaleCap,
