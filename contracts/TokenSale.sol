@@ -1,15 +1,18 @@
 pragma solidity 0.4.25;
 
-import "./lib/Pausable.sol";
-import "./lib/FinalizableCrowdsale.sol";
 import "./lib/ERC20Plus.sol";
-import "./Whitelist.sol";
-import "./TokenSaleInterface.sol";
+import "./lib/FinalizableCrowdsale.sol";
+import "./lib/Pausable.sol";
+
 import "./FundsSplitterInterface.sol";
+import "./StarEthRateInterface.sol";
+import "./TokenSaleInterface.sol";
+import "./Whitelist.sol";
 
 /**
  * @title Token Sale contract - crowdsale of company tokens.
  * @author Gustavo Guimaraes - <gustavo@starbase.co>
+ * @author Markus Waas - <markus@starbase.co>
  */
 contract TokenSale is FinalizableCrowdsale, Pausable {
     uint256 public softCap;
@@ -17,7 +20,6 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
     uint256 public tokensSold;
     // amount of raised money in STAR
     uint256 public starRaised;
-    uint256 public starRatePer1000;
     address public tokenOwnerAfterSale;
     bool public isWeiAccepted;
     bool public isMinting;
@@ -27,6 +29,7 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
     Whitelist public whitelist;
     ERC20Plus public starToken;
     FundsSplitterInterface public wallet;
+    StarEthRateInterface public starEthRateInterface;
 
     // The token being sold
     ERC20Plus public tokenOnSale;
@@ -48,7 +51,7 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
      * @param _companyToken ERC20 contract address that has minting capabilities
      * @param _tokenOwnerAfterSale Address that this TokenSale will pass the token ownership to after it's finished. Only works when TokenSale mints tokens, otherwise must be `0x0`.
      * @param _rate The token rate per ETH
-     * @param _starRatePer1000 The token rate per 1/1000 STAR
+     * @param _starEthRateInterface The StarEthRate contract address .
      * @param _wallet FundsSplitter wallet that redirects funds to client and Starbase.
      * @param _softCap Soft cap of the token sale
      * @param _crowdsaleCap Cap for the token sale
@@ -63,7 +66,7 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
         address _companyToken,
         address _tokenOwnerAfterSale,
         uint256 _rate,
-        uint256 _starRatePer1000,
+        address _starEthRateInterface,
         address _wallet,
         uint256 _softCap,
         uint256 _crowdsaleCap,
@@ -78,8 +81,8 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
         require(
             _whitelist != address(0) &&
             _starToken != address(0) &&
-            _starRatePer1000 != 0 &&
-            (_isWeiAccepted && _rate != 0 || !_isWeiAccepted) &&
+            _starEthRateInterface != address(0) &&
+            _rate > 0 &&
             _companyToken != address(0) &&
             _crowdsaleCap != 0 &&
             _wallet != 0,
@@ -88,19 +91,13 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
 
         require(_softCap < _crowdsaleCap, "SoftCap should be smaller than crowdsaleCap!");
 
-        if (_isWeiAccepted) {
-            require(_rate > 0, "Set a rate for Wei, when it is accepted for purchases!");
-        } else {
-            require(_rate == 0, "Only set a rate for Wei, when it is accepted for purchases!");
-        }
-
         initCrowdsale(_startTime, _endTime, _rate);
         tokenOnSale = ERC20Plus(_companyToken);
         whitelist = Whitelist(_whitelist);
         starToken = ERC20Plus(_starToken);
         wallet = FundsSplitterInterface(_wallet);
         tokenOwnerAfterSale = _tokenOwnerAfterSale;
-        starRatePer1000 = _starRatePer1000;
+        starEthRateInterface = StarEthRateInterface(_starEthRateInterface);
         isWeiAccepted = _isWeiAccepted;
         isMinting = _isMinting;
         _owner = tx.origin;
@@ -135,36 +132,10 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
      * @param newRate Figure that corresponds to the new ETH rate per token
      */
     function setRate(uint256 newRate) external onlyOwner {
-        require(isWeiAccepted, "Sale must allow Wei for purchases to set a rate for Wei!");
-        require(newRate != 0, "ETH rate must be more than 0!");
+        require(newRate > 0, "ETH rate must be more than 0!");
 
         emit TokenRateChanged(rate, newRate);
         rate = newRate;
-    }
-
-    /**
-     * @dev change crowdsale STAR rate
-     * @param newStarRate Figure that corresponds to the new STAR rate per token
-     */
-    function setStarRate(uint256 newStarRate) external onlyOwner {
-        require(newStarRate != 0, "Star rate must be more than 0!");
-
-        emit TokenStarRateChanged(starRatePer1000, newStarRate);
-        starRatePer1000 = newStarRate;
-    }
-
-    /**
-     * @dev allows sale to receive wei or not
-     */
-    function setIsWeiAccepted(bool _isWeiAccepted, uint256 _rate) external onlyOwner {
-        if (_isWeiAccepted) {
-            require(_rate > 0, "When accepting Wei, you need to set a conversion rate!");
-        } else {
-            require(_rate == 0, "When not accepting Wei, you need to set a conversion rate of 0!");
-        }
-
-        isWeiAccepted = _isWeiAccepted;
-        rate = _rate;
     }
 
     /**
@@ -178,7 +149,7 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
         isWhitelisted(beneficiary)
     {
         require(beneficiary != address(0), "Purchaser address cant be zero!");
-        require(validPurchase(), "TokenSale over!");
+        require(validPurchase(), "TokenSale over or not yet started!");
         require(tokensSold < crowdsaleCap, "All tokens sold!");
         if (isMinting) {
             require(tokenOnSale.owner() == address(this), "The token owner must be contract address!");
@@ -190,17 +161,24 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
             buyTokensWithWei(beneficiary);
         }
 
+        uint256 decimalCorrectionFactor =
+            starEthRateInterface.decimalCorrectionFactor();
+        uint256 starEthRate = starEthRateInterface.starEthRate();
+        uint256 starRate = starEthRate
+            .mul(rate)
+            .div(decimalCorrectionFactor);
+
         // beneficiary must allow TokenSale address to transfer star tokens on its behalf
         uint256 starAllocationToTokenSale = starToken.allowance(beneficiary, this);
         if (starAllocationToTokenSale > 0) {
             // calculate token amount to be created
-            uint256 tokens = starAllocationToTokenSale.mul(starRatePer1000).div(1000);
+            uint256 tokens = starAllocationToTokenSale.mul(starRate);
 
             // remainder logic
             if (tokensSold.add(tokens) > crowdsaleCap) {
                 tokens = crowdsaleCap.sub(tokensSold);
 
-                starAllocationToTokenSale = tokens.div(starRatePer1000).div(1000);
+                starAllocationToTokenSale = tokens.div(starRate);
             }
 
             // update state
