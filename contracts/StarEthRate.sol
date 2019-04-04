@@ -41,4 +41,12 @@ contract StarEthRate is Ownable {
         starEthRate = _newStarEthRate;
         emit StarEthRateSet(_newStarEthRate);
     }
+
+    function setStarEthRateAndDecimalCorrectionFactor(
+        uint256 _newdecimalCorrectionFactor,
+        uint256 _newStarEthRate
+    ) public onlyOwner {
+        setDecimalCorrectionFactor(_newdecimalCorrectionFactor);
+        setStarEthRate(_newStarEthRate);
+    }
 }
