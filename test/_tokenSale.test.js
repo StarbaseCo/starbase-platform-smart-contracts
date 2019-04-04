@@ -12,13 +12,9 @@ const { expect } = require('chai')
 
 const BigNumber = web3.BigNumber
 
-contract(
+contract.only(
   'TokenSale',
   ([owner, client, starbase, buyer, buyer2, user1, fakeWallet]) => {
-    // starEthRate = 2 / 10
-    const starEthRate = new BigNumber(2)
-    const starEthRateDecimalCorrectionFactor = new BigNumber(10)
-
     const rate = new BigNumber(50)
     const value = 1e18
     const starbasePercentageNumber = 10
@@ -40,6 +36,9 @@ contract(
       isMinting = true,
       isWeiAccepted = true,
       isTransferringOwnership = true,
+      starEthRate = new BigNumber(2),
+      starEthRateDecimalCorrectionFactor = new BigNumber(10),
+      // starEthRate = 2 / 10
     } = {}) => {
       whitelist = await Whitelist.new()
       star = await MintableToken.new()
@@ -887,6 +886,64 @@ contract(
 
             currentTargetRateIndex = await crowdsale.currentTargetRateIndex()
             currentTargetRateIndex.should.be.bignumber.equal(2)
+          })
+        })
+
+        describe('when purchasing given different STAR/ETH rates', async () => {
+          describe('with STAR/ETH rate of 10 STAR = 1 ETH', async () => {
+            const starEthRate = new BigNumber(1)
+            const starEthRateDecimalCorrectionFactor = new BigNumber(10)
+
+            beforeEach(async () => {
+              await newCrowdsale({
+                starEthRate,
+                starEthRateDecimalCorrectionFactor,
+              })
+              await star.mint(user1, 30e18)
+              await increaseTimeTo(latestTime() + duration.days(20))
+              await whitelist.addManyToWhitelist([user1])
+            })
+
+            it('gives 10 times as many tokens for purchasing with ETH', async () => {
+              await crowdsale.buyTokens(user1, { from: user1, value: 1e18 })
+
+              let userBalance = await token.balanceOf(user1)
+              userBalance.should.be.bignumber.equal(50e18)
+
+              await star.approve(crowdsale.address, 1e18, { from: user1 })
+              await crowdsale.buyTokens(user1, { from: user1 })
+
+              buyerBalance = await token.balanceOf(user1)
+              buyerBalance.should.be.bignumber.equal(55e18)
+            })
+          })
+
+          describe('with STAR/ETH rate of 3,000,000 STAR = 50 ETH', async () => {
+            const starEthRate = new BigNumber(50)
+            const starEthRateDecimalCorrectionFactor = new BigNumber(3000000)
+
+            beforeEach(async () => {
+              await newCrowdsale({
+                starEthRate,
+                starEthRateDecimalCorrectionFactor,
+              })
+              await star.mint(user1, 30e18)
+              await increaseTimeTo(latestTime() + duration.days(20))
+              await whitelist.addManyToWhitelist([user1])
+            })
+
+            it('gives 60,000 times as many tokens for purchasing with ETH', async () => {
+              await crowdsale.buyTokens(user1, { from: user1, value: 1.2e18 })
+
+              let userBalance = await token.balanceOf(user1)
+              userBalance.should.be.bignumber.equal(60e18)
+
+              await star.approve(crowdsale.address, 1.2e18, { from: user1 })
+              await crowdsale.buyTokens(user1, { from: user1 })
+
+              buyerBalance = await token.balanceOf(user1)
+              buyerBalance.should.be.bignumber.equal(60e18 + 1e15)
+            })
           })
         })
 
