@@ -8,17 +8,13 @@ interface TokenSaleInterface {
     (
         uint256 _startTime,
         uint256 _endTime,
-        address _whitelist,
-        address _starToken,
-        address _companyToken,
-        address _tokenOwnerAfterSale,
-        uint256 _rate,
-        address _starEthRate,
-        address _wallet,
+        address[6] _externalAddresses,
         uint256 _softCap,
         uint256 _crowdsaleCap,
         bool    _isWeiAccepted,
-        bool    _isMinting
+        bool    _isMinting,
+        uint256[] _targetRates,
+        uint256[] _targetRatesTimestamps
     )
     external;
 }
