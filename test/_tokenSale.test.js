@@ -12,7 +12,7 @@ const { expect } = require('chai')
 
 const BigNumber = web3.BigNumber
 
-contract.only(
+contract(
   'TokenSale',
   ([owner, client, starbase, buyer, buyer2, user1, fakeWallet]) => {
     const rate = new BigNumber(50)
