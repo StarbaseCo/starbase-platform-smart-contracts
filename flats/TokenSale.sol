@@ -589,13 +589,15 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
         uint256 weiAmount = msg.value;
         uint256 weiRefund;
 
+        uint256 ethRate = targetRates[currentTargetRateIndex];
+
         // calculate token amount to be created
-        uint256 tokens = weiAmount.mul(targetRates[currentTargetRateIndex]);
+        uint256 tokens = weiAmount.mul(ethRate);
 
         // remainder logic
         if (tokensSold.add(tokens) > crowdsaleCap) {
             tokens = crowdsaleCap.sub(tokensSold);
-            weiAmount = tokens.div(targetRates[currentTargetRateIndex]);
+            weiAmount = tokens.div(ethRate);
 
             weiRefund = msg.value.sub(weiAmount);
         }
@@ -701,7 +703,7 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
     function verifyTargetRates() internal view {
         require(
             targetRates.length == targetRatesTimestamps.length,
-            'Target rates and target rates timestamps should match!'
+            'Target rates and target rates timestamps lengths should match!'
         );
 
         require(targetRates.length > 0, 'Target rates cannot be empty!');
@@ -714,7 +716,7 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
             if (i > 0) {
                 require(
                     targetRatesTimestamps[i-1] < targetRatesTimestamps[i],
-                    'Target rates timestamps should be ordered!'
+                    'Target rates timestamps should be sorted from low to high!'
                 );
             }
 
@@ -725,7 +727,7 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
                 ); 
             }
 
-            require(targetRates[i] > 0, 'All target rates must above 0!');
+            require(targetRates[i] > 0, 'All target rates must be above 0!');
         }
     }
 
@@ -756,7 +758,7 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
      * purchasing tokens. 
      */
     function checkForNewRateAndUpdate() public {
-        (, uint256 targetRateIndex) = getCurrentRate();
+        (, uint256 targetRateIndex) = getCurrentRate(); // ignore first value
 
         if (targetRateIndex > currentTargetRateIndex) {
             currentTargetRateIndex = targetRateIndex;
