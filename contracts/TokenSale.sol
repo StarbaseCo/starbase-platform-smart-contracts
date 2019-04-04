@@ -98,7 +98,7 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
         );
 
         currentTargetRateIndex = 0;
-        initCrowdsale(_startTime, _endTime, _targetRates[currentTargetRateIndex]);
+        initCrowdsale(_startTime, _endTime);
         tokenOnSale = ERC20Plus(_externalAddresses[2]);
         whitelist = Whitelist(_externalAddresses[0]);
         starToken = ERC20Plus(_externalAddresses[1]);
@@ -348,7 +348,8 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
 
     /**
      * @dev Returns current rate and index for rate in targetRates array.
-     *      May not be up-to-date, use checkForNewRateAndUpdate() to update, 
+     * Does not update target rate index, use checkForNewRateAndUpdate() to
+     * update, 
      */
     function getCurrentRate() public view returns (uint256, uint256) {
         for (
@@ -369,7 +370,7 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
 
     /**
      * @dev Check for new valid rate and update. Automatically called when
-     *      purchasing tokens. 
+     * purchasing tokens. 
      */
     function checkForNewRateAndUpdate() public {
         (, uint256 targetRateIndex) = getCurrentRate();

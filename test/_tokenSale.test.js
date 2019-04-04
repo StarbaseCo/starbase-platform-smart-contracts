@@ -234,11 +234,6 @@ contract(
       ;(await crowdsale.softCap()).should.be.bignumber.eq(softCap.mul(1e18))
     })
 
-    it('has a normal crowdsale rate', async () => {
-      const crowdsaleRate = await crowdsale.rate()
-      crowdsaleRate.toNumber().should.equal(rate.toNumber())
-    })
-
     it('has a whitelist contract', async () => {
       const whitelistContract = await crowdsale.whitelist()
       whitelistContract.should.equal(whitelist.address)

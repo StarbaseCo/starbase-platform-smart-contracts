@@ -14,7 +14,9 @@ contract Crowdsale {
     uint256 public endTime;
 
     // how many token units a buyer gets per wei
-    uint256 public rate;
+
+    // Note: using custom rate in Tokensale
+    // uint256 public rate;
 
     // amount of raised money in wei
     uint256 public weiRaised;
@@ -27,9 +29,9 @@ contract Crowdsale {
     // amount amount of tokens purchased
     event TokenPurchase(address indexed purchaser, address indexed beneficiary, uint256 value, uint256 amount);
 
-    function initCrowdsale(uint256 _startTime, uint256 _endTime, uint256 _rate) public {
+    function initCrowdsale(uint256 _startTime, uint256 _endTime) public {
         require(
-            startTime == 0 && endTime == 0 && rate == 0,
+            startTime == 0 && endTime == 0,
             "Global variables must be empty when initializing crowdsale!"
         );
         require(_startTime >= now, "_startTime must be more than current time!");
@@ -37,7 +39,6 @@ contract Crowdsale {
 
         startTime = _startTime;
         endTime = _endTime;
-        rate = _rate;
     }
 
     // @return true if crowdsale event has ended
