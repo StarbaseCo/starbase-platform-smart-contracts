@@ -164,24 +164,27 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
             buyTokensWithWei(beneficiary);
         }
 
-        uint256 decimalCorrectionFactor =
-            starEthRateInterface.decimalCorrectionFactor();
-        uint256 starEthRate = starEthRateInterface.starEthRate();
-        uint256 starRate = starEthRate
-            .mul(targetRates[currentTargetRateIndex])
-            .div(decimalCorrectionFactor);
-
         // beneficiary must allow TokenSale address to transfer star tokens on its behalf
         uint256 starAllocationToTokenSale = starToken.allowance(beneficiary, this);
         if (starAllocationToTokenSale > 0) {
-            // calculate token amount to be created
-            uint256 tokens = starAllocationToTokenSale.mul(starRate);
+            uint256 decimalCorrectionFactor =
+                starEthRateInterface.decimalCorrectionFactor();
+            uint256 starEthRate = starEthRateInterface.starEthRate();
+            uint256 ethRate = targetRates[currentTargetRateIndex];
 
+            // calculate token amount to be created
+            uint256 tokens = (starAllocationToTokenSale
+                .mul(ethRate)
+                .mul(starEthRate))
+                .div(decimalCorrectionFactor);
+    
             // remainder logic
             if (tokensSold.add(tokens) > crowdsaleCap) {
                 tokens = crowdsaleCap.sub(tokensSold);
 
-                starAllocationToTokenSale = tokens.div(starRate);
+                starAllocationToTokenSale = (starEthRate
+                    .mul(tokens))
+                    .div(ethRate.mul(decimalCorrectionFactor));
             }
 
             // update state
