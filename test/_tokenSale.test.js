@@ -192,7 +192,7 @@ contract(
     })
 
     it('deployment fails when rate is zero', async () => {
-      const expectedError = 'All target rates must above 0!'
+      const expectedError = 'All target rates must be above 0!'
 
       try {
         await newCrowdsale({ rates: [0] })
@@ -202,7 +202,43 @@ contract(
       }
     })
 
-    it('deployment falis when rate is 0 and isWeiAccepted is true', async () => {
+    it('deployment fails when rates and timestamps not match', async () => {
+      const expectedError =
+        'Target rates and target rates timestamps lengths should match!'
+
+      try {
+        const ratesTimestamps = [
+          latestTime() + duration.seconds(15),
+          latestTime() + duration.days(15),
+        ]
+        const rates = [new BigNumber(12), new BigNumber(15), new BigNumber(15)]
+        await newCrowdsale({ rates, ratesTimestamps })
+        assert.fail()
+      } catch (error) {
+        console.log({ error })
+        ensuresException(error, expectedError)
+      }
+    })
+
+    it('deployment fails when timestamps are not ordered', async () => {
+      const expectedError =
+        'Target rates timestamps should be sorted from low to high!'
+
+      try {
+        const ratesTimestamps = [
+          latestTime() + duration.seconds(15),
+          latestTime() + duration.days(30),
+          latestTime() + duration.days(15),
+        ]
+        const rates = [new BigNumber(12), new BigNumber(15), new BigNumber(15)]
+        await newCrowdsale({ rates, ratesTimestamps })
+        assert.fail()
+      } catch (error) {
+        ensuresException(error, expectedError)
+      }
+    })
+
+    it('deployment fails when rate is 0 and isWeiAccepted is true', async () => {
       const expectedError = 'All target rates must above 0!'
 
       try {
@@ -907,8 +943,8 @@ contract(
             it('gives 10 times as many tokens for purchasing with ETH', async () => {
               await crowdsale.buyTokens(user1, { from: user1, value: 1e18 })
 
-              let userBalance = await token.balanceOf(user1)
-              userBalance.should.be.bignumber.equal(50e18)
+              let buyerBalance = await token.balanceOf(user1)
+              buyerBalance.should.be.bignumber.equal(50e18)
 
               await star.approve(crowdsale.address, 1e18, { from: user1 })
               await crowdsale.buyTokens(user1, { from: user1 })
@@ -935,14 +971,66 @@ contract(
             it('gives 60,000 times as many tokens for purchasing with ETH', async () => {
               await crowdsale.buyTokens(user1, { from: user1, value: 1.2e18 })
 
-              let userBalance = await token.balanceOf(user1)
-              userBalance.should.be.bignumber.equal(60e18)
+              let buyerBalance = await token.balanceOf(user1)
+              buyerBalance.should.be.bignumber.equal(60e18)
 
               await star.approve(crowdsale.address, 1.2e18, { from: user1 })
               await crowdsale.buyTokens(user1, { from: user1 })
 
               buyerBalance = await token.balanceOf(user1)
               buyerBalance.should.be.bignumber.equal(60e18 + 1e15)
+            })
+          })
+
+          describe('with STAR/ETH rate of 1 STAR = 1 ETH', async () => {
+            const starEthRate = new BigNumber(100)
+            const starEthRateDecimalCorrectionFactor = new BigNumber(100)
+
+            beforeEach(async () => {
+              await newCrowdsale({
+                starEthRate,
+                starEthRateDecimalCorrectionFactor,
+              })
+              await star.mint(user1, 30e18)
+              await increaseTimeTo(latestTime() + duration.days(20))
+              await whitelist.addManyToWhitelist([user1])
+            })
+
+            it('gives the same amount of tokens as with ETH', async () => {
+              await crowdsale.buyTokens(user1, { from: user1, value: 1e18 })
+
+              let buyerBalance = await token.balanceOf(user1)
+              buyerBalance.should.be.bignumber.equal(50e18)
+
+              await star.approve(crowdsale.address, 1e18, { from: user1 })
+              await crowdsale.buyTokens(user1, { from: user1 })
+
+              buyerBalance = await token.balanceOf(user1)
+              buyerBalance.should.be.bignumber.equal(50e18 + 50e18)
+            })
+          })
+
+          describe('when STAR is worth less than 1 project token', async () => {
+            const starEthRate = new BigNumber(1)
+            const starEthRateDecimalCorrectionFactor = new BigNumber(10000)
+
+            beforeEach(async () => {
+              await newCrowdsale({
+                starEthRate,
+                starEthRateDecimalCorrectionFactor,
+                rates: [new BigNumber(10)],
+              })
+              await star.mint(user1, 30e18)
+              await increaseTimeTo(latestTime() + duration.days(20))
+              await whitelist.addManyToWhitelist([user1])
+            })
+
+            it('gives less tokens than STAR used for purchase', async () => {
+              await star.approve(crowdsale.address, 1e18, { from: user1 })
+              await crowdsale.buyTokens(user1, { from: user1 })
+
+              const buyerBalance = await token.balanceOf(user1)
+              buyerBalance.should.be.bignumber.equal(1e15)
             })
           })
         })
