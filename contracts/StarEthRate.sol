@@ -24,15 +24,15 @@ contract StarEthRate is Ownable {
     }
 
     function setDecimalCorrectionFactor(
-        uint256 _newdecimalCorrectionFactor
+        uint256 _newDecimalCorrectionFactor
     ) public onlyOwner {
         require(
-            _newdecimalCorrectionFactor > 0,
+            _newDecimalCorrectionFactor > 0,
             'Please pass a decimalCorrectionFactor above 0!'
         );
 
-        decimalCorrectionFactor = _newdecimalCorrectionFactor;
-        emit decimalCorrectionFactorSet(_newdecimalCorrectionFactor);
+        decimalCorrectionFactor = _newDecimalCorrectionFactor;
+        emit decimalCorrectionFactorSet(_newDecimalCorrectionFactor);
     }
 
     function setStarEthRate(uint256 _newStarEthRate) public onlyOwner {
@@ -43,10 +43,10 @@ contract StarEthRate is Ownable {
     }
 
     function setStarEthRateAndDecimalCorrectionFactor(
-        uint256 _newdecimalCorrectionFactor,
+        uint256 _newDecimalCorrectionFactor,
         uint256 _newStarEthRate
     ) public onlyOwner {
-        setDecimalCorrectionFactor(_newdecimalCorrectionFactor);
+        setDecimalCorrectionFactor(_newDecimalCorrectionFactor);
         setStarEthRate(_newStarEthRate);
     }
 }
