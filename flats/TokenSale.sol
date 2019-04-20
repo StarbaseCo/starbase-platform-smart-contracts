@@ -432,7 +432,7 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
      * @dev initialization function
      * @param _startTime The timestamp of the beginning of the crowdsale
      * @param _endTime Timestamp when the crowdsale will finish
-     * @param _externalAddresses contract containing the whitelisted addresses
+     * @param _externalAddresses Containing all external addresses, see below
      * #param _whitelist contract containing the whitelisted addresses
      * #param _starToken STAR token contract address
      * #param _companyToken ERC20 contract address that has minting capabilities
