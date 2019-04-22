@@ -10,17 +10,13 @@ interface TokenSaleInterface {
     (
         uint256 _startTime,
         uint256 _endTime,
-        address _whitelist,
-        address _starToken,
-        address _companyToken,
-        address _tokenOwnerAfterSale,
-        uint256 _rate,
-        uint256 _starRatePer1000,
-        address _wallet,
+        address[6] _externalAddresses,
         uint256 _softCap,
         uint256 _crowdsaleCap,
         bool    _isWeiAccepted,
-        bool    _isMinting
+        bool    _isMinting,
+        uint256[] _targetRates,
+        uint256[] _targetRatesTimestamps
     )
     external;
 }
@@ -112,31 +108,30 @@ contract TokenSaleCloneFactory is CloneFactory {
      * @dev Allows verified creation of pools.
      * @param _startTime The timestamp of the beginning of the crowdsale
      * @param _endTime Timestamp when the crowdsale will finish
-     * @param _whitelist contract containing the whitelisted addresses
-     * @param _companyToken ERC20 CompanyToken contract address
-     * @param _tokenOwnerAfterSale Token on sale owner address after sale is finished
-     * @param _rate The token rate per ETH
-     * @param _starRatePer1000 The token rate per 1/1000 STAR
-     * @param _wallet Multisig wallet that will hold the crowdsale funds.
+     * @param _externalAddresses contract containing the whitelisted addresses
+     * #param _whitelist contract containing the whitelisted addresses
+     * #param _companyToken ERC20 contract address that has minting capabilities
+     * #param _tokenOwnerAfterSale Address that this TokenSale will pass the token ownership to after it's finished. Only works when TokenSale mints tokens, otherwise must be `0x0`.
+     * #param _starEthRateInterface The StarEthRate contract address .
+     * #param _wallet FundsSplitter wallet that redirects funds to client and Starbase.
      * @param _softCap Soft cap of the token sale
      * @param _crowdsaleCap Cap for the token sale
      * @param _isWeiAccepted Bool for acceptance of ether in token sale
-     * @param _isMinting Bool for indication if new tokens are minted or existing ones are transferred
+     * @param _isMinting Bool that indicates whether token sale mints ERC20 tokens on sale or simply transfers them
+     * @param _targetRates Array of target rates.
+     * @param _targetRatesTimestamps Array of target rates timestamps.
      */
     function create
     (
         uint256 _startTime,
         uint256 _endTime,
-        address _whitelist,
-        address _companyToken,
-        address _tokenOwnerAfterSale,
-        uint256 _rate,
-        uint256 _starRatePer1000,
-        address _wallet,
+        address[5] _externalAddresses, // array avoids stack too deep error
         uint256 _softCap,
         uint256 _crowdsaleCap,
         bool    _isWeiAccepted,
-        bool    _isMinting
+        bool    _isMinting,
+        uint256[] _targetRates,
+        uint256[] _targetRatesTimestamps
     )
         public
     {
@@ -144,17 +139,20 @@ contract TokenSaleCloneFactory is CloneFactory {
         TokenSaleInterface(tokenSale).init(
             _startTime,
             _endTime,
-            _whitelist,
-            starToken,
-            _companyToken,
-            _tokenOwnerAfterSale,
-            _rate,
-            _starRatePer1000,
-            _wallet,
+            [
+                _externalAddresses[0],
+                starToken,
+                _externalAddresses[1],
+                _externalAddresses[2],
+                _externalAddresses[3],
+                _externalAddresses[4]
+            ],
             _softCap,
             _crowdsaleCap,
             _isWeiAccepted,
-            _isMinting
+            _isMinting,
+            _targetRates,
+            _targetRatesTimestamps
         );
 
         register(tokenSale);

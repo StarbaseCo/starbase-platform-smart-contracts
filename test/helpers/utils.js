@@ -16,7 +16,11 @@ function isException(error) {
 
 function ensuresException(error, expectedError) {
   assert(isException(error), error.toString())
-  if (expectedError !== undefined) assert(error.message.includes(expectedError))
+  if (expectedError !== undefined)
+    assert(
+      error.message.includes(expectedError),
+      `Expected error '${expectedError}', received'${error.message}'`
+    )
 }
 
 module.exports = {

@@ -1,23 +1,31 @@
 pragma solidity 0.4.25;
 
-import "./lib/Pausable.sol";
-import "./lib/FinalizableCrowdsale.sol";
 import "./lib/ERC20Plus.sol";
-import "./Whitelist.sol";
-import "./TokenSaleInterface.sol";
+import "./lib/FinalizableCrowdsale.sol";
+import "./lib/Pausable.sol";
+
 import "./FundsSplitterInterface.sol";
+import "./StarEthRateInterface.sol";
+import "./TokenSaleInterface.sol";
+import "./Whitelist.sol";
 
 /**
  * @title Token Sale contract - crowdsale of company tokens.
  * @author Gustavo Guimaraes - <gustavo@starbase.co>
+ * @author Markus Waas - <markus@starbase.co>
  */
 contract TokenSale is FinalizableCrowdsale, Pausable {
     uint256 public softCap;
     uint256 public crowdsaleCap;
     uint256 public tokensSold;
+
+    // rate definitions
+    uint256 public currentTargetRateIndex;
+    uint256[] public targetRates;
+    uint256[] public targetRatesTimestamps;
+
     // amount of raised money in STAR
     uint256 public starRaised;
-    uint256 public starRatePer1000;
     address public tokenOwnerAfterSale;
     bool public isWeiAccepted;
     bool public isMinting;
@@ -27,6 +35,7 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
     Whitelist public whitelist;
     ERC20Plus public starToken;
     FundsSplitterInterface public wallet;
+    StarEthRateInterface public starEthRateInterface;
 
     // The token being sold
     ERC20Plus public tokenOnSale;
@@ -43,70 +52,68 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
      * @dev initialization function
      * @param _startTime The timestamp of the beginning of the crowdsale
      * @param _endTime Timestamp when the crowdsale will finish
-     * @param _whitelist contract containing the whitelisted addresses
-     * @param _starToken STAR token contract address
-     * @param _companyToken ERC20 contract address that has minting capabilities
-     * @param _tokenOwnerAfterSale Address that this TokenSale will pass the token ownership to after it's finished. Only works when TokenSale mints tokens, otherwise must be `0x0`.
-     * @param _rate The token rate per ETH
-     * @param _starRatePer1000 The token rate per 1/1000 STAR
-     * @param _wallet FundsSplitter wallet that redirects funds to client and Starbase.
+     * @param _externalAddresses Containing all external addresses, see below
+     * #param _whitelist contract containing the whitelisted addresses
+     * #param _starToken STAR token contract address
+     * #param _companyToken ERC20 contract address that has minting capabilities
+     * #param _tokenOwnerAfterSale Address that this TokenSale will pass the token ownership to after it's finished. Only works when TokenSale mints tokens, otherwise must be `0x0`.
+     * #param _starEthRateInterface The StarEthRate contract address .
+     * #param _wallet FundsSplitter wallet that redirects funds to client and Starbase.
      * @param _softCap Soft cap of the token sale
      * @param _crowdsaleCap Cap for the token sale
      * @param _isWeiAccepted Bool for acceptance of ether in token sale
      * @param _isMinting Bool that indicates whether token sale mints ERC20 tokens on sale or simply transfers them
+     * @param _targetRates Array of target rates.
+     * @param _targetRatesTimestamps Array of target rates timestamps.
      */
     function init(
         uint256 _startTime,
         uint256 _endTime,
-        address _whitelist,
-        address _starToken,
-        address _companyToken,
-        address _tokenOwnerAfterSale,
-        uint256 _rate,
-        uint256 _starRatePer1000,
-        address _wallet,
+        address[6] _externalAddresses, // array avoids stack too deep error
         uint256 _softCap,
         uint256 _crowdsaleCap,
         bool    _isWeiAccepted,
-        bool    _isMinting
+        bool    _isMinting,
+        uint256[] _targetRates,
+        uint256[] _targetRatesTimestamps
     )
         external
     {
         require(!isInitialized, "Contract instance was initialized already!");
         isInitialized = true;
-
+        
         require(
-            _whitelist != address(0) &&
-            _starToken != address(0) &&
-            _starRatePer1000 != 0 &&
-            (_isWeiAccepted && _rate != 0 || !_isWeiAccepted) &&
-            _companyToken != address(0) &&
-            _crowdsaleCap != 0 &&
-            _wallet != 0,
+            _externalAddresses[0] != address(0) &&
+            _externalAddresses[1] != address(0) &&
+            _externalAddresses[2] != address(0) &&
+            _externalAddresses[4] != address(0) &&
+            _externalAddresses[5] != address(0) &&
+            _crowdsaleCap != 0,
             "Parameter variables cannot be empty!"
         );
 
-        require(_softCap < _crowdsaleCap, "SoftCap should be smaller than crowdsaleCap!");
+        require(
+            _softCap < _crowdsaleCap,
+            "SoftCap should be smaller than crowdsaleCap!"
+        );
 
-        if (_isWeiAccepted) {
-            require(_rate > 0, "Set a rate for Wei, when it is accepted for purchases!");
-        } else {
-            require(_rate == 0, "Only set a rate for Wei, when it is accepted for purchases!");
-        }
-
-        initCrowdsale(_startTime, _endTime, _rate);
-        tokenOnSale = ERC20Plus(_companyToken);
-        whitelist = Whitelist(_whitelist);
-        starToken = ERC20Plus(_starToken);
-        wallet = FundsSplitterInterface(_wallet);
-        tokenOwnerAfterSale = _tokenOwnerAfterSale;
-        starRatePer1000 = _starRatePer1000;
+        currentTargetRateIndex = 0;
+        initCrowdsale(_startTime, _endTime);
+        tokenOnSale = ERC20Plus(_externalAddresses[2]);
+        whitelist = Whitelist(_externalAddresses[0]);
+        starToken = ERC20Plus(_externalAddresses[1]);
+        wallet = FundsSplitterInterface(_externalAddresses[5]);
+        tokenOwnerAfterSale = _externalAddresses[3];
+        starEthRateInterface = StarEthRateInterface(_externalAddresses[4]);
         isWeiAccepted = _isWeiAccepted;
         isMinting = _isMinting;
         _owner = tx.origin;
 
         softCap = _softCap.mul(10 ** 18);
         crowdsaleCap = _crowdsaleCap.mul(10 ** 18);
+
+        targetRates = _targetRates;
+        targetRatesTimestamps = _targetRatesTimestamps;
 
         if (isMinting) {
             require(tokenOwnerAfterSale != address(0), "TokenOwnerAftersale cannot be empty when minting tokens!");
@@ -116,6 +123,8 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
         }
 
         require(ERC20Plus(tokenOnSale).decimals() == 18, "Only sales for tokens with 18 decimals are supported!");
+
+        verifyTargetRates();
     }
 
     modifier isWhitelisted(address beneficiary) {
@@ -131,43 +140,6 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
     }
 
     /**
-     * @dev change crowdsale ETH rate
-     * @param newRate Figure that corresponds to the new ETH rate per token
-     */
-    function setRate(uint256 newRate) external onlyOwner {
-        require(isWeiAccepted, "Sale must allow Wei for purchases to set a rate for Wei!");
-        require(newRate != 0, "ETH rate must be more than 0!");
-
-        emit TokenRateChanged(rate, newRate);
-        rate = newRate;
-    }
-
-    /**
-     * @dev change crowdsale STAR rate
-     * @param newStarRate Figure that corresponds to the new STAR rate per token
-     */
-    function setStarRate(uint256 newStarRate) external onlyOwner {
-        require(newStarRate != 0, "Star rate must be more than 0!");
-
-        emit TokenStarRateChanged(starRatePer1000, newStarRate);
-        starRatePer1000 = newStarRate;
-    }
-
-    /**
-     * @dev allows sale to receive wei or not
-     */
-    function setIsWeiAccepted(bool _isWeiAccepted, uint256 _rate) external onlyOwner {
-        if (_isWeiAccepted) {
-            require(_rate > 0, "When accepting Wei, you need to set a conversion rate!");
-        } else {
-            require(_rate == 0, "When not accepting Wei, you need to set a conversion rate of 0!");
-        }
-
-        isWeiAccepted = _isWeiAccepted;
-        rate = _rate;
-    }
-
-    /**
      * @dev function that allows token purchases with STAR or ETH
      * @param beneficiary Address of the purchaser
      */
@@ -178,11 +150,13 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
         isWhitelisted(beneficiary)
     {
         require(beneficiary != address(0), "Purchaser address cant be zero!");
-        require(validPurchase(), "TokenSale over!");
+        require(validPurchase(), "TokenSale over or not yet started!");
         require(tokensSold < crowdsaleCap, "All tokens sold!");
         if (isMinting) {
             require(tokenOnSale.owner() == address(this), "The token owner must be contract address!");
         }
+
+        checkForNewRateAndUpdate();
 
         if (!isWeiAccepted) {
             require(msg.value == 0, "Only purchases with STAR are allowed!");
@@ -193,14 +167,24 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
         // beneficiary must allow TokenSale address to transfer star tokens on its behalf
         uint256 starAllocationToTokenSale = starToken.allowance(beneficiary, this);
         if (starAllocationToTokenSale > 0) {
-            // calculate token amount to be created
-            uint256 tokens = starAllocationToTokenSale.mul(starRatePer1000).div(1000);
+            uint256 decimalCorrectionFactor =
+                starEthRateInterface.decimalCorrectionFactor();
+            uint256 starEthRate = starEthRateInterface.starEthRate();
+            uint256 ethRate = targetRates[currentTargetRateIndex];
 
+            // calculate token amount to be created
+            uint256 tokens = (starAllocationToTokenSale
+                .mul(ethRate)
+                .mul(starEthRate))
+                .div(decimalCorrectionFactor);
+    
             // remainder logic
             if (tokensSold.add(tokens) > crowdsaleCap) {
                 tokens = crowdsaleCap.sub(tokensSold);
 
-                starAllocationToTokenSale = tokens.div(starRatePer1000).div(1000);
+                starAllocationToTokenSale = (starEthRate
+                    .mul(tokens))
+                    .div(ethRate.mul(decimalCorrectionFactor));
             }
 
             // update state
@@ -225,13 +209,15 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
         uint256 weiAmount = msg.value;
         uint256 weiRefund;
 
+        uint256 ethRate = targetRates[currentTargetRateIndex];
+
         // calculate token amount to be created
-        uint256 tokens = weiAmount.mul(rate);
+        uint256 tokens = weiAmount.mul(ethRate);
 
         // remainder logic
         if (tokensSold.add(tokens) > crowdsaleCap) {
             tokens = crowdsaleCap.sub(tokensSold);
-            weiAmount = tokens.div(rate);
+            weiAmount = tokens.div(ethRate);
 
             weiRefund = msg.value.sub(weiAmount);
         }
@@ -332,6 +318,71 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
 
         if (investedEthRefund > 0) msg.sender.transfer(investedEthRefund);
         if (investedStarRefund > 0) starToken.transfer(msg.sender, investedStarRefund);
+    }
+
+    function verifyTargetRates() internal view {
+        require(
+            targetRates.length == targetRatesTimestamps.length,
+            'Target rates and target rates timestamps lengths should match!'
+        );
+
+        require(targetRates.length > 0, 'Target rates cannot be empty!');
+        require(
+            targetRatesTimestamps[0] == startTime,
+            'First target rate timestamp should match startTime!'
+        );
+
+        for (uint256 i = 0; i < targetRates.length; i++) {
+            if (i > 0) {
+                require(
+                    targetRatesTimestamps[i-1] < targetRatesTimestamps[i],
+                    'Target rates timestamps should be sorted from low to high!'
+                );
+            }
+
+            if (i == targetRates.length - 1) {
+               require(
+                    targetRatesTimestamps[i] < endTime,
+                    'All target rate timestamps should be before endTime!'
+                ); 
+            }
+
+            require(targetRates[i] > 0, 'All target rates must be above 0!');
+        }
+    }
+
+    /**
+     * @dev Returns current rate and index for rate in targetRates array.
+     * Does not update target rate index, use checkForNewRateAndUpdate() to
+     * update, 
+     */
+    function getCurrentRate() public view returns (uint256, uint256) {
+        for (
+            uint256 i = currentTargetRateIndex + 1;
+            i < targetRatesTimestamps.length;
+            i++
+        ) {
+            if (now < targetRatesTimestamps[i]) {
+                return (targetRates[i - 1], i - 1);
+            }
+        }
+
+        return (
+            targetRates[targetRatesTimestamps.length - 1],
+            targetRatesTimestamps.length - 1
+        );
+    }
+
+    /**
+     * @dev Check for new valid rate and update. Automatically called when
+     * purchasing tokens. 
+     */
+    function checkForNewRateAndUpdate() public {
+        (, uint256 targetRateIndex) = getCurrentRate(); // ignore first value
+
+        if (targetRateIndex > currentTargetRateIndex) {
+            currentTargetRateIndex = targetRateIndex;
+        }
     }
 
     /**

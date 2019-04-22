@@ -18,48 +18,66 @@ contract ERC20Basic {
 
 /**
  * @title SafeMath
- * @dev Math operations with safety checks that throw on error
+ * @dev Unsigned math operations with safety checks that revert on error.
  */
 library SafeMath {
+    /**
+     * @dev Multiplies two unsigned integers, reverts on overflow.
+     */
+    function mul(uint256 a, uint256 b) internal pure returns (uint256) {
+        // Gas optimization: this is cheaper than requiring 'a' not being zero, but the
+        // benefit is lost if 'b' is also tested.
+        // See: https://github.com/OpenZeppelin/openzeppelin-solidity/pull/522
+        if (a == 0) {
+            return 0;
+        }
 
-  /**
-  * @dev Multiplies two numbers, throws on overflow.
-  */
-  function mul(uint256 a, uint256 b) internal pure returns (uint256 c) {
-    if (a == 0) {
-      return 0;
+        uint256 c = a * b;
+        require(c / a == b, 'SafeMul overflow!');
+
+        return c;
     }
-    c = a * b;
-    assert(c / a == b);
-    return c;
-  }
 
-  /**
-  * @dev Integer division of two numbers, truncating the quotient.
-  */
-  function div(uint256 a, uint256 b) internal pure returns (uint256) {
-    // assert(b > 0); // Solidity automatically throws when dividing by 0
-    // uint256 c = a / b;
-    // assert(a == b * c + a % b); // There is no case in which this doesn't hold
-    return a / b;
-  }
+    /**
+     * @dev Integer division of two unsigned integers truncating the quotient, reverts on division by zero.
+     */
+    function div(uint256 a, uint256 b) internal pure returns (uint256) {
+        // Solidity only automatically asserts when dividing by 0
+        require(b > 0, 'SafeDiv cannot divide by 0!');
+        uint256 c = a / b;
+        // assert(a == b * c + a % b); // There is no case in which this doesn't hold
 
-  /**
-  * @dev Subtracts two numbers, throws on overflow (i.e. if subtrahend is greater than minuend).
-  */
-  function sub(uint256 a, uint256 b) internal pure returns (uint256) {
-    assert(b <= a);
-    return a - b;
-  }
+        return c;
+    }
 
-  /**
-  * @dev Adds two numbers, throws on overflow.
-  */
-  function add(uint256 a, uint256 b) internal pure returns (uint256 c) {
-    c = a + b;
-    assert(c >= a);
-    return c;
-  }
+    /**
+     * @dev Subtracts two unsigned integers, reverts on overflow (i.e. if subtrahend is greater than minuend).
+     */
+    function sub(uint256 a, uint256 b) internal pure returns (uint256) {
+        require(b <= a, 'SafeSub underflow!');
+        uint256 c = a - b;
+
+        return c;
+    }
+
+    /**
+     * @dev Adds two unsigned integers, reverts on overflow.
+     */
+    function add(uint256 a, uint256 b) internal pure returns (uint256) {
+        uint256 c = a + b;
+        require(c >= a, 'SafeAdd overflow!');
+
+        return c;
+    }
+
+    /**
+     * @dev Divides two unsigned integers and returns the remainder (unsigned integer modulo),
+     * reverts when dividing by zero.
+     */
+    function mod(uint256 a, uint256 b) internal pure returns (uint256) {
+        require(b != 0, 'SafeMod cannot compute modulo of 0!');
+        return a % b;
+    }
 }
 
 // File: contracts/lib/BasicToken.sol
@@ -148,9 +166,9 @@ contract StandardToken is ERC20, BasicToken {
    * @param _value uint256 the amount of tokens to be transferred
    */
   function transferFrom(address _from, address _to, uint256 _value) public returns (bool) {
-    require(_to != address(0));
-    require(_value <= balances[_from]);
-    require(_value <= allowed[_from][msg.sender]);
+    require(_to != address(0), 'To address cannot be 0!');
+    require(_value <= balances[_from], 'From user has not enough funds!');
+    require(_value <= allowed[_from][msg.sender], 'From user has not enough approved funds!');
 
     balances[_from] = balances[_from].sub(_value);
     balances[_to] = balances[_to].add(_value);
