@@ -156,12 +156,12 @@ contract StarStaking is StarStakingInterface, Lockable {
                 "Reference node must be empty for first inserted node!"
             );
         }
-        
+
         _addStakingPoints(_user, amount);
 
         if (topRanksCount == 0 || _node != HEAD) {
             _sortedInsert(_user, _node);
-    }
+        }
 
         require(
             starToken.transferFrom(msg.sender, wallet, amount),
@@ -232,6 +232,39 @@ contract StarStaking is StarStakingInterface, Lockable {
 
         return topRanksList;
     }
+
+    /**
+     * @dev Withdraw all received tokens after staking is finished.
+     */
+    function withdrawAllReceivedTokens() external isFinished {
+        require(
+            !hasWithdrawnTokens[msg.sender],
+            'User has already withdrawn tokens!'
+        );
+        hasWithdrawnTokens[msg.sender] = true;
+
+        uint256 stakedStar = totalStakedFor[msg.sender];
+        uint256 baseTokens = stakedStar.mul(ratePer1000).div(1000);
+        uint256 bonusTokens = 0;
+
+        address referenceNode = HEAD;
+
+        for (uint256 i = 0; i < topRanksCount; i++) {
+            referenceNode = getTopRank(referenceNode, NEXT);
+            
+            if (referenceNode == msg.sender) {
+                uint256 discount = maxDiscountPer1000.sub(
+                    i.mul(declinePerRankPer1000)
+                );
+                bonusTokens = baseTokens.mul(discount).div(1000);
+                break;
+            }
+        }
+
+        uint256 totalTokens = baseTokens.add(bonusTokens);
+        tokenOnSale.transfer(msg.sender, totalTokens);
+    }
+
     function _addStakingPoints(address _user, uint256 _amount) private {
         uint256 timeUntilEnd = closingTime.sub(now);
         uint256 addedStakingPoints = timeUntilEnd.mul(_amount);
@@ -297,7 +330,7 @@ contract StarStaking is StarStakingInterface, Lockable {
         
         topRanksCount < topRanksMaxSize
             ? _incrementTopRanksCount() : topRanks.pop(PREV);
-}
+    }
 
     function _incrementTopRanksCount() private returns (address) {
         topRanksCount = topRanksCount.add(1);
