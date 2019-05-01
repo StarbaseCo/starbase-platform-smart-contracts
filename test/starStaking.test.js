@@ -6,151 +6,189 @@ const MintableToken = artifacts.require('MintableToken.sol')
 const { should, ensuresException } = require('./helpers/utils')
 const { increaseTimeTo, latestTime } = require('./helpers/timer')
 
-const NULL = '0x0000000000000000000000000000000000000000'
+const HEAD = '0x0000000000000000000000000000000000000000'
 const BALANCES = [1, 60000, 99999999].map(n => new BigNumber(n))
 
-contract('StarStaking', _accounts => {
+contract('StarStaking', accounts => {
+  const [user1, user2, user3, user4, user5, user6, defaultWallet] = accounts
   let stakingContract,
-    token,
+    starToken,
+    tokenOnSale,
     initialBalance,
-    startTime,
-    closingTime,
-    stakeSaleCap,
-    accounts
+    defaultStartTime,
+    defaultClosingTime,
+    defaultStakeSaleCap,
+    defaultStarRatePer1000,
+    defaultMaxDiscountPer1000,
+    defaultDeclinePerRankPer1000
 
   beforeEach(async () => {
-    accounts = _accounts
-    initialBalance = new BigNumber(10000000000)
-    token = await MintableToken.new()
+    initialBalance = new BigNumber(10000).times(new BigNumber(1e18))
+    starToken = await MintableToken.new()
+    tokenOnSale = await MintableToken.new()
 
-    topRanksMaxSize = new BigNumber(10)
-    startTime = new BigNumber(latestTime().toString()).plus(1000)
-    closingTime = startTime.plus(200000)
-    stakeSaleCap = new BigNumber(1000000000)
-    maxStakePerUser = new BigNumber(600000000)
+    defaultStartTime = new BigNumber(latestTime().toString()).plus(10000)
+    defaultClosingTime = defaultStartTime.plus(200000)
+
+    defaultStarRatePer1000 = new BigNumber(2000) // = x2
+    defaultMaxDiscountPer1000 = new BigNumber(500) // = 50%
+    defaultDeclinePerRankPer1000 = new BigNumber(5) // = 0.5%
+
+    defaultTopRanksMaxSize = new BigNumber(10)
+    defaultStakeSaleCap = new BigNumber(1000)
+    defaultMaxStakePerUser = new BigNumber(600)
+
     stakingContract = await StarStaking.new(
-      token.address,
-      topRanksMaxSize,
-      startTime,
-      closingTime,
-      stakeSaleCap,
-      maxStakePerUser
+      starToken.address,
+      tokenOnSale.address,
+      defaultStartTime,
+      defaultClosingTime,
+      defaultTopRanksMaxSize,
+      defaultStarRatePer1000,
+      defaultMaxDiscountPer1000,
+      defaultDeclinePerRankPer1000,
+      defaultStakeSaleCap,
+      defaultMaxStakePerUser,
+      defaultWallet
     )
 
-    await token.mint(accounts[0], initialBalance)
-    await token.approve(stakingContract.address, initialBalance, {
-      from: accounts[0],
+    await starToken.mint(user1, initialBalance)
+    await tokenOnSale.mint(stakingContract.address, initialBalance)
+    await starToken.approve(stakingContract.address, initialBalance, {
+      from: user1,
     })
   })
 
   describe('when deploying the contract', () => {
-    async function itFailsToDeployContract(
-      _address,
-      _topRanksMaxSize,
-      _startTime,
-      _closingTime,
-      _stakingSaleCap,
-      _maxStakePerUser
-    ) {
+    const itFailsToDeployContract = async ({
+      starTokenAddress = starToken.address,
+      tokenOnSaleAddress = tokenOnSale.address,
+      startTime = defaultStartTime,
+      closingTime = defaultClosingTime,
+      topRanksMaxSize = defaultTopRanksMaxSize,
+      starRatePer1000 = defaultStarRatePer1000,
+      maxDiscountPer1000 = defaultMaxDiscountPer1000,
+      declinePerRankPer1000 = defaultDeclinePerRankPer1000,
+      stakeSaleCap = defaultStakeSaleCap,
+      maxStakePerUser = defaultMaxStakePerUser,
+      wallet = defaultWallet,
+      expectedError,
+    }) => {
       let emptyStakingContract
 
       try {
         emptyStakingContract = await StarStaking.new(
-          _address,
-          _topRanksMaxSize,
-          _startTime,
-          _closingTime,
-          _stakingSaleCap,
-          _maxStakePerUser
+          starTokenAddress,
+          tokenOnSaleAddress,
+          startTime,
+          closingTime,
+          topRanksMaxSize,
+          starRatePer1000,
+          maxDiscountPer1000,
+          declinePerRankPer1000,
+          stakeSaleCap,
+          maxStakePerUser,
+          wallet
         )
         assert.fail()
-      } catch (e) {
-        ensuresException(e)
+      } catch (error) {
+        ensuresException(error, expectedError)
       }
 
       should.equal(emptyStakingContract, undefined)
     }
 
-    it('does NOT allow to deploy without a token address', () => {
-      itFailsToDeployContract(
-        0,
-        topRanksMaxSize,
-        startTime,
-        closingTime,
-        stakeSaleCap,
-        maxStakePerUser
-      )
+    it('does NOT allow to deploy without a starToken address', async () => {
+      await itFailsToDeployContract({
+        starTokenAddress: 0,
+        expectedError: 'Star token address must be defined!',
+    })
     })
 
-    it('does NOT allow to deploy with a closing time before starting time', () => {
-      itFailsToDeployContract(
-        token.address,
-        topRanksMaxSize,
-        closingTime,
-        startTime,
-        stakeSaleCap,
-        maxStakePerUser
-      )
+    it('does NOT allow to deploy without a tokenOnSale address', async () => {
+      await itFailsToDeployContract({
+        tokenOnSaleAddress: 0,
+        expectedError: 'Token on sale address must be defined!',
+    })
     })
 
-    it('does NOT allow to deploy with a starting time before the current time', () => {
+    it('does NOT allow to deploy with a closing time before starting time', async () => {
+      await itFailsToDeployContract({
+        startTime: defaultClosingTime,
+        closingTime: defaultStartTime,
+        expectedError: 'Start time must be before closing time!',
+      })
+    })
+
+    it('does NOT allow to deploy with a starting time before the current time', async () => {
       const earlyStartTime = new BigNumber(latestTime().toString()).minus(1000)
-      itFailsToDeployContract(
-        token.address,
-        topRanksMaxSize,
-        earlyStartTime,
-        closingTime,
-        stakeSaleCap,
-        maxStakePerUser
-      )
+      await itFailsToDeployContract({
+        startTime: earlyStartTime,
+        expectedError: 'Start time must be after current time!',
+    })
     })
 
-    it('does NOT allow to deploy with a topRanksMaxSize of 0', () => {
-      itFailsToDeployContract(
-        token.address,
-        0,
-        startTime,
-        closingTime,
-        stakeSaleCap,
-        maxStakePerUser
-      )
+    it('does NOT allow to deploy with a topRanksMaxSize of 0', async () => {
+      await itFailsToDeployContract({
+        topRanksMaxSize: 0,
+        expectedError: 'Top ranks size must be more than 0!',
+    })
     })
 
-    it('does NOT allow to deploy with a stakeSaleCap of 0', () => {
-      itFailsToDeployContract(
-        token.address,
-        topRanksMaxSize,
-        startTime,
-        closingTime,
-        0,
-        maxStakePerUser
-      )
+    it('does NOT allow to deploy with a starRatePer1000 of 0', async () => {
+      await itFailsToDeployContract({
+        starRatePer1000: 0,
+        expectedError: 'Rate must be more than 0!',
+    })
     })
 
-    it('does NOT allow to deploy with a stakeSaleCap of 0', () => {
-      itFailsToDeployContract(
-        token.address,
-        topRanksMaxSize,
-        startTime,
-        closingTime,
-        0,
-        maxStakePerUser
-      )
+    it('does NOT allow to deploy with a maxDiscountPer1000 of 0', async () => {
+      await itFailsToDeployContract({
+        maxDiscountPer1000: 0,
+        expectedError: 'Max discount must be more than 0!',
+    })
     })
 
-    it('does NOT allow to deploy with a maxStakePerUser of 0', () => {
-      itFailsToDeployContract(
-        token.address,
-        topRanksMaxSize,
-        startTime,
-        closingTime,
-        stakeSaleCap,
-        0
-      )
+    it('does NOT allow to deploy with a declinePerRankPer1000 of 0', async () => {
+      await itFailsToDeployContract({
+        declinePerRankPer1000: 0,
+        expectedError: 'Decline per rank must be more than 0!',
+    })
+    })
+
+    it('does NOT allow to deploy with a stakeSaleCap of 0', async () => {
+      await itFailsToDeployContract({
+        stakeSaleCap: 0,
+        expectedError: 'StakingSale cap should be higher than 0!',
+      })
+    })
+
+    it('does NOT allow to deploy with a maxStakePerUser of 0', async () => {
+      await itFailsToDeployContract({
+        maxStakePerUser: 0,
+        expectedError: 'Max stake per user should be higher than 0!',
+      })
+    })
+
+    it('does NOT allow to deploy with a maxStakePerUser higher than stakeSaleCap', async () => {
+      await itFailsToDeployContract({
+        maxStakePerUser: 200,
+        stakeSaleCap: 100,
+        expectedError:
+          'Max stake per user should be smaller than StakeSale cap!',
+      })
+    })
+
+    it('does NOT allow to deploy with a wallet of 0', async () => {
+      await itFailsToDeployContract({
+        wallet: 0,
+        expectedError: 'Wallet address may must be defined!',
+      })
     })
 
     it('sets initial parameters correctly', async () => {
-      const setTokenAddress = await stakingContract.token()
+      const setTokenAddress = await stakingContract.starToken()
+      const setTokenOnSale = await stakingContract.tokenOnSale()
       const setTopRanksMaxSize = await stakingContract.topRanksMaxSize()
       const setStartTime = await stakingContract.startTime()
       const setClosingTime = await stakingContract.closingTime()
@@ -159,19 +197,23 @@ contract('StarStaking', _accounts => {
       const setMaxStakePerUser = await stakingContract.maxStakePerUser()
 
       setTokenAddress.should.be.equal(
-        token.address,
+        starToken.address,
+        'Token address not matching!'
+      )
+      setTokenOnSale.should.be.equal(
+        tokenOnSale.address,
         'Token address not matching!'
       )
       setTopRanksMaxSize.should.be.bignumber.equal(
-        topRanksMaxSize,
+        defaultTopRanksMaxSize,
         'Top ranks size not matching!'
       )
       setStartTime.should.be.bignumber.equal(
-        startTime,
+        defaultStartTime,
         'Opening time not matching!'
       )
       setClosingTime.should.be.bignumber.equal(
-        closingTime,
+        defaultClosingTime,
         'Closing time not matching!'
       )
       setTopRanksCount.should.be.bignumber.equal(
@@ -179,21 +221,21 @@ contract('StarStaking', _accounts => {
         'Initial top ranks count should be 0!'
       )
       setStakeSaleCap.should.be.bignumber.equal(
-        stakeSaleCap,
+        defaultStakeSaleCap.times(1e18),
         'Stake sale cap not matching!'
       )
       setMaxStakePerUser.should.be.bignumber.equal(
-        maxStakePerUser,
+        defaultMaxStakePerUser.times(1e18),
         'Max stake per user not matching!'
       )
     })
   })
 
-  describe('topRanksMaxSize', () => {
+  describe('when adding to the top ranks count', () => {
     it('respects the maximum top ranks count', async () => {
-      await increaseTimeTo(startTime)
-      await stakingContract.stakeFor(accounts[0], 10000, NULL, {
-        from: accounts[0],
+      await increaseTimeTo(defaultStartTime)
+      await stakingContract.stakeFor(user1, 10000, HEAD, {
+        from: user1,
       })
 
       for (let i = 1; i < 11; i++) {
@@ -206,7 +248,7 @@ contract('StarStaking', _accounts => {
           accounts[i],
           10000 - 500 * i,
           accounts[i - 1],
-          { from: accounts[0] }
+          { from: user1 }
         )
       }
 
@@ -218,84 +260,154 @@ contract('StarStaking', _accounts => {
     })
   })
 
-  describe('staking period is open', () => {
+  describe('when staking period is open', () => {
     beforeEach(async () => {
-      await increaseTimeTo(startTime)
+      await increaseTimeTo(defaultStartTime)
     })
 
     it('must have sufficient funds for the staking', async () => {
-      await stakingContract.stakeFor(accounts[1], 10, NULL, {
-        from: accounts[0],
+      await stakingContract.stakeFor(user2, 10, HEAD, {
+        from: user1,
       })
       const timeWhenSubmitted = [new BigNumber(latestTime().toString())]
 
       try {
-        await stakingContract.stakeFor(accounts[2], 100, accounts[1], {
-          from: accounts[2],
+        await stakingContract.stakeFor(user3, 100, user2, {
+          from: user3,
         })
         assert.fail()
-      } catch (e) {
-        ensuresException(e)
+      } catch (error) {
+        const expectedError = 'From user has not enough funds!'
+        ensuresException(error, expectedError)
       }
 
       const result = await stakingContract.getTopRanksTuples()
-      listShouldEqualExpected(
+      listShouldEqualExpected({
         result,
-        [new BigNumber(accounts[1]).toNumber()],
-        [10],
-        timeWhenSubmitted
-      )
+        addresses: [new BigNumber(user2).toNumber()],
+        totalStaked: [10],
+        timesWhenSubmitted: timeWhenSubmitted,
+    })
     })
 
-    it('transfers tokens to stakingContract when staked', async () => {
+    it('transfers tokens to the wallet when staked', async () => {
       const stakingAmount = new BigNumber(5000)
 
-      await stakingContract.stake(stakingAmount, NULL)
-      const userBalance = await token.balanceOf.call(accounts[0])
-      const stakingContractBalance = await token.balanceOf.call(
+      await stakingContract.stake(stakingAmount, HEAD)
+      const userBalance = await starToken.balanceOf.call(user1)
+      const stakingContractBalance = await starToken.balanceOf.call(
         stakingContract.address
       )
+      const walletBalance = await starToken.balanceOf.call(defaultWallet)
 
       userBalance.should.be.bignumber.equal(initialBalance.sub(stakingAmount))
-      stakingContractBalance.should.be.bignumber.equal(stakingAmount)
+      walletBalance.should.be.bignumber.equal(stakingAmount)
+      stakingContractBalance.should.be.bignumber.equal(new BigNumber(0))
     })
 
     it('allows user to stake for other person', async () => {
       const stakingAmount = new BigNumber(5000)
-      await stakingContract.stakeFor(accounts[1], stakingAmount, NULL, {
-        from: accounts[0],
+      await stakingContract.stakeFor(user2, stakingAmount, HEAD, {
+        from: user1,
       })
 
-      const user1TotalStaked = await stakingContract.totalStakedFor.call(
-        accounts[1]
-      )
+      const user1TotalStaked = await stakingContract.totalStakedFor.call(user2)
       user1TotalStaked.should.be.bignumber.equal(stakingAmount)
     })
 
-    it('adds only the remaining staking tokens when cap is reached', async () => {
-      await stakingContract.stakeFor(accounts[0], maxStakePerUser, NULL)
-      await stakingContract.stakeFor(accounts[1], maxStakePerUser, accounts[0])
+    describe('when cap is reached', async () => {
+      it('adds only the remaining staking tokens', async () => {
+        await stakingContract.stakeFor(
+          user1,
+          defaultMaxStakePerUser.times(1e18),
+          HEAD
+        )
+        await stakingContract.stakeFor(
+          user2,
+          defaultMaxStakePerUser.times(1e18),
+          user1
+        )
 
-      const userBalance = await token.balanceOf.call(accounts[0])
-      const stakingContractBalance = await token.balanceOf.call(
+        const userBalance = await starToken.balanceOf.call(user1)
+        const stakingContractBalance = await starToken.balanceOf.call(
+          stakingContract.address
+        )
+        const walletBalance = await starToken.balanceOf.call(defaultWallet)
+        const user2Staked = await stakingContract.totalStakedFor.call(user2)
+
+        userBalance.should.be.bignumber.equal(
+          initialBalance.minus(defaultStakeSaleCap.times(1e18))
+        )
+        stakingContractBalance.should.be.bignumber.equal(new BigNumber(0))
+        walletBalance.should.be.bignumber.equal(defaultStakeSaleCap.times(1e18))
+        user2Staked.should.be.bignumber.equal(
+          defaultStakeSaleCap
+            .times(1e18)
+            .minus(defaultMaxStakePerUser.times(1e18))
+        )
+      })
+
+      it('throws an error once cap when trying to add above cap', async () => {
+        await stakingContract.stakeFor(
+          user1,
+          defaultMaxStakePerUser.times(1e18),
+          HEAD
+        )
+        await stakingContract.stakeFor(
+          user2,
+          defaultMaxStakePerUser.times(1e18),
+          user1
+        )
+        try {
+          await stakingContract.stakeFor(
+            user2,
+            defaultMaxStakePerUser.times(1e18),
+            user1
+          )
+          assert.fail()
+        } catch (error) {
+          const expectedError = 'StakeSale cap reached, the sale is finished!'
+          ensuresException(error, expectedError)
+        }
+
+        const userBalance = await starToken.balanceOf.call(user1)
+        const stakingContractBalance = await starToken.balanceOf.call(
         stakingContract.address
       )
+        const walletBalance = await starToken.balanceOf.call(defaultWallet)
+        const user2Staked = await stakingContract.totalStakedFor.call(user2)
 
-      userBalance.should.be.bignumber.equal(initialBalance.minus(stakeSaleCap))
-      stakingContractBalance.should.be.bignumber.equal(stakeSaleCap)
+        userBalance.should.be.bignumber.equal(
+          initialBalance.minus(defaultStakeSaleCap.times(1e18))
+        )
+        stakingContractBalance.should.be.bignumber.equal(new BigNumber(0))
+        walletBalance.should.be.bignumber.equal(defaultStakeSaleCap.times(1e18))
+        user2Staked.should.be.bignumber.equal(
+          defaultStakeSaleCap
+            .times(1e18)
+            .minus(defaultMaxStakePerUser.times(1e18))
+        )
+      })
     })
 
-    it('adds only the remaining staking tokens when maxStakePerUser is reached', async () => {
-      await stakingContract.stake(maxStakePerUser.plus(10000), NULL)
-      const userBalance = await token.balanceOf.call(accounts[0])
-      const stakingContractBalance = await token.balanceOf.call(
+    it('adds only the remaining staking tokens when defaultMaxStakePerUser is reached', async () => {
+      await stakingContract.stake(
+        defaultMaxStakePerUser.times(1e18).plus(10000),
+        HEAD
+      )
+      const userBalance = await starToken.balanceOf.call(user1)
+      const walletBalance = await starToken.balanceOf.call(defaultWallet)
+      const stakingContractBalance = await starToken.balanceOf.call(
         stakingContract.address
       )
 
       userBalance.should.be.bignumber.equal(
-        initialBalance.minus(maxStakePerUser)
+        initialBalance.minus(defaultMaxStakePerUser.times(1e18))
       )
-      stakingContractBalance.should.be.bignumber.equal(maxStakePerUser)
+      walletBalance.should.be.bignumber.equal(
+        defaultMaxStakePerUser.times(1e18)
+      )
+      stakingContractBalance.should.be.bignumber.equal(new BigNumber(0))
     })
   })
 
@@ -303,17 +415,17 @@ contract('StarStaking', _accounts => {
     const adjustedTime = timeAdvanced
       ? timeWhenSubmitted.minus(1)
       : timeWhenSubmitted
-    const timeUntilEnd = closingTime.minus(adjustedTime)
+    const timeUntilEnd = defaultClosingTime.minus(adjustedTime)
     const stakingPoints = timeUntilEnd.times(amount)
 
     return stakingPoints
   }
 
-  async function evaluateComputation(amount) {
-    await stakingContract.stake(amount, NULL)
+  const evaluateComputation = async amount => {
+    await stakingContract.stake(amount, HEAD)
     const timeWhenSubmitted = new BigNumber(latestTime())
     const userTotalStakingPoints = await stakingContract.totalStakingPointsFor.call(
-      accounts[0]
+      user1
     )
 
     const pointsWithoutTimeAdvanced = computeStakingPoints({
@@ -333,35 +445,37 @@ contract('StarStaking', _accounts => {
     userTotalStakingPoints.should.be.bignumber.at.most(pointsWithTimeAdvanced)
   }
 
-  describe('adding new stake', () => {
+  describe('when adding new stake', () => {
     BALANCES.forEach(async balance => {
       describe(`staking ${balance.toNumber()} tokens`, async () => {
         it('calculates the points correctly at the beginning', async () => {
-          await increaseTimeTo(startTime)
+          await increaseTimeTo(defaultStartTime)
           evaluateComputation(balance)
         })
 
         it('calculates the points correctly in the middle', async () => {
           await increaseTimeTo(
-            startTime.plus(closingTime.minus(startTime).div(2))
+            defaultStartTime.plus(
+              defaultClosingTime.minus(defaultStartTime).div(2)
+            )
           )
           evaluateComputation(balance)
         })
 
         it('calculates the points correctly at the end', async () => {
-          await increaseTimeTo(closingTime.minus(20))
+          await increaseTimeTo(defaultClosingTime.minus(20))
           evaluateComputation(balance)
         })
       })
     })
   })
 
-  function listShouldEqualExpected(
+  const listShouldEqualExpected = ({
     result,
     addresses,
     totalStaked,
-    timesWhenSubmitted
-  ) {
+    timesWhenSubmitted,
+  }) => {
     const [rcvAddrs, rcvStakingPoints, rcvTotalStaked] = [[], [], []]
 
     result.forEach((e, i) => {
@@ -404,140 +518,144 @@ contract('StarStaking', _accounts => {
     })
   }
 
-  describe('building the top ranks', () => {
-    it('must provide a reference node when topRanksCount less than max size', async () => {
-      await increaseTimeTo(startTime)
-      await stakingContract.stakeFor(accounts[1], 10, NULL, {
-        from: accounts[0],
+  describe('when building the top ranks', () => {
+    it('must provide an existing reference node', async () => {
+      await increaseTimeTo(defaultStartTime)
+      await stakingContract.stakeFor(user2, 10, HEAD, {
+        from: user1,
       })
       const timeWhenSubmitted = [new BigNumber(latestTime().toString())]
 
       try {
-        await stakingContract.stakeFor(accounts[2], 100, NULL, {
-          from: accounts[0],
+        await stakingContract.stakeFor(user3, 100, user4, {
+          from: user1,
         })
         assert.fail()
-      } catch (e) {
-        ensuresException(e)
+      } catch (error) {
+        const expectedError = 'Node for suggested position does not exist!'
+        ensuresException(error, expectedError)
       }
 
       const result = await stakingContract.getTopRanksTuples()
-      listShouldEqualExpected(
+      listShouldEqualExpected({
         result,
-        [new BigNumber(accounts[1]).toNumber()],
-        [10],
-        timeWhenSubmitted
-      )
+        addresses: [new BigNumber(user2).toNumber()],
+        totalStaked: [10],
+        timesWhenSubmitted: timeWhenSubmitted,
+      })
     })
 
     it('must provide a reference node that exists', async () => {
-      await increaseTimeTo(startTime)
-      await stakingContract.stakeFor(accounts[1], 10, NULL, {
-        from: accounts[0],
+      await increaseTimeTo(defaultStartTime)
+      await stakingContract.stakeFor(user2, 10, HEAD, {
+        from: user1,
       })
       const timeWhenSubmitted = [new BigNumber(latestTime().toString())]
 
       try {
-        await stakingContract.stakeFor(accounts[2], 100, accounts[3], {
-          from: accounts[0],
+        await stakingContract.stakeFor(user3, 100, user4, {
+          from: user1,
         })
         assert.fail()
-      } catch (e) {
-        ensuresException(e)
+      } catch (error) {
+        const expectedError = 'Node for suggested position does not exist!'
+        ensuresException(error, expectedError)
       }
 
       const result = await stakingContract.getTopRanksTuples()
-      listShouldEqualExpected(
+      listShouldEqualExpected({
         result,
-        [new BigNumber(accounts[1]).toNumber()],
-        [10],
-        timeWhenSubmitted
-      )
+        addresses: [new BigNumber(user2).toNumber()],
+        totalStaked: [10],
+        timesWhenSubmitted: timeWhenSubmitted,
+      })
     })
 
     describe('referencing a node that is too low/high', () => {
       let timesWhenSubmitted = []
 
       beforeEach(async () => {
-        await increaseTimeTo(startTime)
-        await stakingContract.stakeFor(accounts[0], 100, NULL, {
-          from: accounts[0],
+        await increaseTimeTo(defaultStartTime)
+        await stakingContract.stakeFor(user1, 100, HEAD, {
+          from: user1,
         })
         timesWhenSubmitted = [new BigNumber(latestTime().toString())]
 
-        await stakingContract.stakeFor(accounts[1], 10, accounts[0], {
-          from: accounts[0],
+        await stakingContract.stakeFor(user2, 10, user1, {
+          from: user1,
         })
         timesWhenSubmitted.push(new BigNumber(latestTime().toString()))
 
-        await stakingContract.stakeFor(accounts[2], 1, accounts[1], {
-          from: accounts[0],
+        await stakingContract.stakeFor(user3, 1, user2, {
+          from: user1,
         })
         timesWhenSubmitted.push(new BigNumber(latestTime().toString()))
       })
 
       it('throws an error for suggested positions that are too high', async () => {
         try {
-          await stakingContract.stakeFor(accounts[3], 5, accounts[0], {
-            from: accounts[0],
+          await stakingContract.stakeFor(user4, 5, user1, {
+            from: user1,
           })
           assert.fail()
-        } catch (e) {
-          ensuresException(e)
+        } catch (error) {
+          const expectedError = 'Suggested position into top ranks too high!'
+          ensuresException(error, expectedError)
         }
 
         const result = await stakingContract.getTopRanksTuples()
         const addresses = accounts
           .slice(0, 3)
           .map(user => new BigNumber(user).toNumber())
-        listShouldEqualExpected(
+        listShouldEqualExpected({
           result,
           addresses,
-          [100, 10, 1],
-          timesWhenSubmitted
-        )
+          totalStaked: [100, 10, 1],
+          timesWhenSubmitted,
+        })
       })
 
       it('throws an error for suggested positions that are too low', async () => {
         try {
-          await stakingContract.stakeFor(accounts[3], 1000, accounts[2], {
-            from: accounts[0],
+          await stakingContract.stakeFor(user4, 1000, user3, {
+            from: user1,
           })
           assert.fail()
-        } catch (e) {
-          ensuresException(e)
+        } catch (error) {
+          const expectedError = 'Suggested position into top ranks too low!'
+          ensuresException(error, expectedError)
         }
 
         const result = await stakingContract.getTopRanksTuples()
         const addresses = accounts
           .slice(0, 3)
           .map(user => new BigNumber(user).toNumber())
-        listShouldEqualExpected(
+        listShouldEqualExpected({
           result,
           addresses,
-          [100, 10, 1],
-          timesWhenSubmitted
-        )
+          totalStaked: [100, 10, 1],
+          timesWhenSubmitted,
+        })
       })
     })
 
-    it('correctly insert into top ranks at first rank position', async () => {
+    it('correctly inserts into top ranks at first rank position', async () => {
       const totalStaked = [100000, 10000, 1000, 100, 10]
       const timesWhenSubmitted = []
 
-      await increaseTimeTo(startTime)
-      await stakingContract.stakeFor(accounts[0], totalStaked[4], NULL, {
-        from: accounts[0],
+      await increaseTimeTo(defaultStartTime)
+      await stakingContract.stakeFor(user1, totalStaked[4], HEAD, {
+        from: user1,
       })
       timesWhenSubmitted.push(new BigNumber(latestTime().toString()))
 
       for (let i = 1; i < totalStaked.length; i++) {
-        await increaseTimeTo(startTime.plus(i * 5))
+        await increaseTimeTo(defaultStartTime.plus(i * 5))
         await stakingContract.stakeFor(
           accounts[i],
           totalStaked[4 - i],
           accounts[i - 1],
-          { from: accounts[0] }
+          { from: user1 }
         )
         timesWhenSubmitted.push(new BigNumber(latestTime().toString()))
       }
@@ -548,31 +666,31 @@ contract('StarStaking', _accounts => {
         .reverse()
         .map(user => new BigNumber(user).toNumber())
 
-      listShouldEqualExpected(
+      listShouldEqualExpected({
         result,
         addresses,
         totalStaked,
-        timesWhenSubmitted.reverse()
-      )
+        timesWhenSubmitted: timesWhenSubmitted.reverse(),
+      })
     })
 
-    it('correctly insert into top ranks at last rank position', async () => {
+    it('correctly inserts into top ranks at last rank position', async () => {
       const totalStaked = [6000, 5000, 4000, 3000, 2000, 1000]
       const timesWhenSubmitted = []
 
-      await increaseTimeTo(startTime)
-      await stakingContract.stakeFor(accounts[0], totalStaked[0], NULL, {
-        from: accounts[0],
+      await increaseTimeTo(defaultStartTime)
+      await stakingContract.stakeFor(user1, totalStaked[0], HEAD, {
+        from: user1,
       })
       timesWhenSubmitted.push(new BigNumber(latestTime().toString()))
 
       for (let i = 1; i < totalStaked.length; i++) {
-        await increaseTimeTo(startTime.plus(i * 1000))
+        await increaseTimeTo(defaultStartTime.plus(i * 1000))
         await stakingContract.stakeFor(
           accounts[i],
           totalStaked[i],
           accounts[i - 1],
-          { from: accounts[0] }
+          { from: user1 }
         )
         timesWhenSubmitted.push(new BigNumber(latestTime().toString()))
       }
@@ -582,12 +700,12 @@ contract('StarStaking', _accounts => {
         .slice(0, totalStaked.length)
         .map(user => new BigNumber(user).toNumber())
 
-      listShouldEqualExpected(
+      listShouldEqualExpected({
         result,
         addresses,
         totalStaked,
-        timesWhenSubmitted
-      )
+        timesWhenSubmitted,
+      })
     })
   })
 
@@ -596,19 +714,19 @@ contract('StarStaking', _accounts => {
       const totalStaked = [100000, 10000, 1000, 100, 10]
       const timesWhenSubmitted = []
 
-      await increaseTimeTo(startTime)
-      await stakingContract.stakeFor(accounts[0], totalStaked[4], NULL, {
-        from: accounts[0],
+      await increaseTimeTo(defaultStartTime)
+      await stakingContract.stakeFor(user1, totalStaked[4], HEAD, {
+        from: user1,
       })
       timesWhenSubmitted.push(new BigNumber(latestTime().toString()))
 
       for (let i = 1; i < totalStaked.length; i++) {
-        await increaseTimeTo(startTime.plus(i * 5))
+        await increaseTimeTo(defaultStartTime.plus(i * 5))
         await stakingContract.stakeFor(
           accounts[i],
           totalStaked[4 - i],
           accounts[i - 1],
-          { from: accounts[0] }
+          { from: user1 }
         )
         timesWhenSubmitted.push(new BigNumber(latestTime().toString()))
       }
@@ -638,7 +756,7 @@ contract('StarStaking', _accounts => {
     })
   })
 
-  describe('reading the top ranks with respective staking points and total staked', async () => {
+  describe('when reading the top ranks with respective staking points and total staked', async () => {
     function arrayFromIndices(array, indices) {
       const newArray = []
 
@@ -653,39 +771,39 @@ contract('StarStaking', _accounts => {
       const totalStaked = [500, 74444, 1, 9999, 100000, 44]
       const timesWhenSubmitted = []
 
-      await increaseTimeTo(startTime)
-      await stakingContract.stakeFor(accounts[0], totalStaked[0], NULL, {
-        from: accounts[0],
+      await increaseTimeTo(defaultStartTime)
+      await stakingContract.stakeFor(user1, totalStaked[0], HEAD, {
+        from: user1,
       })
       timesWhenSubmitted.push(new BigNumber(latestTime().toString()))
 
-      await increaseTimeTo(startTime.plus(5000))
-      await stakingContract.stakeFor(accounts[1], totalStaked[1], accounts[0], {
-        from: accounts[0],
+      await increaseTimeTo(defaultStartTime.plus(5000))
+      await stakingContract.stakeFor(user2, totalStaked[1], user1, {
+        from: user1,
       })
       timesWhenSubmitted.push(new BigNumber(latestTime().toString()))
 
-      await increaseTimeTo(closingTime.minus(999))
-      await stakingContract.stakeFor(accounts[2], totalStaked[2], accounts[0], {
-        from: accounts[0],
+      await increaseTimeTo(defaultClosingTime.minus(999))
+      await stakingContract.stakeFor(user3, totalStaked[2], user1, {
+        from: user1,
       })
       timesWhenSubmitted.push(new BigNumber(latestTime().toString()))
 
-      await increaseTimeTo(closingTime.minus(444))
-      await stakingContract.stakeFor(accounts[3], totalStaked[3], accounts[0], {
-        from: accounts[0],
+      await increaseTimeTo(defaultClosingTime.minus(444))
+      await stakingContract.stakeFor(user4, totalStaked[3], user1, {
+        from: user1,
       })
       timesWhenSubmitted.push(new BigNumber(latestTime().toString()))
 
-      await increaseTimeTo(closingTime.minus(84))
-      await stakingContract.stakeFor(accounts[4], totalStaked[4], accounts[0], {
-        from: accounts[0],
+      await increaseTimeTo(defaultClosingTime.minus(84))
+      await stakingContract.stakeFor(user5, totalStaked[4], user1, {
+        from: user1,
       })
       timesWhenSubmitted.push(new BigNumber(latestTime().toString()))
 
-      await increaseTimeTo(closingTime.minus(10))
-      await stakingContract.stakeFor(accounts[5], totalStaked[5], accounts[2], {
-        from: accounts[0],
+      await increaseTimeTo(defaultClosingTime.minus(10))
+      await stakingContract.stakeFor(user6, totalStaked[5], user3, {
+        from: user1,
       })
       timesWhenSubmitted.push(new BigNumber(latestTime().toString()))
 
@@ -704,11 +822,14 @@ contract('StarStaking', _accounts => {
         expectedRankingIndices
       )
 
-      listShouldEqualExpected(
+      listShouldEqualExpected({
         result,
         addresses,
-        sortedTotalStaked,
-        sortedTimesWhenSubmitted
+        totalStaked: sortedTotalStaked,
+        timesWhenSubmitted: sortedTimesWhenSubmitted,
+      })
+    })
+  })
       )
     })
   })
