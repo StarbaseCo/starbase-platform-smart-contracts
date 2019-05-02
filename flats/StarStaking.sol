@@ -357,6 +357,13 @@ library LinkedListLib {
     }
 }
 
+// File: contracts/StarEthRateInterface.sol
+
+contract StarEthRateInterface {
+    function decimalCorrectionFactor() public returns (uint256);
+    function starEthRate() public returns (uint256);
+}
+
 // File: contracts/StarStakingInterface.sol
 
 contract StarStakingInterface {
@@ -375,6 +382,7 @@ contract StarStaking is StarStakingInterface, Lockable {
 
     ERC20 public starToken;
     ERC20 public tokenOnSale;
+    StarEthRateInterface public starEthRateInterface;
 
     mapping (address => bool) public hasWithdrawnTokens;
     mapping (address => uint256) public totalStakingPointsFor;
@@ -387,7 +395,7 @@ contract StarStaking is StarStakingInterface, Lockable {
     uint256 public closingTime;
 
     uint256 public topRanksMaxSize;
-    uint256 public ratePer1000;
+    uint256 public targetRateInEth;
     uint256 public maxDiscountPer1000;
     uint256 public declinePerRankPer1000;
     uint256 public stakeSaleCap;
@@ -412,12 +420,13 @@ contract StarStaking is StarStakingInterface, Lockable {
     }
 
     /**
+     * @param _starEthRateInterface StarEthRate contract for receiving conversion rate of STAR/ETH
      * @param _starToken Token that can be staked
      * @param _tokenOnSale Token that will be sold
      * @param _topRanksMaxSize Maximal size of the top ranks
      * @param _startTime Timestamp for the beginning of the staking event
      * @param _closingTime Timestamp of the end of staking event
-     * @param _ratePer1000 The rate per 1000 for buying tokens without being in top ranks
+     * @param _targetRateInEth The baseline target rate in ETH for purchases
      * @param _maxDiscountPer1000 The max discount per 1000 for rank 1.
      * @param _declinePerRankPer1000 The discount decline per rank per 1000.
      * @param _stakeSaleCap The cap amount for total staking
@@ -425,24 +434,26 @@ contract StarStaking is StarStakingInterface, Lockable {
      * @param _wallet TokenSale wallet where STAR from staking will be transferred
      */
     constructor(
+        StarEthRateInterface _starEthRateInterface,
         ERC20 _starToken,
         ERC20 _tokenOnSale,
         uint256 _startTime,
         uint256 _closingTime,
         uint256 _topRanksMaxSize,
-        uint256 _ratePer1000,
+        uint256 _targetRateInEth,
         uint256 _maxDiscountPer1000,
         uint256 _declinePerRankPer1000,
         uint256 _stakeSaleCap,
         uint256 _maxStakePerUser,
         address _wallet
     ) public {
+        require(address(_starEthRateInterface) != address(0), "StarEthRate address must be defined!");
         require(address(_starToken) != address(0), "Star token address must be defined!");
         require(address(_tokenOnSale) != address(0), "Token on sale address must be defined!");
         require(_startTime < _closingTime, "Start time must be before closing time!");
         require(_startTime >= now, "Start time must be after current time!");
         require(_topRanksMaxSize > 0, "Top ranks size must be more than 0!");
-        require(_ratePer1000 > 0, "Rate must be more than 0!");
+        require(_targetRateInEth > 0, "Target rate must be more than 0!");
         require(_maxDiscountPer1000 > 0, "Max discount must be more than 0!");
         require(_declinePerRankPer1000 > 0, "Decline per rank must be more than 0!");
         require(_stakeSaleCap > 0, "StakingSale cap should be higher than 0!");
@@ -450,13 +461,21 @@ contract StarStaking is StarStakingInterface, Lockable {
         require(_maxStakePerUser < _stakeSaleCap, "Max stake per user should be smaller than StakeSale cap!");
         require(_wallet != address(0), "Wallet address may must be defined!");
 
+        uint256 maxDecline = _topRanksMaxSize.sub(1).mul(_declinePerRankPer1000);
+
+        require(
+            _maxDiscountPer1000 >= maxDecline,
+            'Please increase max discount or decrease decline per rank!'
+        );
+
+        starEthRateInterface = _starEthRateInterface;
         starToken = _starToken;
         tokenOnSale = _tokenOnSale;
         startTime = _startTime;
         closingTime = _closingTime;
         topRanksCount = 0;
         topRanksMaxSize = _topRanksMaxSize;
-        ratePer1000 = _ratePer1000;
+        targetRateInEth = _targetRateInEth;
         maxDiscountPer1000 = _maxDiscountPer1000;
         declinePerRankPer1000 = _declinePerRankPer1000;
         stakeSaleCap = _stakeSaleCap.mul(10 ** 18);
@@ -601,10 +620,26 @@ contract StarStaking is StarStakingInterface, Lockable {
         );
         hasWithdrawnTokens[msg.sender] = true;
 
-        uint256 stakedStar = totalStakedFor[msg.sender];
-        uint256 baseTokens = stakedStar.mul(ratePer1000).div(1000);
-        uint256 bonusTokens = 0;
+        uint256 baseTokens = _computeBaseTokens();
+        uint256 bonusTokens = _computeBonusTokens(baseTokens);
 
+        uint256 totalTokens = baseTokens.add(bonusTokens);
+        tokenOnSale.transfer(msg.sender, totalTokens);
+    }
+
+    function _computeBaseTokens() private returns (uint256) {
+        uint256 stakedStar = totalStakedFor[msg.sender];
+        uint256 decimalCorrectionFactor =
+            starEthRateInterface.decimalCorrectionFactor();
+        uint256 starEthRate = starEthRateInterface.starEthRate();
+
+        return stakedStar
+            .mul(targetRateInEth)
+            .mul(starEthRate)
+            .div(decimalCorrectionFactor);
+    }
+
+    function _computeBonusTokens(uint256 _baseTokens) private view returns (uint256) {
         address referenceNode = HEAD;
 
         for (uint256 i = 0; i < topRanksCount; i++) {
@@ -614,13 +649,11 @@ contract StarStaking is StarStakingInterface, Lockable {
                 uint256 discount = maxDiscountPer1000.sub(
                     i.mul(declinePerRankPer1000)
                 );
-                bonusTokens = baseTokens.mul(discount).div(1000);
-                break;
+                return _baseTokens.mul(discount).div(1000);
             }
         }
 
-        uint256 totalTokens = baseTokens.add(bonusTokens);
-        tokenOnSale.transfer(msg.sender, totalTokens);
+        return 0;
     }
 
     function _addStakingPoints(address _user, uint256 _amount) private {
