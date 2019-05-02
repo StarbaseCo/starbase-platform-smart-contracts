@@ -2,6 +2,7 @@ const BigNumber = web3.BigNumber
 
 const StarStaking = artifacts.require('StarStaking.sol')
 const MintableToken = artifacts.require('MintableToken.sol')
+const StarEthRate = artifacts.require('./StarEthRate.sol')
 
 const { should, ensuresException } = require('./helpers/utils')
 const { increaseTimeTo, latestTime } = require('./helpers/timer')
@@ -9,18 +10,23 @@ const { increaseTimeTo, latestTime } = require('./helpers/timer')
 const HEAD = '0x0000000000000000000000000000000000000000'
 const BALANCES = [1, 60000, 99999999].map(n => new BigNumber(n))
 
+BigNumber.config({ DECIMAL_PLACES: 0 })
+
 contract('StarStaking', accounts => {
   const [user1, user2, user3, user4, user5, user6, defaultWallet] = accounts
   let stakingContract,
+    starEthRate,
     starToken,
     tokenOnSale,
     initialBalance,
     defaultStartTime,
     defaultClosingTime,
     defaultStakeSaleCap,
-    defaultStarRatePer1000,
+    defaultTargetRateInEth,
     defaultMaxDiscountPer1000,
-    defaultDeclinePerRankPer1000
+    defaultDeclinePerRankPer1000,
+    defaultStarEthRateDecimalCorrectionFactor,
+    defaultStarEthRate
 
   beforeEach(async () => {
     initialBalance = new BigNumber(10000).times(new BigNumber(1e18))
@@ -30,7 +36,7 @@ contract('StarStaking', accounts => {
     defaultStartTime = new BigNumber(latestTime().toString()).plus(10000)
     defaultClosingTime = defaultStartTime.plus(200000)
 
-    defaultStarRatePer1000 = new BigNumber(2000) // = x2
+    defaultTargetRateInEth = new BigNumber(2000) // 2000 tokens per ETH
     defaultMaxDiscountPer1000 = new BigNumber(500) // = 50%
     defaultDeclinePerRankPer1000 = new BigNumber(5) // = 0.5%
 
@@ -38,13 +44,22 @@ contract('StarStaking', accounts => {
     defaultStakeSaleCap = new BigNumber(1000)
     defaultMaxStakePerUser = new BigNumber(600)
 
+    defaultStarEthRate = new BigNumber(2) // 2/10 STAR = 1 ETH
+    defaultStarEthRateDecimalCorrectionFactor = new BigNumber(10)
+
+    starEthRate = await StarEthRate.new(
+      defaultStarEthRateDecimalCorrectionFactor,
+      defaultStarEthRate
+    )
+
     stakingContract = await StarStaking.new(
+      starEthRate.address,
       starToken.address,
       tokenOnSale.address,
       defaultStartTime,
       defaultClosingTime,
       defaultTopRanksMaxSize,
-      defaultStarRatePer1000,
+      defaultTargetRateInEth,
       defaultMaxDiscountPer1000,
       defaultDeclinePerRankPer1000,
       defaultStakeSaleCap,
@@ -59,14 +74,50 @@ contract('StarStaking', accounts => {
     })
   })
 
+  const deployStakingContract = async ({
+    starEthRateAddress = starEthRate.address,
+    starTokenAddress = starToken.address,
+    tokenOnSaleAddress = tokenOnSale.address,
+    startTime = defaultStartTime,
+    closingTime = defaultClosingTime,
+    topRanksMaxSize = defaultTopRanksMaxSize,
+    targetRateInEth = defaultTargetRateInEth,
+    maxDiscountPer1000 = defaultMaxDiscountPer1000,
+    declinePerRankPer1000 = defaultDeclinePerRankPer1000,
+    stakeSaleCap = defaultStakeSaleCap,
+    maxStakePerUser = defaultMaxStakePerUser,
+    wallet = defaultWallet,
+  } = {}) => {
+    stakingContract = await StarStaking.new(
+      starEthRateAddress,
+      starTokenAddress,
+      tokenOnSaleAddress,
+      startTime,
+      closingTime,
+      topRanksMaxSize,
+      targetRateInEth,
+      maxDiscountPer1000,
+      declinePerRankPer1000,
+      stakeSaleCap,
+      maxStakePerUser,
+      wallet
+    )
+    await starToken.mint(user1, initialBalance)
+    await tokenOnSale.mint(stakingContract.address, initialBalance)
+    await starToken.approve(stakingContract.address, initialBalance, {
+      from: user1,
+    })
+  }
+
   describe('when deploying the contract', () => {
     const itFailsToDeployContract = async ({
+      starEthRateAddress = starEthRate.address,
       starTokenAddress = starToken.address,
       tokenOnSaleAddress = tokenOnSale.address,
       startTime = defaultStartTime,
       closingTime = defaultClosingTime,
       topRanksMaxSize = defaultTopRanksMaxSize,
-      starRatePer1000 = defaultStarRatePer1000,
+      targetRateInEth = defaultTargetRateInEth,
       maxDiscountPer1000 = defaultMaxDiscountPer1000,
       declinePerRankPer1000 = defaultDeclinePerRankPer1000,
       stakeSaleCap = defaultStakeSaleCap,
@@ -78,12 +129,13 @@ contract('StarStaking', accounts => {
 
       try {
         emptyStakingContract = await StarStaking.new(
+          starEthRateAddress,
           starTokenAddress,
           tokenOnSaleAddress,
           startTime,
           closingTime,
           topRanksMaxSize,
-          starRatePer1000,
+          targetRateInEth,
           maxDiscountPer1000,
           declinePerRankPer1000,
           stakeSaleCap,
@@ -97,6 +149,13 @@ contract('StarStaking', accounts => {
 
       should.equal(emptyStakingContract, undefined)
     }
+
+    it('does NOT allow to deploy without a starEthRate address', async () => {
+      await itFailsToDeployContract({
+        starEthRateAddress: 0,
+        expectedError: 'StarEthRate address must be defined!',
+      })
+    })
 
     it('does NOT allow to deploy without a starToken address', async () => {
       await itFailsToDeployContract({
@@ -135,10 +194,10 @@ contract('StarStaking', accounts => {
       })
     })
 
-    it('does NOT allow to deploy with a starRatePer1000 of 0', async () => {
+    it('does NOT allow to deploy with a targetRateInEth of 0', async () => {
       await itFailsToDeployContract({
-        starRatePer1000: 0,
-        expectedError: 'Rate must be more than 0!',
+        targetRateInEth: 0,
+        expectedError: 'Target rate must be more than 0!',
       })
     })
 
@@ -183,6 +242,16 @@ contract('StarStaking', accounts => {
       await itFailsToDeployContract({
         wallet: 0,
         expectedError: 'Wallet address may must be defined!',
+      })
+    })
+
+    it('does NOT allow to deploy with a max decline higher than max discount', async () => {
+      await itFailsToDeployContract({
+        declinePerRankPer1000: 51,
+        maxDiscountPer1000: 500,
+        topRanksMaxSize: 11,
+        expectedError:
+          'Please increase max discount or decrease decline per rank!',
       })
     })
 
@@ -833,20 +902,423 @@ contract('StarStaking', accounts => {
 
   describe('when withdrawing funds', () => {
     const computeExpectedBalance = ({
+      decimalCorrectionFactor,
       declinePerRankPer1000,
       maxDiscountPer1000,
       rank,
       stakedAmount,
-      starRatePer1000,
+      starEthRate,
+      targetRateInEth,
     }) => {
-      const baselineTokens = stakedAmount.times(starRatePer1000).div(1000)
-      const discountPer1000 = maxDiscountPer1000.minus(
-        declinePerRankPer1000.times(rank - 1)
-      )
+      const baselineTokens = stakedAmount
+        .mul(targetRateInEth)
+        .mul(starEthRate)
+        .div(decimalCorrectionFactor)
+      const discountPer1000 =
+        rank > 0
+          ? maxDiscountPer1000.minus(declinePerRankPer1000.times(rank - 1))
+          : 0
       const bonusTokens = baselineTokens.times(discountPer1000).div(1000)
 
       return baselineTokens.add(bonusTokens)
     }
+
+    describe('when staking given different STAR/ETH rates', async () => {
+      describe('with STAR/ETH rate of 10 STAR = 1 ETH', async () => {
+        const user1StakedAmount = new BigNumber(1500)
+        const starEthRate = new BigNumber(1)
+        const starEthRateDecimalCorrectionFactor = new BigNumber(10)
+
+        beforeEach(async () => {
+          const starEthRateAddress = (await StarEthRate.new(
+            starEthRateDecimalCorrectionFactor,
+            starEthRate
+          )).address
+          await deployStakingContract({ starEthRateAddress })
+
+          await increaseTimeTo(defaultStartTime)
+          await stakingContract.stakeFor(user1, user1StakedAmount, HEAD, {
+            from: user1,
+          })
+          await increaseTimeTo(defaultClosingTime.plus(100))
+          await stakingContract.withdrawAllReceivedTokens({ from: user1 })
+        })
+
+        it('gives 10 times less tokens for staking compared to target rate', async () => {
+          const tokenBalance = await tokenOnSale.balanceOf(user1)
+
+          const expectedTokenBalance = computeExpectedBalance({
+            decimalCorrectionFactor: starEthRateDecimalCorrectionFactor,
+            declinePerRankPer1000: defaultDeclinePerRankPer1000,
+            maxDiscountPer1000: defaultMaxDiscountPer1000,
+            rank: 1,
+            stakedAmount: user1StakedAmount,
+            starEthRate,
+            targetRateInEth: defaultTargetRateInEth,
+          })
+
+          tokenBalance.should.be.bignumber.equal(expectedTokenBalance)
+        })
+      })
+      describe('with STAR/ETH rate of 3,000,000 STAR = 50 ETH', async () => {
+        const user1StakedAmount = new BigNumber(1500)
+        const starEthRate = new BigNumber(50)
+        const starEthRateDecimalCorrectionFactor = new BigNumber(3000000)
+
+        beforeEach(async () => {
+          const starEthRateAddress = (await StarEthRate.new(
+            starEthRateDecimalCorrectionFactor,
+            starEthRate
+          )).address
+          await deployStakingContract({ starEthRateAddress })
+
+          await increaseTimeTo(defaultStartTime)
+          await stakingContract.stakeFor(user1, user1StakedAmount, HEAD, {
+            from: user1,
+          })
+          await increaseTimeTo(defaultClosingTime.plus(100))
+          await stakingContract.withdrawAllReceivedTokens({ from: user1 })
+        })
+
+        it('gives 60,000 times less tokens for staking compared to target rate', async () => {
+          const tokenBalance = await tokenOnSale.balanceOf(user1)
+
+          const expectedTokenBalance = computeExpectedBalance({
+            decimalCorrectionFactor: starEthRateDecimalCorrectionFactor,
+            declinePerRankPer1000: defaultDeclinePerRankPer1000,
+            maxDiscountPer1000: defaultMaxDiscountPer1000,
+            rank: 1,
+            stakedAmount: user1StakedAmount,
+            starEthRate,
+            targetRateInEth: defaultTargetRateInEth,
+          })
+
+          tokenBalance.should.be.bignumber.equal(expectedTokenBalance)
+        })
+      })
+
+      describe('with STAR/ETH rate of 1 STAR = 1 ETH', async () => {
+        const user1StakedAmount = new BigNumber(1500)
+        const starEthRate = new BigNumber(100)
+        const starEthRateDecimalCorrectionFactor = new BigNumber(100)
+
+        beforeEach(async () => {
+          const starEthRateAddress = (await StarEthRate.new(
+            starEthRateDecimalCorrectionFactor,
+            starEthRate
+          )).address
+          await deployStakingContract({ starEthRateAddress })
+
+          await increaseTimeTo(defaultStartTime)
+          await stakingContract.stakeFor(user1, user1StakedAmount, HEAD, {
+            from: user1,
+          })
+          await increaseTimeTo(defaultClosingTime.plus(100))
+          await stakingContract.withdrawAllReceivedTokens({ from: user1 })
+        })
+
+        it('gives the same amount of tokens as target rate', async () => {
+          const tokenBalance = await tokenOnSale.balanceOf(user1)
+
+          const expectedTokenBalance = computeExpectedBalance({
+            decimalCorrectionFactor: starEthRateDecimalCorrectionFactor,
+            declinePerRankPer1000: defaultDeclinePerRankPer1000,
+            maxDiscountPer1000: defaultMaxDiscountPer1000,
+            rank: 1,
+            stakedAmount: user1StakedAmount,
+            starEthRate,
+            targetRateInEth: defaultTargetRateInEth,
+          })
+
+          tokenBalance.should.be.bignumber.equal(expectedTokenBalance)
+        })
+      })
+
+      describe('when STAR is worth less than 1 project token', async () => {
+        const user1StakedAmount = new BigNumber(1500)
+        const starEthRate = new BigNumber(1)
+        const starEthRateDecimalCorrectionFactor = new BigNumber(10000)
+
+        beforeEach(async () => {
+          const starEthRateAddress = (await StarEthRate.new(
+            starEthRateDecimalCorrectionFactor,
+            starEthRate
+          )).address
+          await deployStakingContract({ starEthRateAddress })
+
+          await increaseTimeTo(defaultStartTime)
+          await stakingContract.stakeFor(user1, user1StakedAmount, HEAD, {
+            from: user1,
+          })
+          await increaseTimeTo(defaultClosingTime.plus(100))
+          await stakingContract.withdrawAllReceivedTokens({ from: user1 })
+        })
+
+        it('gives less tokens than STAR used for staking', async () => {
+          const tokenBalance = await tokenOnSale.balanceOf(user1)
+
+          const expectedTokenBalance = computeExpectedBalance({
+            decimalCorrectionFactor: starEthRateDecimalCorrectionFactor,
+            declinePerRankPer1000: defaultDeclinePerRankPer1000,
+            maxDiscountPer1000: defaultMaxDiscountPer1000,
+            rank: 1,
+            stakedAmount: user1StakedAmount,
+            starEthRate,
+            targetRateInEth: defaultTargetRateInEth,
+          })
+
+          tokenBalance.should.be.bignumber.equal(expectedTokenBalance)
+        })
+      })
+    })
+
+    describe('when staking given different top rank discounts', async () => {
+      describe('when given a high max discount and high decline per rank', async () => {
+        const user1StakedAmount = new BigNumber(1500)
+        const user2StakedAmount = new BigNumber(1100)
+        const user3StakedAmount = new BigNumber(666)
+        const maxDiscountPer1000 = new BigNumber(5000)
+        const declinePerRankPer1000 = new BigNumber(500)
+
+        beforeEach(async () => {
+          await deployStakingContract({
+            declinePerRankPer1000,
+            maxDiscountPer1000,
+          })
+
+          await increaseTimeTo(defaultStartTime)
+          await stakingContract.stakeFor(user1, user1StakedAmount, HEAD, {
+            from: user1,
+          })
+          await stakingContract.stakeFor(user2, user2StakedAmount, user1, {
+            from: user1,
+          })
+          await stakingContract.stakeFor(user3, user3StakedAmount, user2, {
+            from: user1,
+          })
+          await increaseTimeTo(defaultClosingTime.plus(100))
+          await stakingContract.withdrawAllReceivedTokens({ from: user3 })
+        })
+
+        it('transfers the correct amount of tokens', async () => {
+          const tokenBalance = await tokenOnSale.balanceOf(user3)
+
+          const expectedTokenBalance = computeExpectedBalance({
+            decimalCorrectionFactor: defaultStarEthRateDecimalCorrectionFactor,
+            declinePerRankPer1000,
+            maxDiscountPer1000,
+            rank: 3,
+            stakedAmount: user3StakedAmount,
+            starEthRate: defaultStarEthRate,
+            targetRateInEth: defaultTargetRateInEth,
+          })
+
+          tokenBalance.should.be.bignumber.equal(expectedTokenBalance)
+        })
+      })
+
+      describe('when given a high max discount and low decline per rank', async () => {
+        const user1StakedAmount = new BigNumber(1500)
+        const user2StakedAmount = new BigNumber(1100)
+        const user3StakedAmount = new BigNumber(666)
+        const maxDiscountPer1000 = new BigNumber(5000)
+        const declinePerRankPer1000 = new BigNumber(2)
+
+        beforeEach(async () => {
+          await deployStakingContract({
+            declinePerRankPer1000,
+            maxDiscountPer1000,
+          })
+
+          await increaseTimeTo(defaultStartTime)
+          await stakingContract.stakeFor(user1, user1StakedAmount, HEAD, {
+            from: user1,
+          })
+          await stakingContract.stakeFor(user2, user2StakedAmount, user1, {
+            from: user1,
+          })
+          await stakingContract.stakeFor(user3, user3StakedAmount, user2, {
+            from: user1,
+          })
+          await increaseTimeTo(defaultClosingTime.plus(100))
+          await stakingContract.withdrawAllReceivedTokens({ from: user3 })
+        })
+
+        it('transfers the correct amount of tokens', async () => {
+          const tokenBalance = await tokenOnSale.balanceOf(user3)
+
+          const expectedTokenBalance = computeExpectedBalance({
+            decimalCorrectionFactor: defaultStarEthRateDecimalCorrectionFactor,
+            declinePerRankPer1000,
+            maxDiscountPer1000,
+            rank: 3,
+            stakedAmount: user3StakedAmount,
+            starEthRate: defaultStarEthRate,
+            targetRateInEth: defaultTargetRateInEth,
+          })
+
+          tokenBalance.should.be.bignumber.equal(expectedTokenBalance)
+        })
+      })
+
+      describe('when given a low max discount and high decline per rank', async () => {
+        const user1StakedAmount = new BigNumber(1500)
+        const user2StakedAmount = new BigNumber(1100)
+        const user3StakedAmount = new BigNumber(666)
+        const maxDiscountPer1000 = new BigNumber(60)
+        const declinePerRankPer1000 = new BigNumber(20)
+        const topRanksMaxSize = new BigNumber(3)
+
+        beforeEach(async () => {
+          await deployStakingContract({
+            declinePerRankPer1000,
+            maxDiscountPer1000,
+            topRanksMaxSize,
+          })
+
+          await increaseTimeTo(defaultStartTime)
+          await stakingContract.stakeFor(user1, user1StakedAmount, HEAD, {
+            from: user1,
+          })
+          await stakingContract.stakeFor(user2, user2StakedAmount, user1, {
+            from: user1,
+          })
+          await stakingContract.stakeFor(user3, user3StakedAmount, user2, {
+            from: user1,
+          })
+          await increaseTimeTo(defaultClosingTime.plus(100))
+          await stakingContract.withdrawAllReceivedTokens({ from: user3 })
+        })
+
+        it('transfers the correct amount of tokens', async () => {
+          const tokenBalance = await tokenOnSale.balanceOf(user3)
+
+          const expectedTokenBalance = computeExpectedBalance({
+            decimalCorrectionFactor: defaultStarEthRateDecimalCorrectionFactor,
+            declinePerRankPer1000,
+            maxDiscountPer1000,
+            rank: 3,
+            stakedAmount: user3StakedAmount,
+            starEthRate: defaultStarEthRate,
+            targetRateInEth: defaultTargetRateInEth,
+          })
+
+          tokenBalance.should.be.bignumber.equal(expectedTokenBalance)
+        })
+      })
+
+      describe('when given a low max discount and low decline per rank', async () => {
+        const user1StakedAmount = new BigNumber(1500)
+        const user2StakedAmount = new BigNumber(1100)
+        const user3StakedAmount = new BigNumber(666)
+        const maxDiscountPer1000 = new BigNumber(5)
+        const declinePerRankPer1000 = new BigNumber(1)
+        const topRanksMaxSize = new BigNumber(3)
+
+        beforeEach(async () => {
+          await deployStakingContract({
+            declinePerRankPer1000,
+            maxDiscountPer1000,
+            topRanksMaxSize,
+          })
+
+          await increaseTimeTo(defaultStartTime)
+          await stakingContract.stakeFor(user1, user1StakedAmount, HEAD, {
+            from: user1,
+          })
+          await stakingContract.stakeFor(user2, user2StakedAmount, user1, {
+            from: user1,
+          })
+          await stakingContract.stakeFor(user3, user3StakedAmount, user2, {
+            from: user1,
+          })
+          await increaseTimeTo(defaultClosingTime.plus(100))
+          await stakingContract.withdrawAllReceivedTokens({ from: user3 })
+        })
+
+        it('transfers the correct amount of tokens', async () => {
+          const tokenBalance = await tokenOnSale.balanceOf(user3)
+
+          const expectedTokenBalance = computeExpectedBalance({
+            decimalCorrectionFactor: defaultStarEthRateDecimalCorrectionFactor,
+            declinePerRankPer1000,
+            maxDiscountPer1000,
+            rank: 3,
+            stakedAmount: user3StakedAmount,
+            starEthRate: defaultStarEthRate,
+            targetRateInEth: defaultTargetRateInEth,
+          })
+
+          tokenBalance.should.be.bignumber.equal(expectedTokenBalance)
+        })
+      })
+    })
+
+    describe('when staking given different target rates', async () => {
+      describe('when given a high target rate', async () => {
+        const user1StakedAmount = new BigNumber(1500)
+        const targetRateInEth = new BigNumber(2000000)
+
+        beforeEach(async () => {
+          await deployStakingContract({ targetRateInEth })
+
+          await increaseTimeTo(defaultStartTime)
+          await stakingContract.stakeFor(user1, user1StakedAmount, HEAD, {
+            from: user1,
+          })
+          await increaseTimeTo(defaultClosingTime.plus(100))
+          await stakingContract.withdrawAllReceivedTokens({ from: user1 })
+        })
+
+        it('transfers the correct amount of tokens', async () => {
+          const tokenBalance = await tokenOnSale.balanceOf(user1)
+
+          const expectedTokenBalance = computeExpectedBalance({
+            decimalCorrectionFactor: defaultStarEthRateDecimalCorrectionFactor,
+            declinePerRankPer1000: defaultDeclinePerRankPer1000,
+            maxDiscountPer1000: defaultMaxDiscountPer1000,
+            rank: 1,
+            stakedAmount: user1StakedAmount,
+            starEthRate: defaultStarEthRate,
+            targetRateInEth,
+          })
+
+          tokenBalance.should.be.bignumber.equal(expectedTokenBalance)
+        })
+      })
+
+      describe('when given a low target rate', async () => {
+        const user1StakedAmount = new BigNumber(1500)
+        const targetRateInEth = new BigNumber(1)
+
+        beforeEach(async () => {
+          await deployStakingContract({ targetRateInEth })
+
+          await increaseTimeTo(defaultStartTime)
+          await stakingContract.stakeFor(user1, user1StakedAmount, HEAD, {
+            from: user1,
+          })
+          await increaseTimeTo(defaultClosingTime.plus(100))
+          await stakingContract.withdrawAllReceivedTokens({ from: user1 })
+        })
+
+        it('transfers the correct amount of tokens', async () => {
+          const tokenBalance = await tokenOnSale.balanceOf(user1)
+
+          const expectedTokenBalance = computeExpectedBalance({
+            decimalCorrectionFactor: defaultStarEthRateDecimalCorrectionFactor,
+            declinePerRankPer1000: defaultDeclinePerRankPer1000,
+            maxDiscountPer1000: defaultMaxDiscountPer1000,
+            rank: 1,
+            stakedAmount: user1StakedAmount,
+            starEthRate: defaultStarEthRate,
+            targetRateInEth,
+          })
+
+          tokenBalance.should.be.bignumber.equal(expectedTokenBalance)
+        })
+      })
+    })
 
     it('transfers bought tokens and bonus', async () => {
       const user1StakedAmount = new BigNumber(1500)
@@ -866,11 +1338,13 @@ contract('StarStaking', accounts => {
       const user2TokenBalance = await tokenOnSale.balanceOf(user2)
 
       const expectedUser1TokenBalance = computeExpectedBalance({
+        decimalCorrectionFactor: defaultStarEthRateDecimalCorrectionFactor,
         declinePerRankPer1000: defaultDeclinePerRankPer1000,
         maxDiscountPer1000: defaultMaxDiscountPer1000,
         rank: 1,
         stakedAmount: user1StakedAmount,
-        starRatePer1000: defaultStarRatePer1000,
+        starEthRate: defaultStarEthRate,
+        targetRateInEth: defaultTargetRateInEth,
       })
 
       user1TokenBalance.should.be.bignumber.equal(expectedUser1TokenBalance)
@@ -907,27 +1381,33 @@ contract('StarStaking', accounts => {
       const user4TokenBalance = await tokenOnSale.balanceOf(user4)
 
       const expectedUser2TokenBalance = computeExpectedBalance({
+        decimalCorrectionFactor: defaultStarEthRateDecimalCorrectionFactor,
         declinePerRankPer1000: defaultDeclinePerRankPer1000,
         maxDiscountPer1000: defaultMaxDiscountPer1000,
         rank: 2,
         stakedAmount: user2StakedAmount,
-        starRatePer1000: defaultStarRatePer1000,
+        starEthRate: defaultStarEthRate,
+        targetRateInEth: defaultTargetRateInEth,
       })
 
       const expectedUser3TokenBalance = computeExpectedBalance({
+        decimalCorrectionFactor: defaultStarEthRateDecimalCorrectionFactor,
         declinePerRankPer1000: defaultDeclinePerRankPer1000,
         maxDiscountPer1000: defaultMaxDiscountPer1000,
         rank: 3,
         stakedAmount: user3StakedAmount,
-        starRatePer1000: defaultStarRatePer1000,
+        starEthRate: defaultStarEthRate,
+        targetRateInEth: defaultTargetRateInEth,
       })
 
       const expectedUser4TokenBalance = computeExpectedBalance({
+        decimalCorrectionFactor: defaultStarEthRateDecimalCorrectionFactor,
         declinePerRankPer1000: defaultDeclinePerRankPer1000,
         maxDiscountPer1000: defaultMaxDiscountPer1000,
         rank: 4,
         stakedAmount: user4StakedAmount,
-        starRatePer1000: defaultStarRatePer1000,
+        starEthRate: defaultStarEthRate,
+        targetRateInEth: defaultTargetRateInEth,
       })
 
       user2TokenBalance.should.be.bignumber.equal(expectedUser2TokenBalance)
@@ -935,7 +1415,43 @@ contract('StarStaking', accounts => {
       user4TokenBalance.should.be.bignumber.equal(expectedUser4TokenBalance)
     })
 
-    it('throws when trying to withdraw more than once', async () => {
+    it('transfers no bonus tokens for users not in top ranks', async () => {
+      const user1StakedAmount = new BigNumber(1500)
+      const user2StakedAmount = new BigNumber(1100)
+      const user3StakedAmount = new BigNumber(666)
+      const topRanksMaxSize = new BigNumber(2)
+
+      await deployStakingContract({ topRanksMaxSize })
+
+      await increaseTimeTo(defaultStartTime)
+      await stakingContract.stakeFor(user1, user1StakedAmount, HEAD, {
+        from: user1,
+      })
+      await stakingContract.stakeFor(user2, user2StakedAmount, user1, {
+        from: user1,
+      })
+      await stakingContract.stakeFor(user3, user3StakedAmount, user2, {
+        from: user1,
+      })
+      await increaseTimeTo(defaultClosingTime.plus(100))
+      await stakingContract.withdrawAllReceivedTokens({ from: user3 })
+
+      const tokenBalance = await tokenOnSale.balanceOf(user3)
+
+      const expectedTokenBalance = computeExpectedBalance({
+        decimalCorrectionFactor: defaultStarEthRateDecimalCorrectionFactor,
+        declinePerRankPer1000: defaultDeclinePerRankPer1000,
+        maxDiscountPer1000: defaultMaxDiscountPer1000,
+        rank: undefined,
+        stakedAmount: user3StakedAmount,
+        starEthRate: defaultStarEthRate,
+        targetRateInEth: defaultTargetRateInEth,
+      })
+
+      tokenBalance.should.be.bignumber.equal(expectedTokenBalance)
+    })
+
+    it('reverts when trying to withdraw more than once', async () => {
       await increaseTimeTo(defaultStartTime)
       await stakingContract.stakeFor(user1, 1500, HEAD, {
         from: user1,
