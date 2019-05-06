@@ -19,7 +19,7 @@ function ensuresException(error, expectedError) {
   if (expectedError !== undefined)
     assert(
       error.message.includes(expectedError),
-      `Expected error '${expectedError}', received'${error.message}'`
+      `Expected error '${expectedError}', received '${error.message}'`
     )
 }
 
