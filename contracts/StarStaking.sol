@@ -27,7 +27,7 @@ contract StarStaking is StarStakingInterface, Lockable {
     LinkedListLib.LinkedList topRanks;
 
     uint256 public startTime;
-    uint256 public closingTime;
+    uint256 public endTime;
 
     uint256 public topRanksMaxSize;
     uint256 public targetRateInEth;
@@ -40,14 +40,14 @@ contract StarStaking is StarStakingInterface, Lockable {
 
     modifier whenStakingOpen {
         require(now >= startTime, "Staking period not yet started!");
-        require(now < closingTime, "Staking period already closed!");
+        require(now < endTime, "Staking period already closed!");
 
         _;
     }
 
     modifier isFinished {
         require(
-            now > closingTime || totalRaised >= stakeSaleCap,
+            now > endTime || totalRaised >= stakeSaleCap,
             "Staking period not yet closed!"
         );
 
@@ -133,7 +133,7 @@ contract StarStaking is StarStakingInterface, Lockable {
         starToken = _starToken;
         tokenOnSale = _tokenOnSale;
         startTime = _startTime;
-        closingTime = _endTime;
+        endTime = _endTime;
         topRanksMaxSize = _topRanksMaxSize;
         targetRateInEth = _targetRateInEth;
         maxDiscountPer1000 = _maxDiscountPer1000;
@@ -309,6 +309,14 @@ contract StarStaking is StarStakingInterface, Lockable {
         tokenOnSale.transfer(msg.sender, totalTokens);
     }
 
+    /**
+     * @dev Withdraw all received tokens after staking is finished.
+     * @return The current top ranks size.
+     */
+    function topRanksCount() external view returns (uint256) {
+        return topRanks.sizeOf();
+    }
+
     function _computeBaseTokens() private returns (uint256) {
         uint256 stakedStar = totalStakedFor[msg.sender];
         uint256 decimalCorrectionFactor =
@@ -347,7 +355,7 @@ contract StarStaking is StarStakingInterface, Lockable {
         view
         returns (uint256)
     {
-        uint256 timeUntilEnd = closingTime.sub(now);
+        uint256 timeUntilEnd = endTime.sub(now);
         uint256 addedStakingPoints = timeUntilEnd.mul(_amount);
 
         return totalStakingPointsFor[_user].add(addedStakingPoints);
@@ -413,7 +421,7 @@ contract StarStaking is StarStakingInterface, Lockable {
             topRanks.insert(_oneRankAboveNode, _user, NEXT);
         }
 
-        if (topRanks.sizeOf() >= topRanksMaxSize) {
+        if (topRanks.sizeOf() > topRanksMaxSize) {
             topRanks.pop(PREV);
         }
     }
