@@ -20,7 +20,7 @@ contract('StarStaking', accounts => {
     tokenOnSale,
     initialBalance,
     defaultStartTime,
-    defaultClosingTime,
+    defaultEndTime,
     defaultStakeSaleCap,
     defaultTargetRateInEth,
     defaultMaxDiscountPer1000,
@@ -34,7 +34,7 @@ contract('StarStaking', accounts => {
     tokenOnSale = await MintableToken.new()
 
     defaultStartTime = new BigNumber(latestTime().toString()).plus(10000)
-    defaultClosingTime = defaultStartTime.plus(200000)
+    defaultEndTime = defaultStartTime.plus(200000)
 
     defaultTargetRateInEth = new BigNumber(2000) // 2000 tokens per ETH
     defaultMaxDiscountPer1000 = new BigNumber(500) // = 50%
@@ -57,7 +57,7 @@ contract('StarStaking', accounts => {
       starToken.address,
       tokenOnSale.address,
       defaultStartTime,
-      defaultClosingTime,
+      defaultEndTime,
       defaultTopRanksMaxSize,
       defaultTargetRateInEth,
       defaultMaxDiscountPer1000,
@@ -79,7 +79,7 @@ contract('StarStaking', accounts => {
     starTokenAddress = starToken.address,
     tokenOnSaleAddress = tokenOnSale.address,
     startTime = defaultStartTime,
-    closingTime = defaultClosingTime,
+    endTime = defaultEndTime,
     topRanksMaxSize = defaultTopRanksMaxSize,
     targetRateInEth = defaultTargetRateInEth,
     maxDiscountPer1000 = defaultMaxDiscountPer1000,
@@ -93,7 +93,7 @@ contract('StarStaking', accounts => {
       starTokenAddress,
       tokenOnSaleAddress,
       startTime,
-      closingTime,
+      endTime,
       topRanksMaxSize,
       targetRateInEth,
       maxDiscountPer1000,
@@ -115,7 +115,7 @@ contract('StarStaking', accounts => {
       starTokenAddress = starToken.address,
       tokenOnSaleAddress = tokenOnSale.address,
       startTime = defaultStartTime,
-      closingTime = defaultClosingTime,
+      endTime = defaultEndTime,
       topRanksMaxSize = defaultTopRanksMaxSize,
       targetRateInEth = defaultTargetRateInEth,
       maxDiscountPer1000 = defaultMaxDiscountPer1000,
@@ -133,7 +133,7 @@ contract('StarStaking', accounts => {
           starTokenAddress,
           tokenOnSaleAddress,
           startTime,
-          closingTime,
+          endTime,
           topRanksMaxSize,
           targetRateInEth,
           maxDiscountPer1000,
@@ -173,8 +173,8 @@ contract('StarStaking', accounts => {
 
     it('does NOT allow to deploy with a closing time before starting time', async () => {
       await itFailsToDeployContract({
-        startTime: defaultClosingTime,
-        closingTime: defaultStartTime,
+        startTime: defaultEndTime,
+        endTime: defaultStartTime,
         expectedError: 'Start time must be before closing time!',
       })
     })
@@ -260,7 +260,7 @@ contract('StarStaking', accounts => {
       const setTokenOnSale = await stakingContract.tokenOnSale()
       const setTopRanksMaxSize = await stakingContract.topRanksMaxSize()
       const setStartTime = await stakingContract.startTime()
-      const setClosingTime = await stakingContract.closingTime()
+      const setEndTime = await stakingContract.endTime()
       const setTopRanksCount = await stakingContract.topRanksCount()
       const setStakeSaleCap = await stakingContract.stakeSaleCap()
       const setMaxStakePerUser = await stakingContract.maxStakePerUser()
@@ -281,8 +281,8 @@ contract('StarStaking', accounts => {
         defaultStartTime,
         'Opening time not matching!'
       )
-      setClosingTime.should.be.bignumber.equal(
-        defaultClosingTime,
+      setEndTime.should.be.bignumber.equal(
+        defaultEndTime,
         'Closing time not matching!'
       )
       setTopRanksCount.should.be.bignumber.equal(
@@ -484,7 +484,7 @@ contract('StarStaking', accounts => {
     const adjustedTime = timeAdvanced
       ? timeWhenSubmitted.minus(1)
       : timeWhenSubmitted
-    const timeUntilEnd = defaultClosingTime.minus(adjustedTime)
+    const timeUntilEnd = defaultEndTime.minus(adjustedTime)
     const stakingPoints = timeUntilEnd.times(amount)
 
     return stakingPoints
@@ -524,15 +524,13 @@ contract('StarStaking', accounts => {
 
         it('calculates the points correctly in the middle', async () => {
           await increaseTimeTo(
-            defaultStartTime.plus(
-              defaultClosingTime.minus(defaultStartTime).div(2)
-            )
+            defaultStartTime.plus(defaultEndTime.minus(defaultStartTime).div(2))
           )
           evaluateComputation(balance)
         })
 
         it('calculates the points correctly at the end', async () => {
-          await increaseTimeTo(defaultClosingTime.minus(20))
+          await increaseTimeTo(defaultEndTime.minus(20))
           evaluateComputation(balance)
         })
       })
@@ -776,6 +774,79 @@ contract('StarStaking', accounts => {
         timesWhenSubmitted,
       })
     })
+
+    it('correctly inserts into top ranks for nodes already in the top ranks', async () => {
+      const totalStaked = [6000, 5000, 4000, 3000, 2000, 1000]
+      const timesWhenSubmitted = []
+
+      await increaseTimeTo(defaultStartTime)
+      await stakingContract.stakeFor(user1, totalStaked[0], HEAD, {
+        from: user1,
+      })
+      timesWhenSubmitted.push(new BigNumber(latestTime().toString()))
+
+      const initialStake = 10
+      await stakingContract.stakeFor(accounts[2], initialStake, user1, {
+        from: user1,
+      })
+      const timeWhenSubmittedFirst = new BigNumber(latestTime().toString())
+
+      for (let i = 1; i < totalStaked.length; i++) {
+        await increaseTimeTo(defaultStartTime.plus(i * 1000))
+        await stakingContract.stakeFor(
+          accounts[i],
+          totalStaked[i],
+          accounts[i - 1],
+          { from: user1 }
+        )
+        timesWhenSubmitted.push(new BigNumber(latestTime().toString()))
+      }
+
+      const result = await stakingContract.getTopRanksTuples()
+      const addresses = accounts
+        .slice(0, totalStaked.length)
+        .map(user => new BigNumber(user).toNumber())
+
+      listShouldEqualExpected({
+        result: [...result.slice(0, 6), ...result.slice(9)],
+        addresses: [...addresses.slice(0, 2), ...addresses.slice(3)],
+        totalStaked: [...totalStaked.slice(0, 2), ...totalStaked.slice(3)],
+        timesWhenSubmitted: [
+          ...timesWhenSubmitted.slice(0, 2),
+          ...timesWhenSubmitted.slice(3),
+        ],
+      })
+
+      const points1WithoutTimeAdvanced = computeStakingPoints({
+        amount: initialStake,
+        timeWhenSubmitted: timeWhenSubmittedFirst,
+        timeAdvanced: false,
+      })
+      const points1WithTimeAdvanced = computeStakingPoints({
+        amount: initialStake,
+        timeWhenSubmitted: timeWhenSubmittedFirst,
+        timeAdvanced: true,
+      })
+      const points2WithoutTimeAdvanced = computeStakingPoints({
+        amount: totalStaked[2],
+        timeWhenSubmitted: timesWhenSubmitted[2],
+        timeAdvanced: false,
+      })
+      const points2WithTimeAdvanced = computeStakingPoints({
+        amount: totalStaked[2],
+        timeWhenSubmitted: timesWhenSubmitted[2],
+        timeAdvanced: true,
+      })
+
+      result[7].should.be.bignumber.at.least(
+        points1WithoutTimeAdvanced.plus(points2WithoutTimeAdvanced),
+        'Staking points should match computed staking points!'
+      )
+      result[7].should.be.bignumber.at.most(
+        points1WithTimeAdvanced.plus(points2WithTimeAdvanced),
+        'Staking points should match computed staking points!'
+      )
+    })
   })
 
   describe('when there is a sorted top ranking', async () => {
@@ -823,6 +894,46 @@ contract('StarStaking', accounts => {
         ...accounts.slice(0, totalStaked.length).reverse(),
       ])
     })
+
+    it('getSortedSpotForNewStake returns correct reference node', async () => {
+      const totalStaked = [100000, 10000, 1000, 100, 10]
+      const timesWhenSubmitted = []
+
+      await increaseTimeTo(defaultStartTime)
+      await stakingContract.stakeFor(user1, totalStaked[4], HEAD, {
+        from: user1,
+      })
+      timesWhenSubmitted.push(new BigNumber(latestTime().toString()))
+
+      for (let i = 1; i < totalStaked.length; i++) {
+        await increaseTimeTo(defaultStartTime.plus(i * 5))
+        await stakingContract.stakeFor(
+          accounts[i],
+          totalStaked[4 - i],
+          accounts[i - 1],
+          { from: user1 }
+        )
+        timesWhenSubmitted.push(new BigNumber(latestTime().toString()))
+      }
+
+      const spots = []
+
+      for (let i = 0; i < totalStaked.length; i++) {
+        spots.push(
+          await stakingContract.getSortedSpotForNewStake(100, {
+            from: accounts[i],
+          })
+        )
+      }
+
+      spots.should.eql([
+        accounts[2],
+        accounts[2],
+        accounts[3],
+        accounts[4],
+        accounts[4],
+      ])
+    })
   })
 
   describe('when reading the top ranks with respective staking points and total staked', async () => {
@@ -852,25 +963,25 @@ contract('StarStaking', accounts => {
       })
       timesWhenSubmitted.push(new BigNumber(latestTime().toString()))
 
-      await increaseTimeTo(defaultClosingTime.minus(999))
+      await increaseTimeTo(defaultEndTime.minus(999))
       await stakingContract.stakeFor(user3, totalStaked[2], user1, {
         from: user1,
       })
       timesWhenSubmitted.push(new BigNumber(latestTime().toString()))
 
-      await increaseTimeTo(defaultClosingTime.minus(444))
+      await increaseTimeTo(defaultEndTime.minus(444))
       await stakingContract.stakeFor(user4, totalStaked[3], user1, {
         from: user1,
       })
       timesWhenSubmitted.push(new BigNumber(latestTime().toString()))
 
-      await increaseTimeTo(defaultClosingTime.minus(84))
+      await increaseTimeTo(defaultEndTime.minus(84))
       await stakingContract.stakeFor(user5, totalStaked[4], user1, {
         from: user1,
       })
       timesWhenSubmitted.push(new BigNumber(latestTime().toString()))
 
-      await increaseTimeTo(defaultClosingTime.minus(10))
+      await increaseTimeTo(defaultEndTime.minus(10))
       await stakingContract.stakeFor(user6, totalStaked[5], user3, {
         from: user1,
       })
@@ -940,7 +1051,7 @@ contract('StarStaking', accounts => {
           await stakingContract.stakeFor(user1, user1StakedAmount, HEAD, {
             from: user1,
           })
-          await increaseTimeTo(defaultClosingTime.plus(100))
+          await increaseTimeTo(defaultEndTime.plus(100))
           await stakingContract.withdrawAllReceivedTokens({ from: user1 })
         })
 
@@ -976,7 +1087,7 @@ contract('StarStaking', accounts => {
           await stakingContract.stakeFor(user1, user1StakedAmount, HEAD, {
             from: user1,
           })
-          await increaseTimeTo(defaultClosingTime.plus(100))
+          await increaseTimeTo(defaultEndTime.plus(100))
           await stakingContract.withdrawAllReceivedTokens({ from: user1 })
         })
 
@@ -1013,7 +1124,7 @@ contract('StarStaking', accounts => {
           await stakingContract.stakeFor(user1, user1StakedAmount, HEAD, {
             from: user1,
           })
-          await increaseTimeTo(defaultClosingTime.plus(100))
+          await increaseTimeTo(defaultEndTime.plus(100))
           await stakingContract.withdrawAllReceivedTokens({ from: user1 })
         })
 
@@ -1050,7 +1161,7 @@ contract('StarStaking', accounts => {
           await stakingContract.stakeFor(user1, user1StakedAmount, HEAD, {
             from: user1,
           })
-          await increaseTimeTo(defaultClosingTime.plus(100))
+          await increaseTimeTo(defaultEndTime.plus(100))
           await stakingContract.withdrawAllReceivedTokens({ from: user1 })
         })
 
@@ -1096,7 +1207,7 @@ contract('StarStaking', accounts => {
           await stakingContract.stakeFor(user3, user3StakedAmount, user2, {
             from: user1,
           })
-          await increaseTimeTo(defaultClosingTime.plus(100))
+          await increaseTimeTo(defaultEndTime.plus(100))
           await stakingContract.withdrawAllReceivedTokens({ from: user3 })
         })
 
@@ -1140,7 +1251,7 @@ contract('StarStaking', accounts => {
           await stakingContract.stakeFor(user3, user3StakedAmount, user2, {
             from: user1,
           })
-          await increaseTimeTo(defaultClosingTime.plus(100))
+          await increaseTimeTo(defaultEndTime.plus(100))
           await stakingContract.withdrawAllReceivedTokens({ from: user3 })
         })
 
@@ -1186,7 +1297,7 @@ contract('StarStaking', accounts => {
           await stakingContract.stakeFor(user3, user3StakedAmount, user2, {
             from: user1,
           })
-          await increaseTimeTo(defaultClosingTime.plus(100))
+          await increaseTimeTo(defaultEndTime.plus(100))
           await stakingContract.withdrawAllReceivedTokens({ from: user3 })
         })
 
@@ -1232,7 +1343,7 @@ contract('StarStaking', accounts => {
           await stakingContract.stakeFor(user3, user3StakedAmount, user2, {
             from: user1,
           })
-          await increaseTimeTo(defaultClosingTime.plus(100))
+          await increaseTimeTo(defaultEndTime.plus(100))
           await stakingContract.withdrawAllReceivedTokens({ from: user3 })
         })
 
@@ -1266,7 +1377,7 @@ contract('StarStaking', accounts => {
           await stakingContract.stakeFor(user1, user1StakedAmount, HEAD, {
             from: user1,
           })
-          await increaseTimeTo(defaultClosingTime.plus(100))
+          await increaseTimeTo(defaultEndTime.plus(100))
           await stakingContract.withdrawAllReceivedTokens({ from: user1 })
         })
 
@@ -1298,7 +1409,7 @@ contract('StarStaking', accounts => {
           await stakingContract.stakeFor(user1, user1StakedAmount, HEAD, {
             from: user1,
           })
-          await increaseTimeTo(defaultClosingTime.plus(100))
+          await increaseTimeTo(defaultEndTime.plus(100))
           await stakingContract.withdrawAllReceivedTokens({ from: user1 })
         })
 
@@ -1330,7 +1441,7 @@ contract('StarStaking', accounts => {
       await stakingContract.stakeFor(user2, 1000, user1, {
         from: user1,
       })
-      await increaseTimeTo(defaultClosingTime.plus(100))
+      await increaseTimeTo(defaultEndTime.plus(100))
 
       await stakingContract.withdrawAllReceivedTokens({ from: user1 })
 
@@ -1370,7 +1481,7 @@ contract('StarStaking', accounts => {
       await stakingContract.stakeFor(user4, user4StakedAmount, user3, {
         from: user1,
       })
-      await increaseTimeTo(defaultClosingTime.plus(100))
+      await increaseTimeTo(defaultEndTime.plus(100))
 
       await stakingContract.withdrawAllReceivedTokens({ from: user2 })
       await stakingContract.withdrawAllReceivedTokens({ from: user3 })
@@ -1433,7 +1544,7 @@ contract('StarStaking', accounts => {
       await stakingContract.stakeFor(user3, user3StakedAmount, user2, {
         from: user1,
       })
-      await increaseTimeTo(defaultClosingTime.plus(100))
+      await increaseTimeTo(defaultEndTime.plus(100))
       await stakingContract.withdrawAllReceivedTokens({ from: user3 })
 
       const tokenBalance = await tokenOnSale.balanceOf(user3)
@@ -1459,7 +1570,7 @@ contract('StarStaking', accounts => {
       await stakingContract.stakeFor(user2, 1000, user1, {
         from: user1,
       })
-      await increaseTimeTo(defaultClosingTime.plus(100))
+      await increaseTimeTo(defaultEndTime.plus(100))
 
       await stakingContract.withdrawAllReceivedTokens({ from: user1 })
 
