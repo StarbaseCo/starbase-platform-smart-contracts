@@ -261,7 +261,6 @@ contract('StarStaking', accounts => {
       const setTopRanksMaxSize = await stakingContract.topRanksMaxSize()
       const setStartTime = await stakingContract.startTime()
       const setEndTime = await stakingContract.endTime()
-      const setTopRanksCount = await stakingContract.topRanksCount()
       const setStakeSaleCap = await stakingContract.stakeSaleCap()
       const setMaxStakePerUser = await stakingContract.maxStakePerUser()
 
@@ -284,10 +283,6 @@ contract('StarStaking', accounts => {
       setEndTime.should.be.bignumber.equal(
         defaultEndTime,
         'Closing time not matching!'
-      )
-      setTopRanksCount.should.be.bignumber.equal(
-        0,
-        'Initial top ranks count should be 0!'
       )
       setStakeSaleCap.should.be.bignumber.equal(
         defaultStakeSaleCap.times(1e18),
