@@ -633,6 +633,32 @@ contract('StarStaking', accounts => {
       })
     })
 
+    it('must provide a reference node that is not equal to calling user', async () => {
+      await increaseTimeTo(defaultStartTime)
+      await stakingContract.stakeFor(user2, 10, HEAD, {
+        from: user1,
+      })
+      const timeWhenSubmitted = [new BigNumber(latestTime().toString())]
+
+      try {
+        await stakingContract.stakeFor(user2, 100, user2, {
+          from: user1,
+        })
+        assert.fail()
+      } catch (error) {
+        const expectedError = 'One rank above cannot be equal to inserted user!'
+        ensuresException(error, expectedError)
+      }
+
+      const result = await stakingContract.getTopRanksTuples()
+      listShouldEqualExpected({
+        result,
+        addresses: [new BigNumber(user2).toNumber()],
+        totalStaked: [10],
+        timesWhenSubmitted: timeWhenSubmitted,
+      })
+    })
+
     describe('referencing a node that is too low/high', () => {
       let timesWhenSubmitted = []
 
@@ -736,6 +762,41 @@ contract('StarStaking', accounts => {
       })
     })
 
+    it('correctly updates adding more stake for current first rank', async () => {
+      const totalStaked = [100000, 10000, 1000, 100, 10]
+      const bigStake = 100e18
+
+      await increaseTimeTo(defaultStartTime)
+      await stakingContract.stakeFor(user1, totalStaked[4], HEAD, {
+        from: user1,
+      })
+
+      for (let i = 1; i < totalStaked.length; i++) {
+        await increaseTimeTo(defaultStartTime.plus(i * 5))
+        await stakingContract.stakeFor(
+          accounts[i],
+          totalStaked[4 - i],
+          accounts[i - 1],
+          { from: user1 }
+        )
+      }
+      const result1 = (await stakingContract.getTopRanksTuples())[0].toNumber()
+
+      await stakingContract.stakeFor(accounts[5], bigStake, accounts[4], {
+        from: user1,
+      })
+      const result2 = (await stakingContract.getTopRanksTuples())[0].toNumber()
+
+      await stakingContract.stakeFor(accounts[5], bigStake, accounts[4], {
+        from: user1,
+      })
+      const result3 = (await stakingContract.getTopRanksTuples())[0].toNumber()
+
+      expect(result1).to.equal(new BigNumber(accounts[4]).toNumber())
+      expect(result2).to.equal(new BigNumber(accounts[5]).toNumber())
+      expect(result3).to.equal(new BigNumber(accounts[5]).toNumber())
+    })
+
     it('correctly inserts into top ranks at last rank position', async () => {
       const totalStaked = [6000, 5000, 4000, 3000, 2000, 1000]
       const timesWhenSubmitted = []
@@ -768,6 +829,46 @@ contract('StarStaking', accounts => {
         totalStaked,
         timesWhenSubmitted,
       })
+    })
+
+    it('correctly updates adding more stake for last rank', async () => {
+      const totalStaked = [6000, 5000, 4000, 3000, 2000, 1000]
+      const smallStake = 600
+
+      await increaseTimeTo(defaultStartTime)
+      await stakingContract.stakeFor(user1, totalStaked[0], HEAD, {
+        from: user1,
+      })
+
+      for (let i = 1; i < totalStaked.length; i++) {
+        await increaseTimeTo(defaultStartTime.plus(i * 1000))
+        await stakingContract.stakeFor(
+          accounts[i],
+          totalStaked[i],
+          accounts[i - 1],
+          { from: user1 }
+        )
+      }
+
+      const topRanks1 = await stakingContract.getTopRanksTuples()
+      const result1 = topRanks1[topRanks1.length - 3].toNumber()
+
+      await increaseTimeTo(defaultEndTime.minus(1000))
+      await stakingContract.stakeFor(accounts[6], smallStake, accounts[5], {
+        from: user1,
+      })
+      const topRanks2 = await stakingContract.getTopRanksTuples()
+      const result2 = topRanks2[topRanks2.length - 3].toNumber()
+
+      await stakingContract.stakeFor(accounts[6], smallStake, accounts[5], {
+        from: user1,
+      })
+      const topRanks3 = await stakingContract.getTopRanksTuples()
+      const result3 = topRanks3[topRanks3.length - 3].toNumber()
+
+      expect(result1).to.equal(new BigNumber(accounts[5]).toNumber())
+      expect(result2).to.equal(new BigNumber(accounts[6]).toNumber())
+      expect(result3).to.equal(new BigNumber(accounts[6]).toNumber())
     })
 
     it('correctly inserts into top ranks for nodes already in the top ranks', async () => {
@@ -875,18 +976,23 @@ contract('StarStaking', accounts => {
         }
       })
       const spots = [
-        await stakingContract.getSortedSpot(rcvStakingPoints[0] + 20),
+        await stakingContract.getSortedSpot(rcvStakingPoints[0] + 20, {
+          from: accounts[rcvStakingPoints.length - 1],
+        }),
       ]
 
       for (let i = 0; i < rcvStakingPoints.length; i++) {
         spots.push(
-          await stakingContract.getSortedSpot(rcvStakingPoints[i] - 20)
+          await stakingContract.getSortedSpot(rcvStakingPoints[i] - 20, {
+            from: accounts[rcvStakingPoints.length - 1],
+          })
         )
       }
 
       spots.should.eql([
-        accounts[totalStaked.length - 1],
-        ...accounts.slice(0, totalStaked.length).reverse(),
+        accounts[totalStaked.length - 2],
+        accounts[totalStaked.length - 2],
+        ...accounts.slice(0, totalStaked.length - 1).reverse(),
       ])
     })
 
@@ -926,7 +1032,7 @@ contract('StarStaking', accounts => {
         accounts[2],
         accounts[3],
         accounts[4],
-        accounts[4],
+        accounts[3],
       ])
     })
   })
