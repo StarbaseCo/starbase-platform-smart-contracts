@@ -163,6 +163,11 @@ contract StarStaking is StarStakingInterface, Lockable {
         onlyWhenUnlocked
         whenStakingOpen
     {
+        require(
+            _user != _oneRankAboveNode,
+            'One rank above cannot be equal to inserted user!'
+        );
+
         require(_amount > 0, "Insert amount higher than 0!");
         uint256 amount = _amount;
 
@@ -241,12 +246,15 @@ contract StarStaking is StarStakingInterface, Lockable {
 
         while (
             (node != HEAD) && ((totalStakingPointsFor[node] < _stakingPoints))
+            || (node == msg.sender)
         ) {
             node = getTopRank(node, PREV);
         }
 
         if (node == HEAD) {
-            return getTopRank(HEAD, NEXT);
+            node = getTopRank(HEAD, NEXT);
+
+            if (node == msg.sender) node = getTopRank(node, NEXT);
         }
 
         return node;
