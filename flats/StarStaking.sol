@@ -589,7 +589,7 @@ contract StarStaking is StarStakingInterface, Lockable {
         address user = msg.sender;
         uint256 newStakingPoints = _computeStakingPoints(user, _addedStake);
 
-        return getSortedSpot(newStakingPoints);
+        return getSortedSpotForPoints(newStakingPoints);
     }
 
     /**
@@ -597,7 +597,7 @@ contract StarStaking is StarStakingInterface, Lockable {
      * @param _stakingPoints new points for user to insert
      * @return reference node for insertion in top ranks
      */
-    function getSortedSpot(uint256 _stakingPoints)
+    function getSortedSpotForPoints(uint256 _stakingPoints)
         public
         view
         returns (address)
@@ -625,6 +625,29 @@ contract StarStaking is StarStakingInterface, Lockable {
     }
 
     /**
+     * @dev Reads the current discount in % for the passed staking points.
+     * @param _stakingPoints The staking points to be used.
+     * @return The discount.for given staking points.
+     */
+    function getDiscountEstimateForPoints(uint256 _stakingPoints)
+        public
+        view
+        returns (uint256)
+    {
+        address oneRankAbove = getSortedSpotForPoints(_stakingPoints);
+        address replacedUser = getTopRank(oneRankAbove, NEXT);
+
+        if (replacedUser == HEAD) {
+            return 0;
+        }
+
+        (uint256 rank,) = _stakingPoints > totalStakingPointsFor[oneRankAbove]
+            ? (0, true) : getRankForUser(replacedUser);
+
+        return _computeDiscountForRank(rank);
+    }
+
+    /**
      * @dev Returns the previous or next top rank node.
      * @param _referenceNode Address of the reference.
      * @param _direction Bool for direction.
@@ -636,6 +659,30 @@ contract StarStaking is StarStakingInterface, Lockable {
         returns (address)
     {
         return topRanks.list[_referenceNode][_direction];
+    }
+
+    /**
+     * @dev Read the current rank for the given user.
+     * @param _user The user to be looked at.
+     * @return The current rank in the top ranks and boolean to indicate,
+     * if user was found in the top ranks.
+     */
+    function getRankForUser(address _user)
+        public
+        view
+        returns (uint256, bool)
+    {
+        address referenceNode = HEAD;
+
+        for (uint256 i = 0; i < topRanks.sizeOf(); i++) {
+            referenceNode = getTopRank(referenceNode, NEXT);
+
+            if (referenceNode == _user) {
+                return (i, true);
+            }
+        }
+
+        return (0, false);
     }
 
     /**
@@ -682,7 +729,7 @@ contract StarStaking is StarStakingInterface, Lockable {
     }
 
     /**
-     * @dev Withdraw all received tokens after staking is finished.
+     * @dev Read the current size of the top ranks.
      * @return The current top ranks size.
      */
     function topRanksCount() external view returns (uint256) {
@@ -701,25 +748,25 @@ contract StarStaking is StarStakingInterface, Lockable {
             .div(decimalCorrectionFactor);
     }
 
+    function _computeDiscountForRank(uint256 _rank)
+        private
+        view
+        returns (uint256)
+    {
+        return maxDiscountPer1000.sub(_rank.mul(declinePerRankPer1000));
+    }
+
     function _computeBonusTokens(uint256 _baseTokens)
         private
         view
         returns (uint256)
     {
-        address referenceNode = HEAD;
+        (uint256 rank, bool isInTopRanks) = getRankForUser(msg.sender);
 
-        for (uint256 i = 0; i < topRanks.sizeOf(); i++) {
-            referenceNode = getTopRank(referenceNode, NEXT);
-            
-            if (referenceNode == msg.sender) {
-                uint256 discount = maxDiscountPer1000.sub(
-                    i.mul(declinePerRankPer1000)
-                );
-                return _baseTokens.mul(discount).div(1000);
-            }
-        }
+        if (!isInTopRanks) return 0;
 
-        return 0;
+        uint256 discount = _computeDiscountForRank(rank);
+        return _baseTokens.mul(discount).div(1000);
     }
 
     function _computeStakingPoints(address _user, uint256 _amount)
