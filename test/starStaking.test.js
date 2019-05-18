@@ -946,9 +946,11 @@ contract('StarStaking', accounts => {
   })
 
   describe('when there is a sorted top ranking', async () => {
-    it('getSortedSpot returns correct reference node', async () => {
-      const totalStaked = [100000, 10000, 1000, 100, 10]
-      const timesWhenSubmitted = []
+    let timesWhenSubmitted, totalStaked
+
+    beforeEach(async () => {
+      totalStaked = [100000, 10000, 1000, 100, 10]
+      timesWhenSubmitted = []
 
       await increaseTimeTo(defaultStartTime)
       await stakingContract.stakeFor(user1, totalStaked[4], HEAD, {
@@ -966,7 +968,9 @@ contract('StarStaking', accounts => {
         )
         timesWhenSubmitted.push(new BigNumber(latestTime().toString()))
       }
+    })
 
+    it('getSortedSpotForPoints returns correct reference node', async () => {
       const result = await stakingContract.getTopRanksTuples()
       const rcvStakingPoints = []
 
@@ -976,16 +980,19 @@ contract('StarStaking', accounts => {
         }
       })
       const spots = [
-        await stakingContract.getSortedSpot(rcvStakingPoints[0] + 20, {
+        await stakingContract.getSortedSpotForPoints(rcvStakingPoints[0] + 20, {
           from: accounts[rcvStakingPoints.length - 1],
         }),
       ]
 
       for (let i = 0; i < rcvStakingPoints.length; i++) {
         spots.push(
-          await stakingContract.getSortedSpot(rcvStakingPoints[i] - 20, {
-            from: accounts[rcvStakingPoints.length - 1],
-          })
+          await stakingContract.getSortedSpotForPoints(
+            rcvStakingPoints[i] - 20,
+            {
+              from: accounts[rcvStakingPoints.length - 1],
+            }
+          )
         )
       }
 
@@ -997,26 +1004,6 @@ contract('StarStaking', accounts => {
     })
 
     it('getSortedSpotForNewStake returns correct reference node', async () => {
-      const totalStaked = [100000, 10000, 1000, 100, 10]
-      const timesWhenSubmitted = []
-
-      await increaseTimeTo(defaultStartTime)
-      await stakingContract.stakeFor(user1, totalStaked[4], HEAD, {
-        from: user1,
-      })
-      timesWhenSubmitted.push(new BigNumber(latestTime().toString()))
-
-      for (let i = 1; i < totalStaked.length; i++) {
-        await increaseTimeTo(defaultStartTime.plus(i * 5))
-        await stakingContract.stakeFor(
-          accounts[i],
-          totalStaked[4 - i],
-          accounts[i - 1],
-          { from: user1 }
-        )
-        timesWhenSubmitted.push(new BigNumber(latestTime().toString()))
-      }
-
       const spots = []
 
       for (let i = 0; i < totalStaked.length; i++) {
@@ -1033,6 +1020,61 @@ contract('StarStaking', accounts => {
         accounts[3],
         accounts[4],
         accounts[3],
+      ])
+    })
+
+    it('getRankForUser returns correct rank', async () => {
+      const isInTopRanksList = []
+      const ranks = []
+
+      for (let i = 0; i < totalStaked.length; i++) {
+        const result = await stakingContract.getRankForUser(accounts[i])
+        ranks.push(result[0].toNumber())
+        isInTopRanksList.push(result[1])
+      }
+
+      const notInListResult = await stakingContract.getRankForUser(accounts[8])
+      ranks.push(notInListResult[0].toNumber())
+      isInTopRanksList.push(notInListResult[1])
+
+      ranks.should.eql([4, 3, 2, 1, 0, 0])
+      isInTopRanksList.should.eql([true, true, true, true, true, false])
+    })
+
+    it('getDiscountEstimateForPoints returns correct rank', async () => {
+      const discounts = []
+
+      const stakingPoints = []
+      const result = await stakingContract.getTopRanksTuples()
+      result.forEach((_, i) =>
+        !(i % 3) ? stakingPoints.push(result[i + 1]) : 0
+      )
+
+      for (let i = 0; i < totalStaked.length; i++) {
+        discounts.push(
+          (await stakingContract.getDiscountEstimateForPoints(
+            stakingPoints[i].plus(5),
+            { from: accounts[i] }
+          )).toNumber()
+        )
+      }
+
+      discounts.push(
+        (await stakingContract.getDiscountEstimateForPoints(1, {
+          from: accounts[8],
+        })).toNumber()
+      )
+
+      const expectedDiscountsForInList = [0, 1, 2, 3, 4].map(rank =>
+        defaultMaxDiscountPer1000
+          .minus(defaultDeclinePerRankPer1000.times(rank))
+          .toNumber()
+      )
+      const expectedDiscountForNotInList = [0]
+
+      discounts.should.eql([
+        ...expectedDiscountsForInList,
+        ...expectedDiscountForNotInList,
       ])
     })
   })
