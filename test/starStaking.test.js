@@ -970,6 +970,45 @@ contract('StarStaking', accounts => {
       }
     })
 
+    it('computeStakingPoints returns correct new staking points', async () => {
+      const newAmount = 1000
+      const newStakingPoints = await stakingContract.computeStakingPoints(
+        user1,
+        newAmount
+      )
+
+      const oldStakingPointsMost = computeStakingPoints({
+        amount: totalStaked[4],
+        timeWhenSubmitted: timesWhenSubmitted[0],
+        timeAdvanced: true,
+      })
+      const addedStakingPointsMost = computeStakingPoints({
+        amount: newAmount,
+        timeWhenSubmitted: new BigNumber(latestTime().toString()),
+        timeAdvanced: true,
+      })
+      const expectedTotalNewPointsMost = oldStakingPointsMost.plus(
+        addedStakingPointsMost
+      )
+
+      const oldStakingPointsLeast = computeStakingPoints({
+        amount: totalStaked[4],
+        timeWhenSubmitted: timesWhenSubmitted[0],
+        timeAdvanced: false,
+      })
+      const addedStakingPointsLeast = computeStakingPoints({
+        amount: newAmount,
+        timeWhenSubmitted: new BigNumber(latestTime().toString()),
+        timeAdvanced: false,
+      })
+      const expectedTotalNewPointsLeast = oldStakingPointsLeast.plus(
+        addedStakingPointsLeast
+      )
+
+      newStakingPoints.should.be.bignumber.at.most(expectedTotalNewPointsMost)
+      newStakingPoints.should.be.bignumber.at.least(expectedTotalNewPointsLeast)
+    })
+
     it('getSortedSpotForPoints returns correct reference node', async () => {
       const result = await stakingContract.getTopRanksTuples()
       const rcvStakingPoints = []
