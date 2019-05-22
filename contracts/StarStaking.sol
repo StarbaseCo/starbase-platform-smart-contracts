@@ -223,7 +223,7 @@ contract StarStaking is StarStakingInterface, Lockable {
         returns (address)
     {
         address user = msg.sender;
-        uint256 newStakingPoints = _computeStakingPoints(user, _addedStake);
+        uint256 newStakingPoints = computeStakingPoints(user, _addedStake);
 
         return getSortedSpotForPoints(newStakingPoints);
     }
@@ -372,6 +372,32 @@ contract StarStaking is StarStakingInterface, Lockable {
         return topRanks.sizeOf();
     }
 
+    /**
+     * @dev Compute the new staking points.
+     * @param _user The user to compute staking points for.
+     * @param _amount The added stake for the user.
+     * @return The new staking points for user.
+     */
+    function computeStakingPoints(address _user, uint256 _amount)
+        public
+        view
+        whenStakingOpen
+        returns (uint256)
+    {
+        uint256 timeUntilEnd = endTime.sub(now);
+        uint256 addedStakingPoints = timeUntilEnd.mul(_amount);
+
+        return totalStakingPointsFor[_user].add(addedStakingPoints);
+    }
+
+    function _computeDiscountForRank(uint256 _rank)
+        private
+        view
+        returns (uint256)
+    {
+        return maxDiscountPer1000.sub(_rank.mul(declinePerRankPer1000));
+    }
+
     function _computeBaseTokens() private returns (uint256) {
         uint256 stakedStar = totalStakedFor[msg.sender];
         uint256 decimalCorrectionFactor =
@@ -382,14 +408,6 @@ contract StarStaking is StarStakingInterface, Lockable {
             .mul(targetRateInEth)
             .mul(starEthRate)
             .div(decimalCorrectionFactor);
-    }
-
-    function _computeDiscountForRank(uint256 _rank)
-        private
-        view
-        returns (uint256)
-    {
-        return maxDiscountPer1000.sub(_rank.mul(declinePerRankPer1000));
     }
 
     function _computeBonusTokens(uint256 _baseTokens)
@@ -405,19 +423,8 @@ contract StarStaking is StarStakingInterface, Lockable {
         return _baseTokens.mul(discount).div(1000);
     }
 
-    function _computeStakingPoints(address _user, uint256 _amount)
-        private
-        view
-        returns (uint256)
-    {
-        uint256 timeUntilEnd = endTime.sub(now);
-        uint256 addedStakingPoints = timeUntilEnd.mul(_amount);
-
-        return totalStakingPointsFor[_user].add(addedStakingPoints);
-    }
-
     function _addStakingPoints(address _user, uint256 _amount) private {
-        totalStakingPointsFor[_user] = _computeStakingPoints(_user, _amount);
+        totalStakingPointsFor[_user] = computeStakingPoints(_user, _amount);
         totalStakedFor[_user] = totalStakedFor[_user].add(_amount);
 
         emit Staked(_user, _amount);
