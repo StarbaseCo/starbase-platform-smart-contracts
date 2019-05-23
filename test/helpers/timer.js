@@ -48,8 +48,8 @@ const duration = {
   },
 }
 
-function latestTime() {
-  return web3.eth.getBlock('latest').timestamp
+async function latestTime() {
+  return (await web3.eth.getBlock('latest')).timestamp
 }
 
 /**

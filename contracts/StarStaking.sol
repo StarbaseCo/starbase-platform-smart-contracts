@@ -1,4 +1,4 @@
-pragma solidity 0.4.25;
+pragma solidity 0.5.8;
 
 import "./lib/Ownable.sol";
 import "./lib/SafeMath.sol";
@@ -324,7 +324,7 @@ contract StarStaking is StarStakingInterface, Lockable {
     /**
      * @dev Returns a flat list of 3-tuples (address, stakingPoints, totalStaked).
      */
-    function getTopRanksTuples() public view returns (uint256[]) {
+    function getTopRanksTuples() public view returns (uint256[] memory) {
         uint256 tripleRanksCount = topRanks.sizeOf() * 3;
         uint256[] memory topRanksList = new uint256[](tripleRanksCount);
 

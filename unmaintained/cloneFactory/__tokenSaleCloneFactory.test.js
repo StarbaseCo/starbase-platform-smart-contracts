@@ -1,13 +1,13 @@
-const { latestTime, duration } = require('./helpers/timer')
+const { latestTime, duration } = require('../../test/helpers/timer')
 const TokenSaleCloneFactory = artifacts.require('./TokenSaleCloneFactory.sol')
 const TokenSale = artifacts.require('./TokenSale.sol')
 const CompanyToken = artifacts.require('./CompanyToken.sol')
 const StandardToken = artifacts.require('./StandardToken.sol')
 const StarEthRate = artifacts.require('./StarEthRate.sol')
 
-const BigNumber = web3.BigNumber
+const BigNumber = require('bignumber.js')
 
-contract('TokenSaleCloneFactory', ([owner, wallet, _, whitelist]) => {
+contract('TokenSaleCloneFactory', ([owner, wallet, _unused, whitelist]) => {
   let tokenSaleCloneFactory,
     tokenSale,
     starToken,
@@ -17,6 +17,10 @@ contract('TokenSaleCloneFactory', ([owner, wallet, _, whitelist]) => {
     endTime,
     starEthRate
 
+  if (!_unused) {
+    // do nothing
+  }
+
   const starEthRateDecimalCorrectionFactor = new BigNumber(1000000)
   const rate = new BigNumber(50)
   const softCap = new BigNumber(200000) // 200 000
@@ -25,7 +29,7 @@ contract('TokenSaleCloneFactory', ([owner, wallet, _, whitelist]) => {
   const isMinting = true
 
   beforeEach(async () => {
-    startTime = latestTime() + 20 // crowdsale starts in 20 seconds
+    startTime = (await latestTime()) + 20 // crowdsale starts in 20 seconds
     endTime = startTime + duration.days(70) // 70 days
 
     starToken = await StandardToken.new()

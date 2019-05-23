@@ -1,3 +1,5 @@
+const { BN } = require('openzeppelin-test-helpers')
+
 const CompanyToken = artifacts.require('./CompanyToken.sol')
 
 contract('CompanyToken', () => {
@@ -19,7 +21,7 @@ contract('CompanyToken', () => {
 
   it('contains 18 decimals', async () => {
     const decimals = await token.decimals()
-    decimals.should.be.bignumber.equal(18)
+    decimals.should.be.bignumber.equal(new BN(18))
   })
 
   it('starts with token paused', async () => {

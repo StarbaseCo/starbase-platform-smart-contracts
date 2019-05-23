@@ -1,4 +1,4 @@
-pragma solidity 0.4.25;
+pragma solidity 0.5.8;
 
 import "./lib/Ownable.sol";
 
@@ -25,7 +25,7 @@ contract Whitelist is Ownable {
      * @dev add various whitelist addresses
      * @param _addresses Array of ethereum addresses
      */
-    function addManyToWhitelist(address[] _addresses) external onlyOwner {
+    function addManyToWhitelist(address[] calldata _addresses) external onlyOwner {
         for (uint256 i = 0; i < _addresses.length; i++) {
             allowedAddresses[_addresses[i]] = true;
             emit WhitelistUpdated(now, "Added", _addresses[i]);
@@ -36,7 +36,7 @@ contract Whitelist is Ownable {
      * @dev remove whitelist addresses
      * @param _addresses Array of ethereum addresses
      */
-    function removeManyFromWhitelist(address[] _addresses) public onlyOwner {
+    function removeManyFromWhitelist(address[] memory _addresses) public onlyOwner {
         for (uint256 i = 0; i < _addresses.length; i++) {
             allowedAddresses[_addresses[i]] = false;
             emit WhitelistUpdated(now, "Removed", _addresses[i]);

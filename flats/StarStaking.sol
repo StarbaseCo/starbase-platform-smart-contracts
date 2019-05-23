@@ -1,6 +1,8 @@
-pragma solidity 0.4.25;
 
-// File: contracts/lib/Ownable.sol
+// File: contracts\lib\Ownable.sol
+
+pragma solidity 0.5.8;
+
 
 /**
  * @title Ownable
@@ -73,7 +75,9 @@ contract Ownable {
     }
 }
 
-// File: contracts/lib/SafeMath.sol
+// File: contracts\lib\SafeMath.sol
+
+pragma solidity ^0.5.8;
 
 /**
  * @title SafeMath
@@ -139,7 +143,10 @@ library SafeMath {
     }
 }
 
-// File: contracts/lib/ERC20.sol
+// File: contracts\lib\ERC20.sol
+
+pragma solidity 0.5.8;
+
 
 /**
  * @title ERC20 interface
@@ -157,7 +164,9 @@ contract ERC20 {
     event Transfer(address indexed from, address indexed to, uint256 value);
 }
 
-// File: contracts/lib/Lockable.sol
+// File: contracts\lib\Lockable.sol
+
+pragma solidity 0.5.8;
 
 contract Lockable is Ownable {
 
@@ -177,7 +186,9 @@ contract Lockable is Ownable {
     }
 }
 
-// File: contracts/LinkedListLib.sol
+// File: contracts\LinkedListLib.sol
+
+pragma solidity 0.5.8;
 
 /**
  * @title LinkedListLib
@@ -260,15 +271,19 @@ library LinkedListLib {
 
     /// @dev Returns the number of elements in the list
     /// @param self stored linked list from contract
-    function sizeOf(LinkedList storage self) internal view returns (uint256 numElements) {
+    function sizeOf(LinkedList storage self) internal view returns (uint256) {
         bool exists;
         address i;
+        uint256 numElements = 0;
+
         (exists,i) = getAdjacent(self, HEAD, NEXT);
+
         while (i != HEAD) {
             (exists,i) = getAdjacent(self, i, NEXT);
             numElements++;
         }
-        return;
+
+        return numElements;
     }
 
     /// @dev Returns the links of a node as a tuple
@@ -278,7 +293,7 @@ library LinkedListLib {
         internal view returns (bool,address,address)
     {
         if (!nodeExists(self,_node)) {
-            return (false,0,0);
+            return (false,address(0),address(0));
         } else {
             return (true,self.list[_node][PREV], self.list[_node][NEXT]);
         }
@@ -292,7 +307,7 @@ library LinkedListLib {
         internal view returns (bool,address)
     {
         if (!nodeExists(self,_node)) {
-            return (false,0);
+            return (false,address(0));
         } else {
             return (true,self.list[_node][_direction]);
         }
@@ -328,7 +343,7 @@ library LinkedListLib {
     /// @param _node node to remove from the list
     function remove(LinkedList storage self, address _node) internal returns (address) {
         if ((_node == NULL) || (!nodeExists(self,_node))) {
-            return 0;
+            return address(0);
         }
         createLink(self, self.list[_node][PREV], self.list[_node][NEXT], NEXT);
         delete self.list[_node][PREV];
@@ -357,20 +372,26 @@ library LinkedListLib {
     }
 }
 
-// File: contracts/StarEthRateInterface.sol
+// File: contracts\StarEthRateInterface.sol
+
+pragma solidity 0.5.8;
 
 contract StarEthRateInterface {
     function decimalCorrectionFactor() public returns (uint256);
     function starEthRate() public returns (uint256);
 }
 
-// File: contracts/StarStakingInterface.sol
+// File: contracts\StarStakingInterface.sol
+
+pragma solidity 0.5.8;
 
 contract StarStakingInterface {
     event Staked(address indexed user, uint256 amount);
 }
 
 // File: contracts\StarStaking.sol
+
+pragma solidity 0.5.8;
 
 contract StarStaking is StarStakingInterface, Lockable {
     using SafeMath for uint256;
@@ -688,7 +709,7 @@ contract StarStaking is StarStakingInterface, Lockable {
     /**
      * @dev Returns a flat list of 3-tuples (address, stakingPoints, totalStaked).
      */
-    function getTopRanksTuples() public view returns (uint256[]) {
+    function getTopRanksTuples() public view returns (uint256[] memory) {
         uint256 tripleRanksCount = topRanks.sizeOf() * 3;
         uint256[] memory topRanksList = new uint256[](tripleRanksCount);
 

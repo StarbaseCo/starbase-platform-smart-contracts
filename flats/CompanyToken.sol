@@ -1,6 +1,8 @@
-pragma solidity 0.4.25;
 
-// File: contracts/lib/ERC20Basic.sol
+// File: contracts\lib\ERC20Basic.sol
+
+pragma solidity 0.5.8;
+
 
 /**
  * @title ERC20Basic
@@ -14,7 +16,9 @@ contract ERC20Basic {
   event Transfer(address indexed from, address indexed to, uint256 value);
 }
 
-// File: contracts/lib/SafeMath.sol
+// File: contracts\lib\SafeMath.sol
+
+pragma solidity ^0.5.8;
 
 /**
  * @title SafeMath
@@ -80,7 +84,10 @@ library SafeMath {
     }
 }
 
-// File: contracts/lib/BasicToken.sol
+// File: contracts\lib\BasicToken.sol
+
+pragma solidity 0.5.8;
+
 
 /**
  * @title Basic token
@@ -127,7 +134,10 @@ contract BasicToken is ERC20Basic {
 
 }
 
-// File: contracts/lib/ERC20.sol
+// File: contracts\lib\ERC20.sol
+
+pragma solidity 0.5.8;
+
 
 /**
  * @title ERC20 interface
@@ -145,7 +155,10 @@ contract ERC20 {
     event Transfer(address indexed from, address indexed to, uint256 value);
 }
 
-// File: contracts/lib/StandardToken.sol
+// File: contracts\lib\StandardToken.sol
+
+pragma solidity 0.5.8;
+
 
 /**
  * @title Standard ERC20 token
@@ -242,7 +255,10 @@ contract StandardToken is ERC20, BasicToken {
 
 }
 
-// File: contracts/lib/Ownable.sol
+// File: contracts\lib\Ownable.sol
+
+pragma solidity 0.5.8;
+
 
 /**
  * @title Ownable
@@ -315,7 +331,10 @@ contract Ownable {
     }
 }
 
-// File: contracts/lib/MintableToken.sol
+// File: contracts\lib\MintableToken.sol
+
+pragma solidity 0.5.8;
+
 
 /**
  * @title Mintable token
@@ -360,7 +379,10 @@ contract MintableToken is StandardToken, Ownable {
   }
 }
 
-// File: contracts/lib/Pausable.sol
+// File: contracts\lib\Pausable.sol
+
+pragma solidity 0.5.8;
+
 
 /**
  * @title Pausable
@@ -416,7 +438,10 @@ contract Pausable is Ownable {
     }
 }
 
-// File: contracts/lib/PausableToken.sol
+// File: contracts\lib\PausableToken.sol
+
+pragma solidity 0.5.8;
+
 
 /**
  * @title Pausable token
@@ -447,6 +472,9 @@ contract PausableToken is StandardToken, Pausable {
 
 // File: contracts\CompanyToken.sol
 
+pragma solidity 0.5.8;
+
+
 /**
  * @title CompanyToken contract - ERC20 compatible token contract with customized token parameters.
  * @author Gustavo Guimaraes - <gustavo@starbase.co>
@@ -461,7 +489,7 @@ contract CompanyToken is PausableToken, MintableToken {
      * @param name Token name
      * @param symbol Token symbol - up to 4 characters
      */
-    constructor(string name, string symbol) public {
+    constructor(string memory name, string memory symbol) public {
         _name = name;
         _symbol = symbol;
 
@@ -471,14 +499,14 @@ contract CompanyToken is PausableToken, MintableToken {
     /**
      * @return the name of the token.
      */
-    function name() public view returns (string) {
+    function name() public view returns (string memory) {
         return _name;
     }
 
     /**
      * @return the symbol of the token.
      */
-    function symbol() public view returns (string) {
+    function symbol() public view returns (string memory) {
         return _symbol;
     }
 

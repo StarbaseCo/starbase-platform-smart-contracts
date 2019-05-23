@@ -1,4 +1,4 @@
-pragma solidity 0.4.25;
+pragma solidity 0.5.8;
 
 import "./lib/ERC20.sol";
 import "./lib/Ownable.sol";
@@ -19,7 +19,7 @@ contract DistributeERC20 is Ownable {
      * @param investorsAddress List of Purchasers addresses
      * @param amountOfTokens List of token amounts for investor
      */
-    function distributeTokens(address[] investorsAddress, uint256[] amountOfTokens)
+    function distributeTokens(address[] calldata investorsAddress, uint256[] calldata amountOfTokens)
         external
         onlyOwner
     {
@@ -42,6 +42,6 @@ contract DistributeERC20 is Ownable {
             token.transfer(_owner, balance);
         }
 
-        selfdestruct(_owner);
+        selfdestruct(address(_owner));
     }
 }

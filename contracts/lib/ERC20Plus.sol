@@ -1,5 +1,4 @@
-pragma solidity 0.4.25;
-
+pragma solidity 0.5.8;
 
 /**
  * @title ERC20 interface with additional functions
@@ -20,9 +19,8 @@ contract ERC20Plus {
     function mint(address _to, uint256 _amount) public returns (bool);
     function owner() public view returns (address);
     function transferOwnership(address newOwner) public;
-    function name() public view returns (string);
-    function symbol() public view returns (string);
+    function name() public view returns (string memory);
+    function symbol() public view returns (string memory);
     function decimals() public view returns (uint8);
     function paused() public view returns (bool);
-
 }

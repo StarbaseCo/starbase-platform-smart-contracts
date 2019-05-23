@@ -1,4 +1,4 @@
-pragma solidity 0.4.25;
+pragma solidity 0.5.8;
 
 /**
  * @title TokenSale contract interface
@@ -8,13 +8,13 @@ interface TokenSaleInterface {
     (
         uint256 _startTime,
         uint256 _endTime,
-        address[6] _externalAddresses,
+        address[6] calldata _externalAddresses,
         uint256 _softCap,
         uint256 _crowdsaleCap,
         bool    _isWeiAccepted,
         bool    _isMinting,
-        uint256[] _targetRates,
-        uint256[] _targetRatesTimestamps
+        uint256[] calldata _targetRates,
+        uint256[] calldata _targetRatesTimestamps
     )
     external;
 }

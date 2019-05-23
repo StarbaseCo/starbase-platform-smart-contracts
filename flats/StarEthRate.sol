@@ -1,6 +1,8 @@
-pragma solidity 0.4.25;
 
-// File: contracts/lib/Ownable.sol
+// File: contracts\lib\Ownable.sol
+
+pragma solidity 0.5.8;
+
 
 /**
  * @title Ownable
@@ -74,6 +76,8 @@ contract Ownable {
 }
 
 // File: contracts\StarEthRate.sol
+
+pragma solidity 0.5.8;
 
 contract StarEthRate is Ownable {
     uint256 public decimalCorrectionFactor;
