@@ -1,4 +1,4 @@
-pragma solidity 0.4.25;
+pragma solidity 0.5.8;
 
 /**
  * @title LinkedListLib
@@ -81,15 +81,19 @@ library LinkedListLib {
 
     /// @dev Returns the number of elements in the list
     /// @param self stored linked list from contract
-    function sizeOf(LinkedList storage self) internal view returns (uint256 numElements) {
+    function sizeOf(LinkedList storage self) internal view returns (uint256) {
         bool exists;
         address i;
+        uint256 numElements = 0;
+
         (exists,i) = getAdjacent(self, HEAD, NEXT);
+
         while (i != HEAD) {
             (exists,i) = getAdjacent(self, i, NEXT);
             numElements++;
         }
-        return;
+
+        return numElements;
     }
 
     /// @dev Returns the links of a node as a tuple
@@ -99,7 +103,7 @@ library LinkedListLib {
         internal view returns (bool,address,address)
     {
         if (!nodeExists(self,_node)) {
-            return (false,0,0);
+            return (false,address(0),address(0));
         } else {
             return (true,self.list[_node][PREV], self.list[_node][NEXT]);
         }
@@ -113,7 +117,7 @@ library LinkedListLib {
         internal view returns (bool,address)
     {
         if (!nodeExists(self,_node)) {
-            return (false,0);
+            return (false,address(0));
         } else {
             return (true,self.list[_node][_direction]);
         }
@@ -149,7 +153,7 @@ library LinkedListLib {
     /// @param _node node to remove from the list
     function remove(LinkedList storage self, address _node) internal returns (address) {
         if ((_node == NULL) || (!nodeExists(self,_node))) {
-            return 0;
+            return address(0);
         }
         createLink(self, self.list[_node][PREV], self.list[_node][NEXT], NEXT);
         delete self.list[_node][PREV];

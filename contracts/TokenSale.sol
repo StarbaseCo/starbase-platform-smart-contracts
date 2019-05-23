@@ -1,4 +1,4 @@
-pragma solidity 0.4.25;
+pragma solidity 0.5.8;
 
 import "./lib/ERC20Plus.sol";
 import "./lib/FinalizableCrowdsale.sol";
@@ -69,13 +69,13 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
     function init(
         uint256 _startTime,
         uint256 _endTime,
-        address[6] _externalAddresses, // array avoids stack too deep error
+        address[6] calldata _externalAddresses, // array avoids stack too deep error
         uint256 _softCap,
         uint256 _crowdsaleCap,
         bool    _isWeiAccepted,
         bool    _isMinting,
-        uint256[] _targetRates,
-        uint256[] _targetRatesTimestamps
+        uint256[] calldata _targetRates,
+        uint256[] calldata _targetRatesTimestamps
     )
         external
     {
@@ -102,7 +102,7 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
         tokenOnSale = ERC20Plus(_externalAddresses[2]);
         whitelist = Whitelist(_externalAddresses[0]);
         starToken = ERC20Plus(_externalAddresses[1]);
-        wallet = FundsSplitterInterface(_externalAddresses[5]);
+        wallet = FundsSplitterInterface(uint160(_externalAddresses[5]));
         tokenOwnerAfterSale = _externalAddresses[3];
         starEthRateInterface = StarEthRateInterface(_externalAddresses[4]);
         isWeiAccepted = _isWeiAccepted;
@@ -165,7 +165,8 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
         }
 
         // beneficiary must allow TokenSale address to transfer star tokens on its behalf
-        uint256 starAllocationToTokenSale = starToken.allowance(beneficiary, this);
+        uint256 starAllocationToTokenSale = starToken.allowance(beneficiary, address(this));
+
         if (starAllocationToTokenSale > 0) {
             uint256 decimalCorrectionFactor =
                 starEthRateInterface.decimalCorrectionFactor();
@@ -285,10 +286,10 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
             starToken.transferFrom(_beneficiary, address(this), _value);
         } else {
             // forward funds
-            starToken.transferFrom(_beneficiary, wallet, _value);
+            starToken.transferFrom(_beneficiary, address(wallet), _value);
             // transfer STAR from previous purchases to wallet once soft cap is reached
             uint256 starBalance = starToken.balanceOf(address(this));
-            if (starBalance > 0) starToken.transfer(wallet, starBalance);
+            if (starBalance > 0) starToken.transfer(address(wallet), starBalance);
 
             wallet.splitStarFunds();
         }
@@ -344,7 +345,7 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
                require(
                     targetRatesTimestamps[i] < endTime,
                     'All target rate timestamps should be before endTime!'
-                ); 
+                );
             }
 
             require(targetRates[i] > 0, 'All target rates must be above 0!');
@@ -354,7 +355,7 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
     /**
      * @dev Returns current rate and index for rate in targetRates array.
      * Does not update target rate index, use checkForNewRateAndUpdate() to
-     * update, 
+     * update,
      */
     function getCurrentRate() public view returns (uint256, uint256) {
         for (
@@ -375,7 +376,7 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
 
     /**
      * @dev Check for new valid rate and update. Automatically called when
-     * purchasing tokens. 
+     * purchasing tokens.
      */
     function checkForNewRateAndUpdate() public {
         (, uint256 targetRateIndex) = getCurrentRate(); // ignore first value
@@ -391,9 +392,49 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
     function finalization() internal {
         uint256 remainingTokens = isMinting ? crowdsaleCap.sub(tokensSold) : tokenOnSale.balanceOf(address(this));
 
-        if (remainingTokens > 0) sendPurchasedTokens(wallet, remainingTokens);
+        if (remainingTokens > 0) sendPurchasedTokens(address(wallet), remainingTokens);
         if (isMinting) tokenOnSale.transferOwnership(tokenOwnerAfterSale);
 
         super.finalization();
+    }
+
+    /**
+     * @dev Get whitelist address.
+     * @return The whitelist address.
+     */
+    function getWhitelistAddress() external view returns (address) {
+        return address(whitelist);
+    }
+
+    /**
+     * @dev Get starToken address.
+     * @return The starToken address.
+     */
+    function getStarTokenAddress() external view returns (address) {
+        return address(starToken);
+    }
+
+    /**
+     * @dev Get wallet address.
+     * @return The wallet address.
+     */
+    function getWalletAddress() external view returns (address) {
+        return address(wallet);
+    }
+
+    /**
+     * @dev Get starEthRateInterface address.
+     * @return The starEthRateInterface address.
+     */
+    function getStarEthRateInterfaceAddress() external view returns (address) {
+        return address(starEthRateInterface);
+    }
+
+    /**
+     * @dev Get tokenOnSale address.
+     * @return The tokenOnSale address.
+     */
+    function getTokenOnSaleAddress() external view returns (address) {
+        return address(tokenOnSale);
     }
 }

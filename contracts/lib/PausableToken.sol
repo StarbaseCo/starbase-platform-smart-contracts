@@ -1,4 +1,4 @@
-pragma solidity 0.4.25;
+pragma solidity 0.5.8;
 
 import "./StandardToken.sol";
 import "./Pausable.sol";

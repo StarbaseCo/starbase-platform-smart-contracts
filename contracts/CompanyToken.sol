@@ -1,4 +1,4 @@
-pragma solidity 0.4.25;
+pragma solidity 0.5.8;
 
 import "./lib/MintableToken.sol";
 import "./lib/PausableToken.sol";
@@ -18,7 +18,7 @@ contract CompanyToken is PausableToken, MintableToken {
      * @param name Token name
      * @param symbol Token symbol - up to 4 characters
      */
-    constructor(string name, string symbol) public {
+    constructor(string memory name, string memory symbol) public {
         _name = name;
         _symbol = symbol;
 
@@ -28,14 +28,14 @@ contract CompanyToken is PausableToken, MintableToken {
     /**
      * @return the name of the token.
      */
-    function name() public view returns (string) {
+    function name() public view returns (string memory) {
         return _name;
     }
 
     /**
      * @return the symbol of the token.
      */
-    function symbol() public view returns (string) {
+    function symbol() public view returns (string memory) {
         return _symbol;
     }
 

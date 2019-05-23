@@ -1,4 +1,4 @@
-pragma solidity 0.4.25;
+pragma solidity 0.5.8;
 
 import "./lib/SafeMath.sol";
 import "./lib/ERC20.sol";
@@ -6,8 +6,8 @@ import "./lib/ERC20.sol";
 contract FundsSplitter {
     using SafeMath for uint256;
 
-    address public client;
-    address public starbase;
+    address payable public client;
+    address payable public starbase;
     uint256 public starbasePercentage;
 
     ERC20 public star;
@@ -22,8 +22,8 @@ contract FundsSplitter {
      * @param _tokenOnSale Token on sale's ERC20 token address
      */
     constructor(
-        address _client,
-        address _starbase,
+        address payable _client,
+        address payable _starbase,
         uint256 _starbasePercentage,
         ERC20 _star,
         ERC20 _tokenOnSale
@@ -40,7 +40,7 @@ contract FundsSplitter {
     /**
      * @dev fallback function that accepts funds
      */
-    function() public payable { }
+    function() external payable { }
 
     /**
      * @dev splits star that are allocated to contract
