@@ -1,8 +1,8 @@
 const MintableToken = artifacts.require('./MintableToken.sol')
 const DistributeERC20 = artifacts.require('./DistributeERC20.sol')
 
-const { ensuresException } = require('./helpers/utils')
-const BigNumber = web3.BigNumber
+const { ensuresException } = require('../test/helpers/utils')
+const BigNumber = require('bignumber.js')
 const expect = require('chai').expect
 
 contract('DistributeERC20', ([owner, tokenHolder, buyer, buyer2]) => {

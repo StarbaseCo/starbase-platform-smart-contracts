@@ -1,4 +1,4 @@
-pragma solidity 0.4.25;
+pragma solidity 0.5.8;
 
 import "../TokenSaleInterface.sol";
 import "./CloneFactory.sol";
@@ -62,13 +62,13 @@ contract TokenSaleCloneFactory is CloneFactory {
     (
         uint256 _startTime,
         uint256 _endTime,
-        address[5] _externalAddresses, // array avoids stack too deep error
+        address[5] memory _externalAddresses, // array avoids stack too deep error
         uint256 _softCap,
         uint256 _crowdsaleCap,
         bool    _isWeiAccepted,
         bool    _isMinting,
-        uint256[] _targetRates,
-        uint256[] _targetRatesTimestamps
+        uint256[] memory _targetRates,
+        uint256[] memory _targetRatesTimestamps
     )
         public
     {
