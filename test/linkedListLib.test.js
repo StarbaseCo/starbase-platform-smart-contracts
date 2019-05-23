@@ -1,28 +1,49 @@
-const BigNumber = web3.BigNumber
 const LinkedListMock = artifacts.require('LinkedListMock.sol')
 
-const HEAD = '0x0000000000000000000000000000000000000000'
+const { constants } = require('openzeppelin-test-helpers')
+
+const HEAD = constants.ZERO_ADDRESS
 const PREV = false
 const NEXT = true
 
-async function sizeShouldBe(linkedList, expectedSize) {
-  const size = await linkedList.sizeOf()
-  size.should.be.bignumber.equal(
-    new BigNumber(size),
+const sizeShouldBe = async (linkedList, expectedSize) => {
+  const size = (await linkedList.sizeOf()).toNumber()
+
+  size.should.be.equal(
+    expectedSize,
     `The size of the linked list should be ${expectedSize}!`
   )
+}
+
+const getAdjacent = async (node, direction) => {
+  const result = await this.linkedList.getAdjacent(node, direction)
+
+  const nodeExists = result['0']
+  const neighbor = result['1']
+
+  return [nodeExists, neighbor]
+}
+
+const getNode = async node => {
+  const result = await this.linkedList.getNode(node)
+
+  const nodeExists = result['0']
+  const prevNode = result['1']
+  const nextNode = result['2']
+
+  return [nodeExists, prevNode, nextNode]
 }
 
 contract(
   'LinkedListMock',
   ([acc1, acc2, acc3, acc4, acc5, acc6, acc7, acc8]) => {
-    beforeEach(async function() {
+    beforeEach(async () => {
       this.linkedList = await LinkedListMock.new()
     })
 
-    describe('the list is empty', function() {
-      describe('.listExists', function() {
-        it('returns false', async function() {
+    describe('the list is empty', () => {
+      describe('.listExists', () => {
+        it('returns false', async () => {
           const listExists = await this.linkedList.listExists()
           listExists.should.be.equal(
             false,
@@ -31,14 +52,14 @@ contract(
         })
       })
 
-      describe('.sizeOf ', function() {
-        it('returns 0', async function() {
+      describe('.sizeOf ', () => {
+        it('returns 0', async () => {
           await sizeShouldBe(this.linkedList, 0)
         })
       })
 
-      describe('.insert', function() {
-        it('inserts correctly', async function() {
+      describe('.insert', () => {
+        it('inserts correctly', async () => {
           await this.linkedList.insert(HEAD, acc1, NEXT)
 
           const listExists = await this.linkedList.listExists()
@@ -58,8 +79,8 @@ contract(
       })
     })
 
-    describe('the list is non-empty', function() {
-      beforeEach(async function() {
+    describe('the list is non-empty', () => {
+      beforeEach(async () => {
         await this.linkedList.insert(HEAD, acc1, NEXT)
         await this.linkedList.insert(acc1, acc2, NEXT)
         await this.linkedList.insert(acc2, acc3, NEXT)
@@ -67,16 +88,13 @@ contract(
         await this.linkedList.insert(acc4, acc5, NEXT)
       })
 
-      describe('.insert', function() {
-        it('inserts correctly at beginning', async function() {
+      describe('.insert', () => {
+        it('inserts correctly at beginning', async () => {
           await this.linkedList.insert(acc1, acc6, PREV)
           await sizeShouldBe(this.linkedList, 6)
 
-          const [
-            nodeExists,
-            prevNode,
-            nextNode,
-          ] = await this.linkedList.getNode(acc6)
+          const [nodeExists, prevNode, nextNode] = await getNode(acc6)
+
           nodeExists.should.be.equal(
             true,
             'The inserted node should exist after insertion!'
@@ -84,11 +102,9 @@ contract(
           prevNode.should.be.equal(HEAD, 'The previous node should be HEAD!')
           nextNode.should.be.equal(acc1, `The next node should be ${acc1}!`)
 
-          const [
-            otherNodeExists,
-            prevOtherNode,
-            nextOtherNode,
-          ] = await this.linkedList.getNode(acc8)
+          const [otherNodeExists, prevOtherNode, nextOtherNode] = await getNode(
+            acc8
+          )
           otherNodeExists.should.be.equal(
             false,
             'The non-inserted node should not exist!'
@@ -102,11 +118,7 @@ contract(
             'The next node of non-inserted node should be HEAD!'
           )
 
-          const [
-            node2Exists,
-            prev2Node,
-            next2Node,
-          ] = await this.linkedList.getNode(acc1)
+          const [node2Exists, prev2Node, next2Node] = await getNode(acc1)
           node2Exists.should.be.equal(
             true,
             'The referenced node should still exist after insertion!'
@@ -121,15 +133,11 @@ contract(
           )
         })
 
-        it('inserts correctly in the middle', async function() {
+        it('inserts correctly in the middle', async () => {
           await this.linkedList.insert(acc3, acc6, NEXT)
           await sizeShouldBe(this.linkedList, 6)
 
-          const [
-            nodeExists,
-            prevNode,
-            nextNode,
-          ] = await this.linkedList.getNode(acc6)
+          const [nodeExists, prevNode, nextNode] = await getNode(acc6)
           nodeExists.should.be.equal(
             true,
             'The inserted node should exist after insertion!'
@@ -137,11 +145,9 @@ contract(
           prevNode.should.be.equal(acc3, `The previous node should be ${acc3}!`)
           nextNode.should.be.equal(acc4, `The previous node should be ${acc4}!`)
 
-          const [
-            otherNodeExists,
-            prevOtherNode,
-            nextOtherNode,
-          ] = await this.linkedList.getNode(acc8)
+          const [otherNodeExists, prevOtherNode, nextOtherNode] = await getNode(
+            acc8
+          )
           otherNodeExists.should.be.equal(
             false,
             'The non-inserted node should not exist!'
@@ -155,11 +161,7 @@ contract(
             'The next node of non-inserted node should be HEAD!'
           )
 
-          const [
-            node2Exists,
-            prev2Node,
-            next2Node,
-          ] = await this.linkedList.getNode(acc3)
+          const [node2Exists, prev2Node, next2Node] = await getNode(acc3)
           node2Exists.should.be.equal(
             true,
             'The referenced node should still exist after insertion!'
@@ -174,15 +176,11 @@ contract(
           )
         })
 
-        it('inserts correctly at end', async function() {
+        it('inserts correctly at end', async () => {
           await this.linkedList.insert(acc5, acc6, NEXT)
           await sizeShouldBe(this.linkedList, 6)
 
-          const [
-            nodeExists,
-            prevNode,
-            nextNode,
-          ] = await this.linkedList.getNode(acc6)
+          const [nodeExists, prevNode, nextNode] = await getNode(acc6)
           nodeExists.should.be.equal(
             true,
             'The inserted node should exist after insertion!'
@@ -190,11 +188,9 @@ contract(
           prevNode.should.be.equal(acc5, `The previous node should be ${acc1}!`)
           nextNode.should.be.equal(HEAD, 'The next node should be HEAD!')
 
-          const [
-            otherNodeExists,
-            prevOtherNode,
-            nextOtherNode,
-          ] = await this.linkedList.getNode(acc8)
+          const [otherNodeExists, prevOtherNode, nextOtherNode] = await getNode(
+            acc8
+          )
           otherNodeExists.should.be.equal(
             false,
             'The non-inserted node should not exist!'
@@ -208,11 +204,7 @@ contract(
             'The next node of non-inserted node should be HEAD!'
           )
 
-          const [
-            node2Exists,
-            prev2Node,
-            next2Node,
-          ] = await this.linkedList.getNode(acc5)
+          const [node2Exists, prev2Node, next2Node] = await getNode(acc5)
           node2Exists.should.be.equal(
             true,
             'The referenced node should still exist after insertion!'
@@ -228,12 +220,9 @@ contract(
         })
       })
 
-      describe('.getAdjacent', function() {
-        it('finds the correct neighbor for first element in PREV direction', async function() {
-          const [nodeExists, neighbor] = await this.linkedList.getAdjacent(
-            acc1,
-            PREV
-          )
+      describe('.getAdjacent', () => {
+        it('finds the correct neighbor for first element in PREV direction', async () => {
+          const [nodeExists, neighbor] = await getAdjacent(acc1, PREV)
           nodeExists.should.be.equal(true, 'The node should exist!')
           neighbor.should.be.equal(
             HEAD,
@@ -241,11 +230,8 @@ contract(
           )
         })
 
-        it('finds the correct neighbor for first element in NEXT direction', async function() {
-          const [nodeExists, neighbor] = await this.linkedList.getAdjacent(
-            acc1,
-            NEXT
-          )
+        it('finds the correct neighbor for first element in NEXT direction', async () => {
+          const [nodeExists, neighbor] = await getAdjacent(acc1, NEXT)
           nodeExists.should.be.equal(true, 'The node should exist!')
           neighbor.should.be.equal(
             acc2,
@@ -253,11 +239,8 @@ contract(
           )
         })
 
-        it('finds the correct neighbor for last element in PREV direction', async function() {
-          const [nodeExists, neighbor] = await this.linkedList.getAdjacent(
-            acc5,
-            PREV
-          )
+        it('finds the correct neighbor for last element in PREV direction', async () => {
+          const [nodeExists, neighbor] = await getAdjacent(acc5, PREV)
           nodeExists.should.be.equal(true, 'The node should exist!')
           neighbor.should.be.equal(
             acc4,
@@ -265,11 +248,8 @@ contract(
           )
         })
 
-        it('finds the correct neighbor for last element in NEXT direction', async function() {
-          const [nodeExists, neighbor] = await this.linkedList.getAdjacent(
-            acc5,
-            NEXT
-          )
+        it('finds the correct neighbor for last element in NEXT direction', async () => {
+          const [nodeExists, neighbor] = await getAdjacent(acc5, NEXT)
           nodeExists.should.be.equal(true, 'The node should exist!')
           neighbor.should.be.equal(
             HEAD,
@@ -278,16 +258,14 @@ contract(
         })
       })
 
-      describe('.remove', function() {
-        it('removes the first element correctly', async function() {
+      describe('.remove', () => {
+        it('removes the first element correctly', async () => {
           await this.linkedList.remove(acc1)
           await sizeShouldBe(this.linkedList, 4)
 
-          const [
-            otherNodeExists,
-            prevOtherNode,
-            nextOtherNode,
-          ] = await this.linkedList.getNode(acc1)
+          const [otherNodeExists, prevOtherNode, nextOtherNode] = await getNode(
+            acc1
+          )
           otherNodeExists.should.be.equal(
             false,
             'The non-inserted node should not exist!'
@@ -301,11 +279,7 @@ contract(
             'The next node of deleted node should be HEAD!'
           )
 
-          const [
-            nodeExists,
-            prevNode,
-            nextNode,
-          ] = await this.linkedList.getNode(HEAD)
+          const [nodeExists, prevNode, nextNode] = await getNode(HEAD)
           nodeExists.should.be.equal(true, 'The head node should still exist!')
           prevNode.should.be.equal(
             acc5,
@@ -316,11 +290,7 @@ contract(
             `The next node of HEAD should be ${acc2}!`
           )
 
-          const [
-            node2Exists,
-            prev2Node,
-            next2Node,
-          ] = await this.linkedList.getNode(acc2)
+          const [node2Exists, prev2Node, next2Node] = await getNode(acc2)
           node2Exists.should.be.equal(true, 'The next node should still exist!')
           prev2Node.should.be.equal(
             HEAD,
@@ -332,15 +302,13 @@ contract(
           )
         })
 
-        it('removes the middle element correctly', async function() {
+        it('removes the middle element correctly', async () => {
           await this.linkedList.remove(acc3)
           await sizeShouldBe(this.linkedList, 4)
 
-          const [
-            otherNodeExists,
-            prevOtherNode,
-            nextOtherNode,
-          ] = await this.linkedList.getNode(acc3)
+          const [otherNodeExists, prevOtherNode, nextOtherNode] = await getNode(
+            acc3
+          )
           otherNodeExists.should.be.equal(
             false,
             'The non-inserted node should not exist!'
@@ -354,11 +322,7 @@ contract(
             'The next node of deleted node should be HEAD!'
           )
 
-          const [
-            nodeExists,
-            prevNode,
-            nextNode,
-          ] = await this.linkedList.getNode(acc2)
+          const [nodeExists, prevNode, nextNode] = await getNode(acc2)
           nodeExists.should.be.equal(
             true,
             'The previous node should still exist!'
@@ -372,11 +336,7 @@ contract(
             `The next node of previous node should be ${acc4}!`
           )
 
-          const [
-            node2Exists,
-            prev2Node,
-            next2Node,
-          ] = await this.linkedList.getNode(acc4)
+          const [node2Exists, prev2Node, next2Node] = await getNode(acc4)
           node2Exists.should.be.equal(true, 'The next node should still exist!')
           prev2Node.should.be.equal(
             acc2,
@@ -388,15 +348,13 @@ contract(
           )
         })
 
-        it('removes the last element correctly', async function() {
+        it('removes the last element correctly', async () => {
           await this.linkedList.remove(acc5)
           await sizeShouldBe(this.linkedList, 4)
 
-          const [
-            otherNodeExists,
-            prevOtherNode,
-            nextOtherNode,
-          ] = await this.linkedList.getNode(acc5)
+          const [otherNodeExists, prevOtherNode, nextOtherNode] = await getNode(
+            acc5
+          )
           otherNodeExists.should.be.equal(
             false,
             'The non-inserted node should not exist!'
@@ -410,11 +368,7 @@ contract(
             'The next node of deleted node should be HEAD!'
           )
 
-          const [
-            nodeExists,
-            prevNode,
-            nextNode,
-          ] = await this.linkedList.getNode(acc4)
+          const [nodeExists, prevNode, nextNode] = await getNode(acc4)
           nodeExists.should.be.equal(
             true,
             'The previous node should still exist!'
@@ -428,11 +382,7 @@ contract(
             `The next node of previous node should be HEAD!`
           )
 
-          const [
-            node2Exists,
-            prev2Node,
-            next2Node,
-          ] = await this.linkedList.getNode(HEAD)
+          const [node2Exists, prev2Node, next2Node] = await getNode(HEAD)
           node2Exists.should.be.equal(true, 'The next node should still exist!')
           prev2Node.should.be.equal(
             acc4,
@@ -445,18 +395,16 @@ contract(
         })
       })
 
-      describe('.push', function() {
-        it('pushes correctly', async function() {
+      describe('.push', () => {
+        it('pushes correctly', async () => {
           await this.linkedList.push(acc6, NEXT)
           await this.linkedList.push(acc7, PREV)
           await this.linkedList.push(acc8, NEXT)
           await sizeShouldBe(this.linkedList, 8)
 
-          const [
-            otherNodeExists,
-            prevOtherNode,
-            nextOtherNode,
-          ] = await this.linkedList.getNode(acc7)
+          const [otherNodeExists, prevOtherNode, nextOtherNode] = await getNode(
+            acc7
+          )
           otherNodeExists.should.be.equal(true, 'The pushed node should exist!')
           prevOtherNode.should.be.equal(
             acc5,
@@ -467,11 +415,7 @@ contract(
             'The next node of pushed node in PREV direction should be HEAD!'
           )
 
-          const [
-            nodeExists,
-            prevNode,
-            nextNode,
-          ] = await this.linkedList.getNode(acc8)
+          const [nodeExists, prevNode, nextNode] = await getNode(acc8)
           nodeExists.should.be.equal(true, 'The pushed node should exist!')
           prevNode.should.be.equal(
             HEAD,
@@ -484,17 +428,13 @@ contract(
         })
       })
 
-      describe('.pop', function() {
-        it('pops correctly', async function() {
+      describe('.pop', () => {
+        it('pops correctly', async () => {
           await this.linkedList.pop(NEXT)
           await this.linkedList.pop(PREV)
           await sizeShouldBe(this.linkedList, 3)
 
-          const [
-            nodeExists,
-            prevNode,
-            nextNode,
-          ] = await this.linkedList.getNode(HEAD)
+          const [nodeExists, prevNode, nextNode] = await getNode(HEAD)
           nodeExists.should.be.equal(true, 'The pushed node should exist!')
           prevNode.should.be.equal(
             acc4,

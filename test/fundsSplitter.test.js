@@ -1,10 +1,13 @@
 const FundsSplitter = artifacts.require('./FundsSplitter.sol')
 const MintableToken = artifacts.require('./MintableToken.sol')
 
+const { expect } = require('chai')
+const { balance, BN, ether } = require('openzeppelin-test-helpers')
+
 contract('FundsSplitter', ([_, client, starbase]) => {
   let token, tokenOnSale, fundsSplitter
 
-  const starbasePercentageNumber = 10
+  const starbasePercentageNumber = new BN(10)
 
   beforeEach(async () => {
     token = await MintableToken.new()
@@ -20,50 +23,50 @@ contract('FundsSplitter', ([_, client, starbase]) => {
 
   describe('#splitFunds', () => {
     it('split existing funds between client and starbase', async () => {
-      const clientBalanceBefore = await web3.eth.getBalance(client)
-      const starbaseBalanceBefore = await web3.eth.getBalance(starbase)
+      const clientBalanceBefore = await balance.current(client)
+      const starbaseBalanceBefore = await balance.current(starbase)
 
-      await fundsSplitter.sendTransaction({ from: _, value: 20e18 })
+      await fundsSplitter.sendTransaction({ from: _, value: ether('20') })
       await fundsSplitter.splitFunds({ from: _ })
 
-      const clientBalanceAfter = await web3.eth.getBalance(client)
-      const starbaseBalanceAfter = await web3.eth.getBalance(starbase)
+      const clientBalanceAfter = await balance.current(client)
+      const starbaseBalanceAfter = await balance.current(starbase)
 
-      const clientBalanceDifference = clientBalanceAfter.minus(
+      const clientBalanceDifference = clientBalanceAfter.sub(
         clientBalanceBefore
       )
-      const starbaseBalanceDifference = starbaseBalanceAfter.minus(
+      const starbaseBalanceDifference = starbaseBalanceAfter.sub(
         starbaseBalanceBefore
       )
 
-      starbaseBalanceDifference.should.be.bignumber.equal(2e18)
-      clientBalanceDifference.should.be.bignumber.equal(18e18)
+      expect(starbaseBalanceDifference).to.be.bignumber.equal(ether('2'))
+      expect(clientBalanceDifference).to.be.bignumber.equal(ether('18'))
     })
 
     it('split new funds between client and starbase', async () => {
-      const clientBalanceBefore = await web3.eth.getBalance(client)
-      const starbaseBalanceBefore = await web3.eth.getBalance(starbase)
+      const clientBalanceBefore = await balance.current(client)
+      const starbaseBalanceBefore = await balance.current(starbase)
 
-      await fundsSplitter.splitFunds({ from: _, value: 20e18 })
+      await fundsSplitter.splitFunds({ from: _, value: ether('20') })
 
-      const clientBalanceAfter = await web3.eth.getBalance(client)
-      const starbaseBalanceAfter = await web3.eth.getBalance(starbase)
+      const clientBalanceAfter = await balance.current(client)
+      const starbaseBalanceAfter = await balance.current(starbase)
 
-      const clientBalanceDifference = clientBalanceAfter.minus(
+      const clientBalanceDifference = clientBalanceAfter.sub(
         clientBalanceBefore
       )
-      const starbaseBalanceDifference = starbaseBalanceAfter.minus(
+      const starbaseBalanceDifference = starbaseBalanceAfter.sub(
         starbaseBalanceBefore
       )
 
-      starbaseBalanceDifference.should.be.bignumber.equal(2e18)
-      clientBalanceDifference.should.be.bignumber.equal(18e18)
+      expect(starbaseBalanceDifference).to.be.bignumber.equal(ether('2'))
+      expect(clientBalanceDifference).to.be.bignumber.equal(ether('18'))
     })
   })
 
   describe('#splitStarFunds', () => {
     beforeEach(async () => {
-      token.mint(fundsSplitter.address, 10e18)
+      token.mint(fundsSplitter.address, ether('10'))
     })
 
     it('split funds between client and starbase', async () => {
@@ -72,21 +75,21 @@ contract('FundsSplitter', ([_, client, starbase]) => {
       const clientStarBalance = await token.balanceOf(client)
       const starbaseStarBalance = await token.balanceOf(starbase)
 
-      starbaseStarBalance.should.be.bignumber.equal(1e18)
-      clientStarBalance.should.be.bignumber.equal(9e18)
+      expect(starbaseStarBalance).to.be.bignumber.equal(ether('1'))
+      expect(clientStarBalance).to.be.bignumber.equal(ether('9'))
     })
   })
 
   describe('#withdrawRemainingTokens', () => {
     beforeEach(async () => {
-      tokenOnSale.mint(fundsSplitter.address, 10e18)
+      tokenOnSale.mint(fundsSplitter.address, ether('10'))
     })
 
     it('withdraw all remaining tokens on sale to client', async () => {
       await fundsSplitter.withdrawRemainingTokens({ from: _ })
 
       const clientStarBalance = await tokenOnSale.balanceOf(client)
-      clientStarBalance.should.be.bignumber.equal(10e18)
+      expect(clientStarBalance).to.be.bignumber.equal(ether('10'))
     })
   })
 })
