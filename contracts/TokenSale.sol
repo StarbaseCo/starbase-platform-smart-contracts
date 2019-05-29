@@ -1,4 +1,4 @@
-pragma solidity 0.5.8;
+pragma solidity 0.5.9;
 
 import "./lib/ERC20Plus.sol";
 import "./lib/FinalizableCrowdsale.sol";
@@ -81,7 +81,7 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
     {
         require(!isInitialized, "Contract instance was initialized already!");
         isInitialized = true;
-        
+
         require(
             _externalAddresses[0] != address(0) &&
             _externalAddresses[1] != address(0) &&
@@ -116,10 +116,10 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
         targetRatesTimestamps = _targetRatesTimestamps;
 
         if (isMinting) {
-            require(tokenOwnerAfterSale != address(0), "TokenOwnerAftersale cannot be empty when minting tokens!");
+            require(tokenOwnerAfterSale != address(0), "tokenOwnerAfterSale cannot be empty when minting tokens!");
             require(ERC20Plus(tokenOnSale).paused(), "Company token must be paused upon initialization!");
         } else {
-            require(tokenOwnerAfterSale == address(0), "TokenOwnerAftersale must be empty when minting tokens!");
+            require(tokenOwnerAfterSale == address(0), "tokenOwnerAfterSale must be empty when minting tokens!");
         }
 
         require(ERC20Plus(tokenOnSale).decimals() == 18, "Only sales for tokens with 18 decimals are supported!");

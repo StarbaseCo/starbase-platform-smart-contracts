@@ -1,7 +1,7 @@
 
 // File: contracts\lib\SafeMath.sol
 
-pragma solidity ^0.5.8;
+pragma solidity ^0.5.9;
 
 /**
  * @title SafeMath
@@ -69,7 +69,7 @@ library SafeMath {
 
 // File: contracts\lib\ERC20.sol
 
-pragma solidity 0.5.8;
+pragma solidity 0.5.9;
 
 
 /**
@@ -90,7 +90,7 @@ contract ERC20 {
 
 // File: contracts\FundsSplitter.sol
 
-pragma solidity 0.5.8;
+pragma solidity 0.5.9;
 
 contract FundsSplitter {
     using SafeMath for uint256;
