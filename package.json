@@ -35,6 +35,6 @@
         "truffle-flattener": "^1.3.0"
     },
     "dependencies": {
-        "solc": "^0.5.8"
+        "solc": "^0.5.9"
     }
 }

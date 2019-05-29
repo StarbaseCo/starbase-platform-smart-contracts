@@ -1,4 +1,4 @@
-pragma solidity 0.5.8;
+pragma solidity 0.5.9;
 
 import "./lib/MintableToken.sol";
 import "./lib/PausableToken.sol";
