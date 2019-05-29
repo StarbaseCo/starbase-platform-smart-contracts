@@ -2,12 +2,20 @@ pragma solidity 0.5.9;
 
 import "./lib/Ownable.sol";
 import "./lib/SafeMath.sol";
-import "./lib/ERC20.sol";
+import "./lib/ERC20Plus.sol";
 import "./lib/Lockable.sol";
+
+import "./FundsSplitterInterface.sol";
 import "./LinkedListLib.sol";
 import "./StarEthRateInterface.sol";
 import "./StarStakingInterface.sol";
+import "./Whitelist.sol";
 
+/**
+ * @title Staking Sale contract - staking of STAR.
+ * @author Markus Waas - <markus@starbase.co>
+ * @author Gustavo Guimaraes - <gustavo@starbase.co>
+ */
 contract StarStaking is StarStakingInterface, Lockable {
     using SafeMath for uint256;
     using LinkedListLib for LinkedListLib.LinkedList;
@@ -16,9 +24,12 @@ contract StarStaking is StarStakingInterface, Lockable {
     bool constant PREV = false;
     bool constant NEXT = true;
 
-    ERC20 public starToken;
-    ERC20 public tokenOnSale;
+    // external addresses
     StarEthRateInterface public starEthRateInterface;
+    ERC20Plus public starToken;
+    ERC20Plus public tokenOnSale;
+    Whitelist public whitelist;
+    FundsSplitterInterface public wallet;
 
     mapping (address => bool) public hasWithdrawnTokens;
     mapping (address => uint256) public totalStakingPointsFor;
@@ -36,7 +47,15 @@ contract StarStaking is StarStakingInterface, Lockable {
     uint256 public stakeSaleCap;
     uint256 public maxStakePerUser;
     uint256 public totalRaised;
-    address public wallet;
+
+    modifier isWhitelisted(address beneficiary) {
+        require(
+            whitelist.allowedAddresses(beneficiary),
+            "Beneficiary not whitelisted!"
+        );
+
+        _;
+    }
 
     modifier whenStakingOpen {
         require(now >= startTime, "Staking period not yet started!");
@@ -55,70 +74,61 @@ contract StarStaking is StarStakingInterface, Lockable {
     }
 
     /**
-     * @param _starEthRateInterface StarEthRate contract for receiving conversion rate of STAR/ETH
-     * @param _starToken Token that can be staked
-     * @param _tokenOnSale Token that will be sold
-     * @param _topRanksMaxSize Maximal size of the top ranks
      * @param _startTime Timestamp for the beginning of the staking event
      * @param _endTime Timestamp of the end of staking event
+     * @param _externalAddresses Containing all external addresses, see below
+     * #param _starEthRateInterface StarEthRate contract for receiving conversion rate of STAR/ETH
+     * #param _starToken Token that can be staked
+     * #param _tokenOnSale Token that will be sold
+     * #param _wallet TokenSale wallet where STAR from staking will be transferred
+     * #param _whitelist contract containing the whitelisted addresses
+     * @param _topRanksMaxSize Maximal size of the top ranks
      * @param _targetRateInEth The baseline target rate in ETH for purchases
      * @param _maxDiscountPer1000 The max discount per 1000 for rank 1.
      * @param _declinePerRankPer1000 The discount decline per rank per 1000.
      * @param _stakeSaleCap The cap amount for total staking
      * @param _maxStakePerUser The maximum amount permitted per user
-     * @param _wallet TokenSale wallet where STAR from staking will be transferred
      */
     constructor(
-        StarEthRateInterface _starEthRateInterface,
-        ERC20 _starToken,
-        ERC20 _tokenOnSale,
         uint256 _startTime,
         uint256 _endTime,
+        address[5] memory _externalAddresses, // array avoids stack too deep error
         uint256 _topRanksMaxSize,
         uint256 _targetRateInEth,
         uint256 _maxDiscountPer1000,
         uint256 _declinePerRankPer1000,
         uint256 _stakeSaleCap,
-        uint256 _maxStakePerUser,
-        address _wallet
+        uint256 _maxStakePerUser
     ) public {
         require(
-            address(_starEthRateInterface) != address(0),
-            "StarEthRate address must be defined!"
-        );
-        require(
-            address(_starToken) != address(0),
-            "Star token address must be defined!"
-        );
-        require(
-            address(_tokenOnSale) != address(0),
-            "Token on sale address must be defined!"
-        );
-        require(
-            _startTime < _endTime,
-            "Start time must be before closing time!"
-        );
-        require(_startTime >= now, "Start time must be after current time!");
-        require(_topRanksMaxSize > 0, "Top ranks size must be more than 0!");
-        require(_targetRateInEth > 0, "Target rate must be more than 0!");
-        require(_maxDiscountPer1000 > 0, "Max discount must be more than 0!");
-        require(
-            _declinePerRankPer1000 > 0,
-            "Decline per rank must be more than 0!"
-        );
-        require(
-            _stakeSaleCap > 0,
-            "StakingSale cap should be higher than 0!"
-        );
-        require(
+            _startTime > 0 &&
+            _endTime > 0 &&
+            _externalAddresses[0] != address(0) &&
+            _externalAddresses[1] != address(0) &&
+            _externalAddresses[2] != address(0) &&
+            _externalAddresses[3] != address(0) &&
+            _externalAddresses[4] != address(0) &&
+            _topRanksMaxSize > 0 &&
+            _targetRateInEth > 0 &&
+            _maxDiscountPer1000 > 0 &&
+            _declinePerRankPer1000 > 0 &&
+            _stakeSaleCap > 0 &&
             _maxStakePerUser > 0,
-            "Max stake per user should be higher than 0!"
+            "Parameter variables cannot be empty!"
         );
+
+        require(_startTime >= now, "startTime must be more than current time!");
+        require(_endTime >= _startTime, "endTime must be more than startTime!");
+
+         require(
+            ERC20Plus(_externalAddresses[2]).decimals() == 18,
+            "Only sales for tokens with 18 decimals are supported!"
+        );
+
         require(
             _maxStakePerUser < _stakeSaleCap,
             "Max stake per user should be smaller than StakeSale cap!"
         );
-        require(_wallet != address(0), "Wallet address may must be defined!");
 
         uint256 maxDecline = _topRanksMaxSize
             .sub(1)
@@ -129,18 +139,21 @@ contract StarStaking is StarStakingInterface, Lockable {
             'Please increase max discount or decrease decline per rank!'
         );
 
-        starEthRateInterface = _starEthRateInterface;
-        starToken = _starToken;
-        tokenOnSale = _tokenOnSale;
         startTime = _startTime;
         endTime = _endTime;
+
+        starEthRateInterface = StarEthRateInterface(_externalAddresses[0]);
+        starToken = ERC20Plus(_externalAddresses[1]);
+        tokenOnSale = ERC20Plus(_externalAddresses[2]);
+        wallet = FundsSplitterInterface(uint160(_externalAddresses[3]));
+        whitelist = Whitelist(_externalAddresses[4]);
+
         topRanksMaxSize = _topRanksMaxSize;
         targetRateInEth = _targetRateInEth;
         maxDiscountPer1000 = _maxDiscountPer1000;
         declinePerRankPer1000 = _declinePerRankPer1000;
         stakeSaleCap = _stakeSaleCap.mul(10 ** 18);
         maxStakePerUser = _maxStakePerUser.mul(10 ** 18);
-        wallet = _wallet;
     }
 
     /**
@@ -162,6 +175,7 @@ contract StarStaking is StarStakingInterface, Lockable {
         public
         onlyWhenUnlocked
         whenStakingOpen
+        isWhitelisted(_user)
     {
         require(
             _user != _oneRankAboveNode,
@@ -206,9 +220,10 @@ contract StarStaking is StarStakingInterface, Lockable {
         }
 
         require(
-            starToken.transferFrom(msg.sender, wallet, amount),
+            starToken.transferFrom(msg.sender, address(wallet), amount),
             "Not enough funds for sender!"
         );
+        wallet.splitStarFunds();
         totalRaised = totalRaised.add(amount);
     }
 
