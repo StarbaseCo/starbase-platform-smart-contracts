@@ -1,7 +1,7 @@
 
 // File: contracts\lib\ERC20Basic.sol
 
-pragma solidity 0.5.8;
+pragma solidity 0.5.9;
 
 
 /**
@@ -18,7 +18,7 @@ contract ERC20Basic {
 
 // File: contracts\lib\SafeMath.sol
 
-pragma solidity ^0.5.8;
+pragma solidity ^0.5.9;
 
 /**
  * @title SafeMath
@@ -86,7 +86,7 @@ library SafeMath {
 
 // File: contracts\lib\BasicToken.sol
 
-pragma solidity 0.5.8;
+pragma solidity 0.5.9;
 
 
 /**
@@ -136,7 +136,7 @@ contract BasicToken is ERC20Basic {
 
 // File: contracts\lib\ERC20.sol
 
-pragma solidity 0.5.8;
+pragma solidity 0.5.9;
 
 
 /**
@@ -157,7 +157,7 @@ contract ERC20 {
 
 // File: contracts\lib\StandardToken.sol
 
-pragma solidity 0.5.8;
+pragma solidity 0.5.9;
 
 
 /**
@@ -257,7 +257,7 @@ contract StandardToken is ERC20, BasicToken {
 
 // File: contracts\lib\Ownable.sol
 
-pragma solidity 0.5.8;
+pragma solidity 0.5.9;
 
 
 /**
@@ -333,7 +333,7 @@ contract Ownable {
 
 // File: contracts\lib\MintableToken.sol
 
-pragma solidity 0.5.8;
+pragma solidity 0.5.9;
 
 
 /**
@@ -381,7 +381,7 @@ contract MintableToken is StandardToken, Ownable {
 
 // File: contracts\lib\Pausable.sol
 
-pragma solidity 0.5.8;
+pragma solidity 0.5.9;
 
 
 /**
@@ -440,7 +440,7 @@ contract Pausable is Ownable {
 
 // File: contracts\lib\PausableToken.sol
 
-pragma solidity 0.5.8;
+pragma solidity 0.5.9;
 
 
 /**
@@ -472,7 +472,7 @@ contract PausableToken is StandardToken, Pausable {
 
 // File: contracts\CompanyToken.sol
 
-pragma solidity 0.5.8;
+pragma solidity 0.5.9;
 
 
 /**

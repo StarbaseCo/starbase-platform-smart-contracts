@@ -1,7 +1,7 @@
 
 // File: contracts\lib\ERC20Plus.sol
 
-pragma solidity 0.5.8;
+pragma solidity 0.5.9;
 
 /**
  * @title ERC20 interface with additional functions
@@ -30,7 +30,7 @@ contract ERC20Plus {
 
 // File: contracts\lib\SafeMath.sol
 
-pragma solidity ^0.5.8;
+pragma solidity ^0.5.9;
 
 /**
  * @title SafeMath
@@ -98,7 +98,7 @@ library SafeMath {
 
 // File: contracts\lib\Ownable.sol
 
-pragma solidity 0.5.8;
+pragma solidity 0.5.9;
 
 
 /**
@@ -174,7 +174,7 @@ contract Ownable {
 
 // File: contracts\lib\Crowdsale.sol
 
-pragma solidity 0.5.8;
+pragma solidity 0.5.9;
 
 /**
  * @title Crowdsale - modified from zeppelin-solidity library
@@ -225,7 +225,7 @@ contract Crowdsale {
 
 // File: contracts\lib\FinalizableCrowdsale.sol
 
-pragma solidity 0.5.8;
+pragma solidity 0.5.9;
 
 
 /**
@@ -265,7 +265,7 @@ contract FinalizableCrowdsale is Crowdsale, Ownable {
 
 // File: contracts\lib\Pausable.sol
 
-pragma solidity 0.5.8;
+pragma solidity 0.5.9;
 
 
 /**
@@ -324,7 +324,7 @@ contract Pausable is Ownable {
 
 // File: contracts\FundsSplitterInterface.sol
 
-pragma solidity 0.5.8;
+pragma solidity 0.5.9;
 
 contract FundsSplitterInterface {
     function splitFunds() public payable;
@@ -334,7 +334,7 @@ contract FundsSplitterInterface {
 
 // File: contracts\StarEthRateInterface.sol
 
-pragma solidity 0.5.8;
+pragma solidity 0.5.9;
 
 contract StarEthRateInterface {
     function decimalCorrectionFactor() public returns (uint256);
@@ -343,7 +343,7 @@ contract StarEthRateInterface {
 
 // File: contracts\TokenSaleInterface.sol
 
-pragma solidity 0.5.8;
+pragma solidity 0.5.9;
 
 /**
  * @title TokenSale contract interface
@@ -366,7 +366,7 @@ interface TokenSaleInterface {
 
 // File: contracts\Whitelist.sol
 
-pragma solidity 0.5.8;
+pragma solidity 0.5.9;
 
 
 /**
@@ -412,7 +412,7 @@ contract Whitelist is Ownable {
 
 // File: contracts\TokenSale.sol
 
-pragma solidity 0.5.8;
+pragma solidity 0.5.9;
 
 /**
  * @title Token Sale contract - crowdsale of company tokens.
@@ -486,7 +486,7 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
     {
         require(!isInitialized, "Contract instance was initialized already!");
         isInitialized = true;
-        
+
         require(
             _externalAddresses[0] != address(0) &&
             _externalAddresses[1] != address(0) &&
@@ -521,10 +521,10 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
         targetRatesTimestamps = _targetRatesTimestamps;
 
         if (isMinting) {
-            require(tokenOwnerAfterSale != address(0), "TokenOwnerAftersale cannot be empty when minting tokens!");
+            require(tokenOwnerAfterSale != address(0), "tokenOwnerAfterSale cannot be empty when minting tokens!");
             require(ERC20Plus(tokenOnSale).paused(), "Company token must be paused upon initialization!");
         } else {
-            require(tokenOwnerAfterSale == address(0), "TokenOwnerAftersale must be empty when minting tokens!");
+            require(tokenOwnerAfterSale == address(0), "tokenOwnerAfterSale must be empty when minting tokens!");
         }
 
         require(ERC20Plus(tokenOnSale).decimals() == 18, "Only sales for tokens with 18 decimals are supported!");
