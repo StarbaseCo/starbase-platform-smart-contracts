@@ -24,7 +24,7 @@ const { ZERO_ADDRESS } = constants
 const HEAD = ZERO_ADDRESS
 const BALANCES = [1, 60000, 99999999].map(n => new BN(n))
 
-contract.only('StarStaking', accounts => {
+contract('StarStaking', accounts => {
   const [user1, user2, user3, user4, user5, user6, client, starbase] = accounts
   let stakingContract,
     starEthRate,
