@@ -48,6 +48,8 @@ contract StarStaking is StarStakingInterface, Lockable {
     uint256 public maxStakePerUser;
     uint256 public totalRaised;
 
+    uint256 public topRanksCount;
+
     modifier isWhitelisted(address beneficiary) {
         require(
             whitelist.allowedAddresses(beneficiary),
@@ -139,6 +141,7 @@ contract StarStaking is StarStakingInterface, Lockable {
             'Please increase max discount or decrease decline per rank!'
         );
 
+        topRanksCount = 0;
         startTime = _startTime;
         endTime = _endTime;
 
@@ -201,7 +204,7 @@ contract StarStaking is StarStakingInterface, Lockable {
             amount = maxStakePerUser.sub(totalStakedFor[_user]);
         }
 
-        if (topRanks.sizeOf() > 0) {
+        if (topRanksCount > 0) {
             require(
                 _oneRankAboveNode == HEAD || topRanks.nodeExists(_oneRankAboveNode),
                 "Node for suggested position does not exist!"
@@ -215,7 +218,7 @@ contract StarStaking is StarStakingInterface, Lockable {
 
         _addStakingPoints(_user, amount);
 
-        if (topRanks.sizeOf() == 0 || _oneRankAboveNode != HEAD) {
+        if (topRanksCount == 0 || _oneRankAboveNode != HEAD) {
             _sortedInsert(_user, _oneRankAboveNode);
         }
 
@@ -253,7 +256,7 @@ contract StarStaking is StarStakingInterface, Lockable {
         view
         returns (address)
     {
-        if (topRanks.sizeOf() == 0) {
+        if (topRanksCount == 0) {
             return HEAD;
         }
 
@@ -325,7 +328,7 @@ contract StarStaking is StarStakingInterface, Lockable {
     {
         address referenceNode = HEAD;
 
-        for (uint256 i = 0; i < topRanks.sizeOf(); i++) {
+        for (uint256 i = 0; i < topRanksCount; i++) {
             referenceNode = getTopRank(referenceNode, NEXT);
 
             if (referenceNode == _user) {
@@ -340,7 +343,7 @@ contract StarStaking is StarStakingInterface, Lockable {
      * @dev Returns a flat list of 3-tuples (address, stakingPoints, totalStaked).
      */
     function getTopRanksTuples() public view returns (uint256[] memory) {
-        uint256 tripleRanksCount = topRanks.sizeOf() * 3;
+        uint256 tripleRanksCount = topRanksCount * 3;
         uint256[] memory topRanksList = new uint256[](tripleRanksCount);
 
         address referenceNode = HEAD;
@@ -377,14 +380,6 @@ contract StarStaking is StarStakingInterface, Lockable {
 
         uint256 totalTokens = baseTokens.add(bonusTokens);
         tokenOnSale.transfer(msg.sender, totalTokens);
-    }
-
-    /**
-     * @dev Read the current size of the top ranks.
-     * @return The current top ranks size.
-     */
-    function topRanksCount() external view returns (uint256) {
-        return topRanks.sizeOf();
     }
 
     /**
@@ -450,7 +445,7 @@ contract StarStaking is StarStakingInterface, Lockable {
         uint256 _oneRankAbovePoints,
         address _twoRanksAbove
     ) private view returns (bool) {
-        if (topRanks.sizeOf() == 0) {
+        if (topRanksCount == 0) {
             return true;
         }
 
@@ -473,7 +468,7 @@ contract StarStaking is StarStakingInterface, Lockable {
     }
 
     function _sortedInsert(address _user, address _oneRankAboveNode) private {
-        topRanks.remove(_user);
+        address removedNode = topRanks.remove(_user);
 
         address twoRanksAbove = getTopRank(_oneRankAboveNode, PREV);
         address oneRankBelow = getTopRank(_oneRankAboveNode, NEXT);
@@ -498,8 +493,10 @@ contract StarStaking is StarStakingInterface, Lockable {
             topRanks.insert(_oneRankAboveNode, _user, NEXT);
         }
 
-        if (topRanks.sizeOf() > topRanksMaxSize) {
+        if (topRanksCount == topRanksMaxSize) {
             topRanks.pop(PREV);
+        } else if (removedNode == address(0)) {
+            topRanksCount++;
         }
     }
 }
