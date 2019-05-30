@@ -1,8 +1,9 @@
 pragma solidity 0.5.9;
 
 import "./lib/Ownable.sol";
+import "./StarEthRateInterface.sol";
 
-contract StarEthRate is Ownable {
+contract StarEthRate is Ownable, StarEthRateInterface {
     uint256 public decimalCorrectionFactor;
     uint256 public starEthRate;
 

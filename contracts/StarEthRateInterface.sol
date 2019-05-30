@@ -1,6 +1,6 @@
 pragma solidity 0.5.9;
 
-contract StarEthRateInterface {
-    function decimalCorrectionFactor() public returns (uint256);
-    function starEthRate() public returns (uint256);
+interface StarEthRateInterface {
+    function decimalCorrectionFactor() external returns (uint256);
+    function starEthRate() external returns (uint256);
 }
