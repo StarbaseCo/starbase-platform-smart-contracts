@@ -50,6 +50,15 @@ contract StarStaking is StarStakingInterface, Lockable {
 
     uint256 public topRanksCount;
 
+    modifier isAfterClaimPeriod {
+        require(
+            (now > endTime.add(60 * 60 * 24 * 60)),
+            'Claim period is not yet finished!'
+        );
+
+        _;
+    }
+
     modifier isWhitelisted(address beneficiary) {
         require(
             whitelist.allowedAddresses(beneficiary),
@@ -398,6 +407,17 @@ contract StarStaking is StarStakingInterface, Lockable {
         uint256 addedStakingPoints = timeUntilEnd.mul(_amount);
 
         return totalStakingPointsFor[_user].add(addedStakingPoints);
+    }
+
+    /**
+     * @dev Withdraw received tokens after claim period is finished.
+     */
+    function withdrawTokens(uint256 _amount)
+        external
+        isAfterClaimPeriod
+        onlyOwner
+    {
+        tokenOnSale.transfer(msg.sender, _amount);
     }
 
     function _computeDiscountForRank(uint256 _rank)

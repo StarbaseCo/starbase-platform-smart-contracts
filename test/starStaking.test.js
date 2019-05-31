@@ -1833,5 +1833,61 @@ contract('StarStaking', accounts => {
         ensuresException(error, expectedError)
       }
     })
+
+    describe('when withdrawing remaining tokens', async () => {
+      beforeEach(async () => {
+        await increaseTimeTo(defaultStartTime)
+        await stakingContract.stakeFor(user1, new BN(1500), HEAD)
+        await increaseTimeTo(defaultEndTime.add(duration.days(59)))
+      })
+
+      describe('when claim period is not yet finished', async () => {
+        it('reverts the transaction', async () => {
+          await expectRevert(
+            stakingContract.withdrawTokens(new BN(100)),
+            'Claim period is not yet finished!'
+          )
+        })
+      })
+
+      describe('when claim period is finished', async () => {
+        beforeEach(async () => {
+          await increaseTimeTo(defaultEndTime.add(duration.days(61)))
+        })
+
+        describe('when not called by owner', async () => {
+          it('reverts the transaction', async () => {
+            await expectRevert(
+              stakingContract.withdrawTokens(new BN(100), { from: user2 }),
+              'only owner is able call this function'
+            )
+          })
+        })
+
+        it('withdraws requested amount of tokens', async () => {
+          const requestedTokens = new BN(100)
+          const ownerBalanceBefore = await tokenOnSale.balanceOf(user1)
+          const saleBalanceBefore = await tokenOnSale.balanceOf(
+            stakingContract.address
+          )
+
+          await stakingContract.withdrawTokens(requestedTokens, {
+            from: user1,
+          })
+
+          const ownerBalanceAfter = await tokenOnSale.balanceOf(user1)
+          const saleBalanceAfter = await tokenOnSale.balanceOf(
+            stakingContract.address
+          )
+
+          expect(saleBalanceAfter).to.be.bignumber.equal(
+            saleBalanceBefore.sub(requestedTokens)
+          )
+          expect(ownerBalanceAfter).to.be.bignumber.equal(
+            ownerBalanceBefore.add(requestedTokens)
+          )
+        })
+      })
+    })
   })
 })
