@@ -75,11 +75,20 @@ contract Ownable {
     }
 }
 
+// File: contracts\StarEthRateInterface.sol
+
+pragma solidity 0.5.9;
+
+interface StarEthRateInterface {
+    function decimalCorrectionFactor() external returns (uint256);
+    function starEthRate() external returns (uint256);
+}
+
 // File: contracts\StarEthRate.sol
 
-pragma solidity 0.5.9;
+pragma solidity 0.5.9;
 
-contract StarEthRate is Ownable {
+contract StarEthRate is Ownable, StarEthRateInterface {
     uint256 public decimalCorrectionFactor;
     uint256 public starEthRate;
 
