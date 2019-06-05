@@ -241,19 +241,6 @@ contract StarStaking is StarStakingInterface, Lockable {
 
     /**
      * @dev Can be used before `stakeFor` to get the correct reference node
-     * @param _addedStake new added stake for calling user
-     * @return reference node for insertion in top ranks
-     */
-    function getSortedSpotForNewStake(uint256 _addedStake)
-        public
-        view
-        returns (address)
-    {
-        return getSortedSpotForNewStakeForUser(_addedStake, msg.sender);
-    }
-
-    /**
-     * @dev Can be used before `stakeFor` to get the correct reference node
      * @param _addedStake new added stake for user
      * @param _user the user address
      * @return reference node for insertion in top ranks
@@ -265,20 +252,7 @@ contract StarStaking is StarStakingInterface, Lockable {
     {
         uint256 newStakingPoints = computeStakingPoints(_user, _addedStake);
 
-        return getSortedSpotForPoints(newStakingPoints);
-    }
-
-    /**
-     * @dev Can be used before `stakeFor` to get the correct reference node
-     * @param _stakingPoints new points for user to insert
-     * @return reference node for insertion in top ranks
-     */
-    function getSortedSpotForPoints(uint256 _stakingPoints)
-        public
-        view
-        returns (address)
-    {
-        return getSortedSpotForPointsForUser(_stakingPoints, msg.sender);
+        return getSortedSpotForPointsForUser(newStakingPoints, _user);
     }
 
     /**
@@ -315,19 +289,6 @@ contract StarStaking is StarStakingInterface, Lockable {
         }
 
         return node;
-    }
-
-     /**
-     * @dev Reads the current discount in % for the passed staking points
-     * @param _stakingPoints The staking points to be used
-     * @return The discount for given staking points
-     */
-    function getDiscountEstimateForPoints(uint256 _stakingPoints)
-        public
-        view
-        returns (uint256)
-    {
-        return getDiscountEstimateForPointsForUser(_stakingPoints, msg.sender);
     }
 
     /**
