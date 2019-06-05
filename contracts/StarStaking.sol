@@ -245,12 +245,25 @@ contract StarStaking is StarStakingInterface, Lockable {
      * @return reference node for insertion in top ranks
      */
     function getSortedSpotForNewStake(uint256 _addedStake)
-        external
+        public
         view
         returns (address)
     {
-        address user = msg.sender;
-        uint256 newStakingPoints = computeStakingPoints(user, _addedStake);
+        return getSortedSpotForNewStakeForUser(_addedStake, msg.sender);
+    }
+
+    /**
+     * @dev Can be used before `stakeFor` to get the correct reference node
+     * @param _addedStake new added stake for user
+     * @param _user the user address
+     * @return reference node for insertion in top ranks
+     */
+    function getSortedSpotForNewStakeForUser(uint256 _addedStake, address _user)
+        public
+        view
+        returns (address)
+    {
+        uint256 newStakingPoints = computeStakingPoints(_user, _addedStake);
 
         return getSortedSpotForPoints(newStakingPoints);
     }
@@ -265,6 +278,23 @@ contract StarStaking is StarStakingInterface, Lockable {
         view
         returns (address)
     {
+        return getSortedSpotForPointsForUser(_stakingPoints, msg.sender);
+    }
+
+    /**
+     * @dev Can be used before `stakeFor` to get the correct reference node
+     * @param _stakingPoints new points for user to insert
+     * @param _user the user address
+     * @return reference node for insertion in top ranks
+     */
+    function getSortedSpotForPointsForUser(
+        uint256 _stakingPoints,
+        address _user
+    )
+        public
+        view
+        returns (address)
+    {
         if (topRanksCount == 0) {
             return HEAD;
         }
@@ -273,7 +303,7 @@ contract StarStaking is StarStakingInterface, Lockable {
 
         while (
             (node != HEAD) && ((totalStakingPointsFor[node] < _stakingPoints))
-            || (node == msg.sender)
+            || (node == _user)
         ) {
             node = getTopRank(node, PREV);
         }
@@ -281,23 +311,43 @@ contract StarStaking is StarStakingInterface, Lockable {
         if (node == HEAD) {
             node = getTopRank(HEAD, NEXT);
 
-            if (node == msg.sender) node = getTopRank(node, NEXT);
+            if (node == _user) node = getTopRank(node, NEXT);
         }
 
         return node;
     }
 
-    /**
-     * @dev Reads the current discount in % for the passed staking points.
-     * @param _stakingPoints The staking points to be used.
-     * @return The discount.for given staking points.
+     /**
+     * @dev Reads the current discount in % for the passed staking points
+     * @param _stakingPoints The staking points to be used
+     * @return The discount for given staking points
      */
     function getDiscountEstimateForPoints(uint256 _stakingPoints)
         public
         view
         returns (uint256)
     {
-        address oneRankAbove = getSortedSpotForPoints(_stakingPoints);
+        return getDiscountEstimateForPointsForUser(_stakingPoints, msg.sender);
+    }
+
+    /**
+     * @dev Reads the current discount in % for the passed staking points
+     * @param _stakingPoints The staking points to be used
+     * @param _user the user address
+     * @return The discount for given staking points
+     */
+    function getDiscountEstimateForPointsForUser(
+        uint256 _stakingPoints,
+        address _user
+    )
+        public
+        view
+        returns (uint256)
+    {
+        address oneRankAbove = getSortedSpotForPointsForUser(
+            _stakingPoints,
+            _user
+        );
         address replacedUser = getTopRank(oneRankAbove, NEXT);
 
         if (replacedUser == HEAD) {
@@ -311,10 +361,10 @@ contract StarStaking is StarStakingInterface, Lockable {
     }
 
     /**
-     * @dev Returns the previous or next top rank node.
-     * @param _referenceNode Address of the reference.
-     * @param _direction Bool for direction.
-     * @return The previous or next top rank node.
+     * @dev Returns the previous or next top rank node
+     * @param _referenceNode Address of the reference
+     * @param _direction Bool for direction
+     * @return The previous or next top rank node
      */
     function getTopRank(address _referenceNode, bool _direction)
         public
@@ -325,10 +375,10 @@ contract StarStaking is StarStakingInterface, Lockable {
     }
 
     /**
-     * @dev Read the current rank for the given user.
-     * @param _user The user to be looked at.
-     * @return The current rank in the top ranks and boolean to indicate,
-     * if user was found in the top ranks.
+     * @dev Read the current rank for the given user
+     * @param _user The user to be looked at
+     * @return The current rank in the top ranks and boolean to indicate
+     * if user was found in the top ranks
      */
     function getRankForUser(address _user)
         public
@@ -349,7 +399,7 @@ contract StarStaking is StarStakingInterface, Lockable {
     }
 
     /**
-     * @dev Returns a flat list of 3-tuples (address, stakingPoints, totalStaked).
+     * @dev Returns a flat list of 3-tuples (address, stakingPoints, totalStaked)
      */
     function getTopRanksTuples() public view returns (uint256[] memory) {
         uint256 tripleRanksCount = topRanksCount * 3;
@@ -375,7 +425,7 @@ contract StarStaking is StarStakingInterface, Lockable {
     }
 
     /**
-     * @dev Withdraw all received tokens after staking is finished.
+     * @dev Withdraw all received tokens after staking is finished
      */
     function withdrawAllReceivedTokens() external isFinished {
         require(
@@ -392,10 +442,10 @@ contract StarStaking is StarStakingInterface, Lockable {
     }
 
     /**
-     * @dev Compute the new staking points.
-     * @param _user The user to compute staking points for.
-     * @param _amount The added stake for the user.
-     * @return The new staking points for user.
+     * @dev Compute the new staking points
+     * @param _user The user to compute staking points for
+     * @param _amount The added stake for the user
+     * @return The new staking points for user
      */
     function computeStakingPoints(address _user, uint256 _amount)
         public
@@ -410,7 +460,7 @@ contract StarStaking is StarStakingInterface, Lockable {
     }
 
     /**
-     * @dev Withdraw received tokens after claim period is finished.
+     * @dev Withdraw received tokens after claim period is finished
      */
     function withdrawTokens(uint256 _amount)
         external
