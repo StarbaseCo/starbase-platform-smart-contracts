@@ -513,10 +513,16 @@ contract StarStaking is StarStakingInterface, Lockable {
             topRanks.insert(_oneRankAboveNode, _user, NEXT);
         }
 
-        if (topRanksCount == topRanksMaxSize) {
-            topRanks.pop(PREV);
-        } else if (removedNode == address(0)) {
+        if (removedNode == address(0)) {
+            _handleTopRanksAddition();
+        }
+    }
+
+    function _handleTopRanksAddition() private {
+        if (topRanksCount < topRanksMaxSize) {
             topRanksCount++;
+        } else {
+            topRanks.pop(PREV);
         }
     }
 }
