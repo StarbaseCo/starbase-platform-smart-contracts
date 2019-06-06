@@ -52,7 +52,7 @@ contract StarStaking is StarStakingInterface, Lockable {
 
     modifier isAfterClaimPeriod {
         require(
-            (now > endTime.add(60 * 60 * 24 * 60)),
+            (now > endTime.add(60 days)),
             'Claim period is not yet finished!'
         );
 
