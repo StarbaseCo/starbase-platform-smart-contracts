@@ -298,7 +298,7 @@ contract StarStaking is StarStakingInterface, Lockable {
     }
 
     /**
-     * @dev Reads the current discount in % for the passed staking points
+     * @dev Reads the current discount in per mill for the passed staking points
      * @param _stakingPoints The staking points to be used
      * @param _user the user address
      * @return The discount for given staking points
