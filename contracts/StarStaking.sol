@@ -230,6 +230,11 @@ contract StarStaking is StarStakingInterface, Lockable {
 
         if (topRanksCount == 0 || _oneRankAboveNode != HEAD) {
             _sortedInsert(_user, _oneRankAboveNode);
+        } else {
+            require(
+                !topRanks.nodeExists(_user),
+                "User is already in topRanks, you need to pass a reference node!"
+            );
         }
 
         require(

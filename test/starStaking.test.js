@@ -1062,6 +1062,15 @@ contract('StarStaking', accounts => {
       }
     })
 
+    it('reverts when not passing reference node for already inserted node', async () => {
+      await defaultWhitelist.removeManyFromWhitelist([accounts[8]])
+
+      await expectRevert(
+        stakingContract.stakeFor(user1, 100, HEAD),
+        'User is already in topRanks, you need to pass a reference node!'
+      )
+    })
+
     it('computeStakingPoints returns correct new staking points', async () => {
       const newAmount = new BN(1000)
       const newStakingPoints = await stakingContract.computeStakingPoints(
