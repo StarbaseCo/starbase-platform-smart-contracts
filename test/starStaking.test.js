@@ -1114,7 +1114,7 @@ contract('StarStaking', accounts => {
       )
     })
 
-    it('getSortedSpotForPoints returns correct reference node', async () => {
+    it('getSortedSpotForPointsForUser returns correct reference node', async () => {
       const result = await stakingContract.getTopRanksTuples()
       const rcvStakingPoints = []
 
@@ -1124,18 +1124,17 @@ contract('StarStaking', accounts => {
         }
       })
       const spots = [
-        await stakingContract.getSortedSpotForPoints(rcvStakingPoints[0] + 20, {
-          from: accounts[rcvStakingPoints.length - 1],
-        }),
+        await stakingContract.getSortedSpotForPointsForUser(
+          rcvStakingPoints[0] + 20,
+          accounts[rcvStakingPoints.length - 1]
+        ),
       ]
 
       for (let i = 0; i < rcvStakingPoints.length; i++) {
         spots.push(
-          await stakingContract.getSortedSpotForPoints(
+          await stakingContract.getSortedSpotForPointsForUser(
             rcvStakingPoints[i] - 20,
-            {
-              from: accounts[rcvStakingPoints.length - 1],
-            }
+            accounts[rcvStakingPoints.length - 1]
           )
         )
       }
@@ -1147,14 +1146,15 @@ contract('StarStaking', accounts => {
       ])
     })
 
-    it('getSortedSpotForNewStake returns correct reference node', async () => {
+    it('getSortedSpotForNewStakeForUser returns correct reference node', async () => {
       const spots = []
 
       for (let i = 0; i < totalStaked.length; i++) {
         spots.push(
-          await stakingContract.getSortedSpotForNewStake(100, {
-            from: accounts[i],
-          })
+          await stakingContract.getSortedSpotForNewStakeForUser(
+            100,
+            accounts[i]
+          )
         )
       }
 
@@ -1185,7 +1185,7 @@ contract('StarStaking', accounts => {
       isInTopRanksList.should.eql([true, true, true, true, true, false])
     })
 
-    it('getDiscountEstimateForPoints returns correct rank', async () => {
+    it('getDiscountEstimateForPointsForUser returns correct rank', async () => {
       const discounts = []
 
       const stakingPoints = []
@@ -1196,20 +1196,41 @@ contract('StarStaking', accounts => {
 
       for (let i = 0; i < totalStaked.length; i++) {
         discounts.push(
-          (await stakingContract.getDiscountEstimateForPoints(
+          (await stakingContract.getDiscountEstimateForPointsForUser(
             stakingPoints[i].add(new BN(5)),
-            { from: accounts[i] }
+            accounts[i]
           )).toNumber()
         )
       }
 
       discounts.push(
-        (await stakingContract.getDiscountEstimateForPoints(1, {
-          from: accounts[8],
-        })).toNumber()
+        (await stakingContract.getDiscountEstimateForPointsForUser(
+          1,
+          accounts[9]
+        )).toNumber()
       )
 
-      const expectedDiscountsForInList = [0, 1, 2, 3, 4].map(rank =>
+      for (let i = 5; i < 10; i++) {
+        const oneRankAbove = await stakingContract.getSortedSpotForNewStakeForUser(
+          100,
+          accounts[i]
+        )
+
+        await stakingContract.stakeFor(accounts[i], 100, oneRankAbove, {
+          from: user1,
+        })
+      }
+
+      const notInListAddress = '0x9F7982c7E7B87abF344ade8cCA4105fc56C319DE'
+
+      discounts.push(
+        (await stakingContract.getDiscountEstimateForPointsForUser(
+          1,
+          notInListAddress
+        )).toNumber()
+      )
+
+      const expectedDiscountsForInList = [0, 1, 2, 3, 4, 5].map(rank =>
         defaultMaxDiscountPer1000
           .sub(defaultDeclinePerRankPer1000.mul(new BN(rank)))
           .toNumber()
