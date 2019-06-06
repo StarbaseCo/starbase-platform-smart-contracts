@@ -311,14 +311,24 @@ contract StarStaking is StarStakingInterface, Lockable {
         view
         returns (uint256)
     {
+        if (topRanksCount == 0) {
+            return _computeDiscountForRank(0);
+        }
+
+        address notInTopRanks = 0xd20B0A19D1806f4f6F5a714EddF8e3e9807e2d9f;
         address oneRankAbove = getSortedSpotForPointsForUser(
             _stakingPoints,
-            _user
+            notInTopRanks
         );
-        address replacedUser = getTopRank(oneRankAbove, NEXT);
+        address replacedUser = oneRankAbove == _user
+            ? _user
+            : getTopRank(oneRankAbove, NEXT);
 
-        if (replacedUser == HEAD) {
+        if (topRanksCount == topRanksMaxSize && replacedUser == HEAD) {
             return 0;
+        } else if (replacedUser == HEAD) {
+            uint256 lastRank = topRanksCount;
+            return _computeDiscountForRank(lastRank);
         }
 
         (uint256 rank,) = _stakingPoints > totalStakingPointsFor[oneRankAbove]
