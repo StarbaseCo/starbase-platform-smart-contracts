@@ -77,7 +77,7 @@ contract StarStaking is StarStakingInterface, Lockable {
 
     modifier isFinished {
         require(
-            now > endTime || totalRaised >= stakeSaleCap,
+            now >= endTime || totalRaised >= stakeSaleCap,
             "Staking period not yet closed!"
         );
 
