@@ -150,6 +150,7 @@ contract StarStaking is StarStakingInterface, Lockable {
             'Please increase max discount or decrease decline per rank!'
         );
 
+        totalRaised = 0;
         topRanksCount = 0;
         startTime = _startTime;
         endTime = _endTime;
