@@ -363,15 +363,15 @@ contract StarStaking is StarStakingInterface, Lockable {
         returns (uint256, bool)
     {
         if (topRanks.nodeExists(_user)) {
-        address referenceNode = HEAD;
+            address referenceNode = HEAD;
 
-        for (uint256 i = 0; i < topRanksCount; i++) {
-            referenceNode = getTopRank(referenceNode, NEXT);
+            for (uint256 i = 0; i < topRanksCount; i++) {
+                referenceNode = getTopRank(referenceNode, NEXT);
 
-            if (referenceNode == _user) {
-                return (i, true);
+                if (referenceNode == _user) {
+                    return (i, true);
+                }
             }
-        }
         }
 
         return (0, false);
@@ -491,7 +491,7 @@ contract StarStaking is StarStakingInterface, Lockable {
 
     function _doesCorrectlyInsertAtFirstRank(
         uint256 _newRankPoints,
-        uint256 _oneRankAbovePoints,
+        uint256 _oneRankAbovePoints, // if true, this is actually oneRankBelow
         address _twoRanksAbove
     ) private view returns (bool) {
         if (topRanksCount == 0) {
@@ -528,7 +528,7 @@ contract StarStaking is StarStakingInterface, Lockable {
 
         if (_doesCorrectlyInsertAtFirstRank(
             newRankPoints,
-            oneRankAbovePoints,
+            oneRankAbovePoints, // if true, this is actually oneRankBelow
             twoRanksAbove
         )) {
             topRanks.insert(HEAD, _user, NEXT);
