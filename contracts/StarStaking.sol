@@ -362,6 +362,7 @@ contract StarStaking is StarStakingInterface, Lockable {
         view
         returns (uint256, bool)
     {
+        if (topRanks.nodeExists(_user)) {
         address referenceNode = HEAD;
 
         for (uint256 i = 0; i < topRanksCount; i++) {
@@ -370,6 +371,7 @@ contract StarStaking is StarStakingInterface, Lockable {
             if (referenceNode == _user) {
                 return (i, true);
             }
+        }
         }
 
         return (0, false);
