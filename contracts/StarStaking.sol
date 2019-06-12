@@ -315,6 +315,7 @@ contract StarStaking is StarStakingInterface, Lockable {
             return _computeDiscountForRank(0);
         }
 
+        // small hack: notInTopRanks ensures proper oneRankAbove
         address notInTopRanks = 0xd20B0A19D1806f4f6F5a714EddF8e3e9807e2d9f;
         address oneRankAbove = getSortedSpotForPointsForUser(
             _stakingPoints,
