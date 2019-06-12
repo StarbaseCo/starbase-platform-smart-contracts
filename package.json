@@ -11,7 +11,7 @@
         "test": "bash scripts/run_test.sh",
         "flat": "bash scripts/flatten.sh",
         "remix": "bash scripts/flatten.sh && remixd -s ./flats",
-        "compile": "bash scripts/compile.sh"
+        "compile": "npm run flat && bash scripts/compile.sh"
     },
     "husky": {
         "hooks": {
