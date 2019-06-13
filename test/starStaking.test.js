@@ -1106,16 +1106,6 @@ contract('StarStaking', accounts => {
         addedStakingPointsLeast
       )
 
-      console.log('newStakingPoints', newStakingPoints.toString())
-      console.log(
-        'expectedTotalNewPointsMost',
-        expectedTotalNewPointsMost.toString()
-      )
-      console.log(
-        'expectedTotalNewPointsLeast',
-        expectedTotalNewPointsLeast.toString()
-      )
-
       expect(newStakingPoints).to.be.bignumber.at.most(
         expectedTotalNewPointsMost
       )
