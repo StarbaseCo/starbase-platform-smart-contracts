@@ -50,7 +50,7 @@ contract(
     } = {}) => {
       whitelist = await Whitelist.new()
       star = await MintableToken.new()
-      token = await CompanyToken.new('Example Token', 'EXT')
+      token = await CompanyToken.new('Example Token', 'EXT', 18)
       const fundsSplitter = await FundsSplitter.new(
         client,
         starbase,

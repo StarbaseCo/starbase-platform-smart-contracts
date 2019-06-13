@@ -482,16 +482,21 @@ pragma solidity 0.5.9;
 contract CompanyToken is PausableToken, MintableToken {
     string private _name;
     string private _symbol;
-    uint8 constant private _decimals = 18;
+    uint8 private _decimals;
 
     /**
      * @dev Contract constructor function
      * @param name Token name
      * @param symbol Token symbol - up to 4 characters
      */
-    constructor(string memory name, string memory symbol) public {
+    constructor(
+        string memory name,
+        string memory symbol,
+        uint8 decimals
+    ) public {
         _name = name;
         _symbol = symbol;
+        _decimals = decimals;
 
         pause();
     }
@@ -513,7 +518,7 @@ contract CompanyToken is PausableToken, MintableToken {
     /**
      * @return the number of decimals of the token.
      */
-    function decimals() public pure returns (uint8) {
+    function decimals() public view returns (uint8) {
         return _decimals;
     }
 }

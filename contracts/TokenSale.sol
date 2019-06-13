@@ -122,8 +122,6 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
             require(tokenOwnerAfterSale == address(0), "tokenOwnerAfterSale must be empty when minting tokens!");
         }
 
-        require(ERC20Plus(tokenOnSale).decimals() == 18, "Only sales for tokens with 18 decimals are supported!");
-
         verifyTargetRates();
     }
 
@@ -178,7 +176,7 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
                 .mul(ethRate)
                 .mul(starEthRate))
                 .div(decimalCorrectionFactor);
-    
+
             // remainder logic
             if (tokensSold.add(tokens) > crowdsaleCap) {
                 tokens = crowdsaleCap.sub(tokensSold);
