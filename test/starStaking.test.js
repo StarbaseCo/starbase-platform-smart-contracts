@@ -47,8 +47,8 @@ contract('StarStaking', accounts => {
     defaultStarbasePercentageNumber = new BN(10)
 
     initialBalance = new BN(10000).mul(ether('1'))
-    starToken = await CompanyToken.new('Starbase', 'STAR')
-    tokenOnSale = await CompanyToken.new('ProjectToken', 'PT')
+    starToken = await CompanyToken.new('Starbase', 'STAR', 18)
+    tokenOnSale = await CompanyToken.new('ProjectToken', 'PT', 18)
 
     await starToken.unpause()
     await tokenOnSale.unpause()
@@ -1104,6 +1104,16 @@ contract('StarStaking', accounts => {
       })
       const expectedTotalNewPointsLeast = oldStakingPointsLeast.add(
         addedStakingPointsLeast
+      )
+
+      console.log('newStakingPoints', newStakingPoints.toString())
+      console.log(
+        'expectedTotalNewPointsMost',
+        expectedTotalNewPointsMost.toString()
+      )
+      console.log(
+        'expectedTotalNewPointsLeast',
+        expectedTotalNewPointsLeast.toString()
       )
 
       expect(newStakingPoints).to.be.bignumber.at.most(

@@ -131,11 +131,6 @@ contract StarStaking is StarStakingInterface, Lockable {
         require(_startTime >= now, "startTime must be more than current time!");
         require(_endTime >= _startTime, "endTime must be more than startTime!");
 
-         require(
-            ERC20Plus(_externalAddresses[2]).decimals() == 18,
-            "Only sales for tokens with 18 decimals are supported!"
-        );
-
         require(
             _maxStakePerUser < _stakeSaleCap,
             "Max stake per user should be smaller than StakeSale cap!"
