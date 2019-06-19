@@ -1889,7 +1889,7 @@ contract('StarStaking', accounts => {
           it('reverts the transaction', async () => {
             await expectRevert(
               stakingContract.withdrawTokens(new BN(100), { from: user2 }),
-              'only owner is able call this function'
+              'Only owner is able call this function!'
             )
           })
         })

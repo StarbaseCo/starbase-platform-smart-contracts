@@ -16,6 +16,8 @@ const {
   time,
 } = require('openzeppelin-test-helpers')
 
+const { ZERO_ADDRESS } = constants
+
 const { duration } = time
 const increaseTimeTo = time.increaseTo
 const latestTime = time.latest
@@ -80,7 +82,7 @@ contract(
           whitelist.address,
           star.address,
           token.address,
-          isMinting ? await token.owner() : constants.ZERO_ADDRESS,
+          isMinting ? await token.owner() : ZERO_ADDRESS,
           starEthRateContract.address,
           wallet,
         ],
@@ -688,7 +690,7 @@ contract(
           await star.approve(crowdsale.address, ether('5'), { from: buyer })
 
           try {
-            await crowdsale.buyTokens(constants.ZERO_ADDRESS, { from: buyer })
+            await crowdsale.buyTokens(ZERO_ADDRESS, { from: buyer })
             assert.fail()
           } catch (e) {
             ensuresException(e)

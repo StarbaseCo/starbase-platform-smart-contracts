@@ -7,7 +7,7 @@ contract Lockable is Ownable {
     bool public locked;
 
     modifier onlyWhenUnlocked() {
-        require(!locked);
+        require(!locked, 'Contract is locked by owner!');
         _;
     }
 
