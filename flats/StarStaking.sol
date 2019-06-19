@@ -34,7 +34,7 @@ contract Ownable {
      * @dev Throws if called by any account other than the owner.
      */
     modifier onlyOwner() {
-        require(isOwner(), "only owner is able call this function");
+        require(isOwner(), "Only owner is able call this function!");
         _;
     }
 
@@ -181,7 +181,7 @@ contract Lockable is Ownable {
     bool public locked;
 
     modifier onlyWhenUnlocked() {
-        require(!locked);
+        require(!locked, 'Contract is locked by owner!');
         _;
     }
 

@@ -92,6 +92,10 @@ contract ERC20 {
 
 pragma solidity 0.5.9;
 
+/**
+ * @title FundsSplitter - contract for splitting funds between Starbase and client
+ * @author Markus Waas - <markus@starbase.co>
+ */
 contract FundsSplitter {
     using SafeMath for uint256;
 
