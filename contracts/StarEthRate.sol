@@ -3,6 +3,10 @@ pragma solidity 0.5.9;
 import "./lib/Ownable.sol";
 import "./StarEthRateInterface.sol";
 
+/**
+ * @title StarEthRate - STAR/ETH rate contract
+ * @author Markus Waas - <markus@starbase.co>
+ */
 contract StarEthRate is Ownable, StarEthRateInterface {
     uint256 public decimalCorrectionFactor;
     uint256 public starEthRate;

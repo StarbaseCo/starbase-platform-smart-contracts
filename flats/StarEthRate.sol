@@ -34,7 +34,7 @@ contract Ownable {
      * @dev Throws if called by any account other than the owner.
      */
     modifier onlyOwner() {
-        require(isOwner(), "only owner is able call this function");
+        require(isOwner(), "Only owner is able call this function!");
         _;
     }
 
@@ -88,6 +88,10 @@ interface StarEthRateInterface {
 
 pragma solidity 0.5.9;
 
+/**
+ * @title StarEthRate - STAR/ETH rate contract
+ * @author Markus Waas - <markus@starbase.co>
+ */
 contract StarEthRate is Ownable, StarEthRateInterface {
     uint256 public decimalCorrectionFactor;
     uint256 public starEthRate;
