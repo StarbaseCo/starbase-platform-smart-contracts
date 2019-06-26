@@ -2,6 +2,7 @@
 
 rm -rf build/*
 
+./node_modules/solc/solcjs --optimize --abi --bin flats/BonusTokenDistribution.sol --output-dir build/BonusTokenDistribution
 ./node_modules/solc/solcjs --optimize --abi --bin flats/StarEthRate.sol --output-dir build/StarEthRate
 ./node_modules/solc/solcjs --optimize --abi --bin flats/StarStaking.sol --output-dir build/StarStaking
 ./node_modules/solc/solcjs --optimize --abi --bin flats/TokenSale.sol --output-dir build/TokenSale
@@ -9,6 +10,7 @@ rm -rf build/*
 ./node_modules/solc/solcjs --optimize --abi --bin flats/Whitelist.sol --output-dir build/Whitelist
 ./node_modules/solc/solcjs --optimize --abi --bin flats/FundsSplitter.sol --output-dir build/FundsSplitter
 
+find build/BonusTokenDistribution -type f -not -name 'flats_BonusTokenDistribution_sol_BonusTokenDistribution.abi' -not -name 'flats_BonusTokenDistribution_sol_BonusTokenDistribution.bin' -delete
 find build/StarEthRate -type f -not -name 'flats_StarEthRate_sol_StarEthRate.abi' -not -name 'flats_StarEthRate_sol_StarEthRate.bin' -delete
 find build/StarStaking -type f -not -name 'flats_StarStaking_sol_StarStaking.abi' -not -name 'flats_StarStaking_sol_StarStaking.bin' -delete
 find build/TokenSale -type f -not -name 'flats_TokenSale_sol_TokenSale.abi' -not -name 'flats_TokenSale_sol_TokenSale.bin' -delete
