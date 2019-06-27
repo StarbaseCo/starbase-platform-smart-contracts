@@ -48,11 +48,12 @@ contract(
       isTransferringOwnership = true,
       starEthRate = new BN(2),
       starEthRateDecimalCorrectionFactor = new BN(10),
+      decimals = 18,
       // starEthRate = 2 / 10
     } = {}) => {
       whitelist = await Whitelist.new()
       star = await MintableToken.new()
-      token = await CompanyToken.new('Example Token', 'EXT', 18)
+      token = await CompanyToken.new('Example Token', 'EXT', decimals)
       const fundsSplitter = await FundsSplitter.new(
         client,
         starbase,
@@ -271,6 +272,23 @@ contract(
       })
       expect(await crowdsale.softCap()).to.be.bignumber.equal(
         softCap.mul(ether('1'))
+      )
+    })
+
+    it('sets caps given the token decimals', async () => {
+      const decimals = 10
+
+      await newCrowdsale({
+        rate,
+        softCap,
+        crowdsaleCap,
+        decimals,
+      })
+      expect(await crowdsale.softCap()).to.be.bignumber.equal(
+        softCap.mul(new BN(10).pow(new BN(decimals)))
+      )
+      expect(await crowdsale.crowdsaleCap()).to.be.bignumber.equal(
+        crowdsaleCap.mul(new BN(10).pow(new BN(decimals)))
       )
     })
 
