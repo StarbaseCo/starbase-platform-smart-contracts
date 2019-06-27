@@ -469,12 +469,13 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
         isMinting = _isMinting;
         _owner = tx.origin;
 
-        softCap = _softCap.mul(10 ** 18);
-        crowdsaleCap = _crowdsaleCap.mul(10 ** 18);
+        uint8 decimals = tokenOnSale.decimals();
+        softCap = _softCap.mul(10 ** uint256(decimals));
+        crowdsaleCap = _crowdsaleCap.mul(10 ** uint256(decimals));
 
         if (isMinting) {
             require(tokenOwnerAfterSale != address(0), "TokenOwnerAftersale cannot be empty when minting tokens!");
-            require(ERC20Plus(tokenOnSale).paused(), "Company token must be paused upon initialization!");
+            require(tokenOnSale.paused(), "Company token must be paused upon initialization!");
         } else {
             require(tokenOwnerAfterSale == address(0), "TokenOwnerAftersale must be empty when minting tokens!");
         }
