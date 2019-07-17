@@ -173,10 +173,13 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
             uint256 ethRate = targetRates[currentTargetRateIndex];
 
             // calculate token amount to be created
+            uint256 decimals = uint256(tokenOnSale.decimals());
             uint256 tokens = (starAllocationToTokenSale
                 .mul(ethRate)
                 .mul(starEthRate))
-                .div(decimalCorrectionFactor);
+                .mul(10 ** decimals) // token decimals count
+                .div(decimalCorrectionFactor)
+                .div(1e18); // STAR decimals count
 
             // remainder logic
             if (tokensSold.add(tokens) > crowdsaleCap) {
@@ -212,7 +215,11 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
         uint256 ethRate = targetRates[currentTargetRateIndex];
 
         // calculate token amount to be created
-        uint256 tokens = weiAmount.mul(ethRate);
+        uint256 decimals = uint256(tokenOnSale.decimals());
+        uint256 tokens = weiAmount
+            .mul(ethRate)
+            .mul(10 ** decimals) // token decimals count
+            .div(1e18);  // ETH decimals count
 
         // remainder logic
         if (tokensSold.add(tokens) > crowdsaleCap) {
