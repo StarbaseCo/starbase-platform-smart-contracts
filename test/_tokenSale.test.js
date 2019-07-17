@@ -164,6 +164,83 @@ contract(
           ensuresException(e)
         }
       })
+
+      it('sells tokens up to crowdsale cap for any decimals when buying with wei and sends remaining wei back to the buyer', async () => {
+        await newCrowdsale({
+          isWeiAccepted: true,
+          decimals: 10,
+          rates: [crowdsaleCap],
+        })
+
+        await whitelist.addToWhitelist(buyer, { from: owner })
+
+        await increaseTimeTo((await latestTime()).add(duration.days(52)))
+
+        const buyerWeiBalanceBeforePurchase = await balance.current(buyer)
+
+        await crowdsale.buyTokens(buyer, {
+          from: buyer,
+          value: value.mul(new BN(3)),
+        })
+        const buyerBalance = await token.balanceOf(buyer)
+        expect(buyerBalance).to.be.bignumber.equal(
+          crowdsaleCap.mul(new BN(1e10))
+        )
+
+        const buyerWeiBalanceAfterPurchase = await balance.current(buyer)
+
+        expect(buyerWeiBalanceAfterPurchase).to.be.bignumber.closeTo(
+          buyerWeiBalanceBeforePurchase.sub(ether('1')),
+          ether('0.1')
+        )
+
+        try {
+          await crowdsale.buyTokens(buyer, { value, from: buyer })
+          assert.fail()
+        } catch (e) {
+          ensuresException(e)
+        }
+      })
+
+      it('sells tokens up to crowdsale cap for any decimals when buying with STAR and sends remaining STAR back to the buyer', async () => {
+        await newCrowdsale({
+          decimals: 10,
+          rates: [crowdsaleCap],
+        })
+
+        await whitelist.addToWhitelist(buyer, { from: owner })
+        await increaseTimeTo((await latestTime()).add(duration.days(52)))
+
+        await star.mint(buyer, ether('10'), { from: owner })
+
+        const starEthRateFactor = new BN(5)
+        const value = ether('1')
+          .mul(new BN(3))
+          .mul(starEthRateFactor)
+        const buyerStarBalanceBeforePurchase = await star.balanceOf(buyer)
+
+        await star.approve(crowdsale.address, value, { from: buyer })
+        await crowdsale.buyTokens(buyer, { from: buyer })
+
+        const buyerBalance = await token.balanceOf(buyer)
+        expect(buyerBalance).to.be.bignumber.equal(
+          crowdsaleCap.mul(new BN(1e10))
+        )
+
+        const buyerStarBalanceAfterPurchase = await star.balanceOf(buyer)
+
+        expect(buyerStarBalanceAfterPurchase).to.be.bignumber.equal(
+          buyerStarBalanceBeforePurchase.sub(ether('1').mul(starEthRateFactor))
+        )
+
+        try {
+          await star.approve(crowdsale.address, value, { from: buyer })
+          await crowdsale.buyTokens(buyer, { from: buyer })
+          assert.fail()
+        } catch (e) {
+          ensuresException(e)
+        }
+      })
     }
 
     const endsTokenSaleWhenAllTokensAreSold = () => {

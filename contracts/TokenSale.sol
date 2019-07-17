@@ -185,9 +185,12 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
             if (tokensSold.add(tokens) > crowdsaleCap) {
                 tokens = crowdsaleCap.sub(tokensSold);
 
-                starAllocationToTokenSale = (starEthRate
-                    .mul(tokens))
-                    .div(ethRate.mul(decimalCorrectionFactor));
+                starAllocationToTokenSale = tokens
+                    .mul(1e18)
+                    .mul(decimalCorrectionFactor)
+                    .div(ethRate)
+                    .div(starEthRate)
+                    .div(10 ** decimals);
             }
 
             // update state
@@ -224,7 +227,7 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
         // remainder logic
         if (tokensSold.add(tokens) > crowdsaleCap) {
             tokens = crowdsaleCap.sub(tokensSold);
-            weiAmount = tokens.div(ethRate);
+            weiAmount = tokens.mul(1e18).div(ethRate).div(10 ** decimals);
 
             weiRefund = msg.value.sub(weiAmount);
         }
