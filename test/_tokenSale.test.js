@@ -837,6 +837,24 @@ contract(
 
           const buyerBalance = await token.balanceOf(user1)
           expect(buyerBalance).to.be.bignumber.equal(new BN(100e10))
+
+          await newCrowdsale({ isWeiAccepted: true, decimals: 22 })
+          await increaseTimeTo((await latestTime()).add(duration.days(52)))
+          await whitelist.addManyToWhitelist([user1])
+
+          await crowdsale.buyTokens(user1, { from: user1, value })
+
+          const userBalance2 = await token.balanceOf(user1)
+          expect(userBalance2).to.be.bignumber.equal(
+            new BN('500000000000000000000000')
+          )
+
+          await crowdsale.buyTokens(user1, { from: user1, value })
+
+          const buyerBalance2 = await token.balanceOf(user1)
+          expect(buyerBalance2).to.be.bignumber.equal(
+            new BN('1000000000000000000000000')
+          )
         })
 
         it('buys tokens correctly by sending STAR for any decimals', async () => {
@@ -856,6 +874,27 @@ contract(
 
           const buyerBalance = await token.balanceOf(buyer)
           expect(buyerBalance).to.be.bignumber.equal(new BN(20e10))
+
+          await newCrowdsale({ isWeiAccepted: true, decimals: 22 })
+          await increaseTimeTo((await latestTime()).add(duration.days(52)))
+          await whitelist.addManyToWhitelist([buyer])
+
+          await star.mint(buyer, ether('1000'))
+          await star.approve(crowdsale.address, value, { from: buyer })
+          await crowdsale.buyTokens(buyer, { from: buyer })
+
+          const userBalance2 = await token.balanceOf(buyer)
+          expect(userBalance2).to.be.bignumber.equal(
+            new BN('100000000000000000000000')
+          )
+
+          await star.approve(crowdsale.address, value, { from: buyer })
+          await crowdsale.buyTokens(buyer, { from: buyer })
+
+          const buyerBalance2 = await token.balanceOf(buyer)
+          expect(buyerBalance2).to.be.bignumber.equal(
+            new BN('200000000000000000000000')
+          )
         })
 
         it('updates wei raised', async () => {
