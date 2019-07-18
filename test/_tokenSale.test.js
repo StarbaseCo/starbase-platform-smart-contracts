@@ -825,8 +825,8 @@ contract(
 
           await increaseTimeTo((await latestTime()).add(duration.days(22)))
 
-          await star.mint(buyer, ether('5'))
-          await star.approve(crowdsale.address, ether('5'), { from: buyer })
+          await star.mint(owner, ether('5'))
+          await star.approve(crowdsale.address, ether('5'), { from: owner })
 
           try {
             await crowdsale.buyTokens(buyer, { from: owner, value })
@@ -1017,7 +1017,8 @@ contract(
         it('updates STAR raised', async () => {
           await increaseTimeTo((await latestTime()).add(duration.days(52)))
 
-          await star.approve(crowdsale.address, ether('8'), { from: buyer })
+          await star.mint(owner, ether('8'), { from: owner })
+          await star.approve(crowdsale.address, ether('8'), { from: owner })
 
           // purchase occurence
           await crowdsale.buyTokens(buyer, { from: owner })
