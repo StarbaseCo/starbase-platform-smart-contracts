@@ -82,7 +82,7 @@ contract('FundsSplitter', ([_, client, starbase]) => {
 
   describe('#withdrawRemainingTokens', () => {
     beforeEach(async () => {
-      tokenOnSale.mint(fundsSplitter.address, ether('10'))
+      await tokenOnSale.mint(fundsSplitter.address, ether('10'))
     })
 
     it('withdraw all remaining tokens on sale to client', async () => {

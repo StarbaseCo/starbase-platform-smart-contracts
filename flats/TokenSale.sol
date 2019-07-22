@@ -451,7 +451,12 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
 
     event TokenRateChanged(uint256 previousRate, uint256 newRate);
     event TokenStarRateChanged(uint256 previousStarRate, uint256 newStarRate);
-    event TokenPurchaseWithStar(address indexed purchaser, address indexed beneficiary, uint256 value, uint256 amount);
+    event TokenPurchaseWithStar(
+        address indexed purchaser,
+        address indexed beneficiary,
+        uint256 value,
+        uint256 amount
+    );
 
     /**
      * @dev initialization function
@@ -532,7 +537,11 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
     }
 
     modifier isWhitelisted(address beneficiary) {
-        require(whitelist.allowedAddresses(beneficiary), "Beneficiary not whitelisted!");
+        require(
+            whitelist.allowedAddresses(beneficiary),
+            "Beneficiary not whitelisted!"
+        );
+
         _;
     }
 
@@ -569,7 +578,8 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
         }
 
         // beneficiary must allow TokenSale address to transfer star tokens on its behalf
-        uint256 starAllocationToTokenSale = starToken.allowance(beneficiary, address(this));
+        uint256 starAllocationToTokenSale
+            = starToken.allowance(msg.sender, address(this));
 
         if (starAllocationToTokenSale > 0) {
             uint256 decimalCorrectionFactor =
@@ -578,29 +588,35 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
             uint256 ethRate = targetRates[currentTargetRateIndex];
 
             // calculate token amount to be created
+            uint256 decimals = uint256(tokenOnSale.decimals());
             uint256 tokens = (starAllocationToTokenSale
                 .mul(ethRate)
                 .mul(starEthRate))
-                .div(decimalCorrectionFactor);
+                .mul(10 ** decimals) // token decimals count
+                .div(decimalCorrectionFactor)
+                .div(1e18); // STAR decimals count
 
             // remainder logic
             if (tokensSold.add(tokens) > crowdsaleCap) {
                 tokens = crowdsaleCap.sub(tokensSold);
 
-                starAllocationToTokenSale = (starEthRate
-                    .mul(tokens))
-                    .div(ethRate.mul(decimalCorrectionFactor));
+                starAllocationToTokenSale = tokens
+                    .mul(1e18)
+                    .mul(decimalCorrectionFactor)
+                    .div(ethRate)
+                    .div(starEthRate)
+                    .div(10 ** decimals);
             }
 
             // update state
             starRaised = starRaised.add(starAllocationToTokenSale);
-            starInvestments[msg.sender] = starInvestments[msg.sender].add(starAllocationToTokenSale);
+            starInvestments[beneficiary] = starInvestments[beneficiary].add(starAllocationToTokenSale);
 
             tokensSold = tokensSold.add(tokens);
             sendPurchasedTokens(beneficiary, tokens);
             emit TokenPurchaseWithStar(msg.sender, beneficiary, starAllocationToTokenSale, tokens);
 
-            forwardsStarFunds(beneficiary, starAllocationToTokenSale);
+            forwardsStarFunds(starAllocationToTokenSale);
         }
     }
 
@@ -617,19 +633,24 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
         uint256 ethRate = targetRates[currentTargetRateIndex];
 
         // calculate token amount to be created
-        uint256 tokens = weiAmount.mul(ethRate);
+        uint256 decimals = uint256(tokenOnSale.decimals());
+        uint256 tokens = weiAmount
+            .mul(ethRate)
+            .mul(10 ** decimals) // token decimals count
+            .div(1e18);  // ETH decimals count
 
         // remainder logic
         if (tokensSold.add(tokens) > crowdsaleCap) {
             tokens = crowdsaleCap.sub(tokensSold);
-            weiAmount = tokens.div(ethRate);
+            weiAmount = tokens.mul(1e18).div(ethRate).div(10 ** decimals);
 
             weiRefund = msg.value.sub(weiAmount);
         }
 
         // update state
         weiRaised = weiRaised.add(weiAmount);
-        ethInvestments[msg.sender] = ethInvestments[msg.sender].add(weiAmount);
+        ethInvestments[beneficiary]
+            = ethInvestments[beneficiary].add(weiAmount);
 
         tokensSold = tokensSold.add(tokens);
         sendPurchasedTokens(beneficiary, tokens);
@@ -639,8 +660,15 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
     }
 
     // isMinting checker -- it either mints ERC20 token or transfers them
-    function sendPurchasedTokens(address _beneficiary, uint256 _tokens) internal {
-        isMinting ? tokenOnSale.mint(_beneficiary, _tokens) : tokenOnSale.transfer(_beneficiary, _tokens);
+    function sendPurchasedTokens(
+        address _beneficiary,
+        uint256 _tokens
+    ) internal {
+        if (isMinting) {
+            tokenOnSale.mint(_beneficiary, _tokens);
+        } else {
+            tokenOnSale.transfer(_beneficiary, _tokens);
+        }
     }
 
     // check for softCap achievement
@@ -685,12 +713,12 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
     /**
      * @dev forward star funds
      */
-    function forwardsStarFunds(address _beneficiary, uint256 _value) internal {
+    function forwardsStarFunds(uint256 _value) internal {
         if (softCap > 0 && !hasReachedSoftCap()) {
-            starToken.transferFrom(_beneficiary, address(this), _value);
+            starToken.transferFrom(msg.sender, address(this), _value);
         } else {
             // forward funds
-            starToken.transferFrom(_beneficiary, address(wallet), _value);
+            starToken.transferFrom(msg.sender, address(wallet), _value);
             // transfer STAR from previous purchases to wallet once soft cap is reached
             uint256 starBalance = starToken.balanceOf(address(this));
             if (starBalance > 0) starToken.transfer(address(wallet), starBalance);
@@ -721,8 +749,12 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
         ethInvestments[msg.sender] = 0;
         starInvestments[msg.sender] = 0;
 
-        if (investedEthRefund > 0) msg.sender.transfer(investedEthRefund);
-        if (investedStarRefund > 0) starToken.transfer(msg.sender, investedStarRefund);
+        if (investedEthRefund > 0) {
+            msg.sender.transfer(investedEthRefund);
+        }
+        if (investedStarRefund > 0) {
+            starToken.transfer(msg.sender, investedStarRefund);
+        }
     }
 
     function verifyTargetRates() internal view {
@@ -794,10 +826,16 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
      * @dev finalizes crowdsale
      */
     function finalization() internal {
-        uint256 remainingTokens = isMinting ? crowdsaleCap.sub(tokensSold) : tokenOnSale.balanceOf(address(this));
+        uint256 remainingTokens = isMinting
+            ? crowdsaleCap.sub(tokensSold)
+            : tokenOnSale.balanceOf(address(this));
 
-        if (remainingTokens > 0) sendPurchasedTokens(address(wallet), remainingTokens);
-        if (isMinting) tokenOnSale.transferOwnership(tokenOwnerAfterSale);
+        if (remainingTokens > 0) {
+            sendPurchasedTokens(address(wallet), remainingTokens);
+        }
+        if (isMinting) {
+            tokenOnSale.transferOwnership(tokenOwnerAfterSale);
+        }
 
         super.finalization();
     }
