@@ -1499,30 +1499,39 @@ contract(
               )
             })
 
-            it('transfers STAR funds between client and starbase once softCap is reached', async () => {
+            it('transfers ETH + STAR funds between client and starbase once softCap is reached', async () => {
               await star.mint(buyer, ether('10.004'))
               await star.approve(crowdsale.address, ether('0.003'), {
                 from: buyer,
               })
 
               await increaseTimeTo((await latestTime()).add(duration.days(34)))
+              const clientEthBalanceBefore = await balance.current(client)
+              const starbaseBalanceBefore = await balance.current(starbase)
+              const clientStarBalanceBefore = await star.balanceOf(client)
+              const starbaseStarBalanceBefore = await star.balanceOf(starbase)
 
-              const clientBalanceBefore = await star.balanceOf(client)
-              const starbaseBalanceBefore = await star.balanceOf(starbase)
+              await crowdsale.buyTokens(user1, {
+                from: user1,
+                value: ether('0.001'),
+              })
 
               await crowdsale.buyTokens(buyer, { from: buyer })
 
-              let clientBalanceAfter = await star.balanceOf(client)
-              let starbaseBalanceAfter = await star.balanceOf(starbase)
-              let tokenSaleBalance = await star.balanceOf(crowdsale.address)
+              let clientEthBalanceAfter = await balance.current(client)
+              let starbaseEthBalanceAfter = await balance.current(starbase)
+              let tokenSaleEthBalance = await balance.current(crowdsale.address)
+              let clientStarBalanceAfter = await star.balanceOf(client)
+              let starbaseStarBalanceAfter = await star.balanceOf(starbase)
+              let tokenSaleStarBalance = await star.balanceOf(crowdsale.address)
 
-              expect(clientBalanceAfter).to.be.bignumber.equal(
-                clientBalanceBefore
+              expect(clientStarBalanceAfter).to.be.bignumber.equal(
+                clientStarBalanceBefore
               )
-              expect(starbaseBalanceAfter).to.be.bignumber.equal(
-                starbaseBalanceBefore
+              expect(starbaseStarBalanceAfter).to.be.bignumber.equal(
+                starbaseStarBalanceBefore
               )
-              expect(tokenSaleBalance).to.be.bignumber.equal(ether('0.003'))
+              expect(tokenSaleStarBalance).to.be.bignumber.equal(ether('0.003'))
 
               // still has not reached cap
               await star.approve(crowdsale.address, ether('0.001'), {
@@ -1530,17 +1539,24 @@ contract(
               })
               await crowdsale.buyTokens(buyer, { from: buyer })
 
-              clientBalanceAfter = await star.balanceOf(client)
-              starbaseBalanceAfter = await star.balanceOf(starbase)
-              tokenSaleBalance = await star.balanceOf(crowdsale.address)
+              clientStarBalanceAfter = await star.balanceOf(client)
+              starbaseStarBalanceAfter = await star.balanceOf(starbase)
+              tokenSaleStarBalance = await star.balanceOf(crowdsale.address)
 
-              expect(clientBalanceAfter).to.be.bignumber.equal(
-                clientBalanceBefore
+              expect(clientStarBalanceAfter).to.be.bignumber.equal(
+                clientStarBalanceBefore
               )
-              expect(starbaseBalanceAfter).to.be.bignumber.equal(
+              expect(starbaseStarBalanceAfter).to.be.bignumber.equal(
+                starbaseStarBalanceBefore
+              )
+              expect(tokenSaleStarBalance).to.be.bignumber.equal(ether('0.004'))
+              expect(clientEthBalanceAfter).to.be.bignumber.equal(
+                clientEthBalanceBefore
+              )
+              expect(starbaseEthBalanceAfter).to.be.bignumber.equal(
                 starbaseBalanceBefore
               )
-              expect(tokenSaleBalance).to.be.bignumber.equal(ether('0.004'))
+              expect(tokenSaleEthBalance).to.be.bignumber.equal(ether('0.001'))
 
               // reaches soft cap and goes over crowdsale cap
               await star.approve(crowdsale.address, ether('1'), {
@@ -1548,8 +1564,27 @@ contract(
               })
               await crowdsale.buyTokens(buyer, { from: buyer })
 
-              tokenSaleBalance = await star.balanceOf(crowdsale.address)
-              expect(tokenSaleBalance).to.be.bignumber.equal(new BN(0))
+              clientEthBalanceAfter = await balance.current(client)
+              starbaseEthBalanceAfter = await balance.current(starbase)
+              tokenSaleEthBalance = await balance.current(crowdsale.address)
+
+              const clientEthBalanceDifference = clientEthBalanceAfter.sub(
+                clientEthBalanceBefore
+              )
+              const starbaseEthBalanceDifference = starbaseEthBalanceAfter.sub(
+                starbaseBalanceBefore
+              )
+
+              expect(starbaseEthBalanceDifference).to.be.bignumber.equal(
+                ether('0.0001')
+              )
+              expect(clientEthBalanceDifference).to.be.bignumber.equal(
+                ether('0.0009')
+              )
+              expect(tokenSaleEthBalance).to.be.bignumber.equal(new BN(0))
+
+              tokenSaleStarBalance = await star.balanceOf(crowdsale.address)
+              expect(tokenSaleStarBalance).to.be.bignumber.equal(new BN(0))
             })
 
             itTransfersEthCorrectly()
@@ -1601,24 +1636,24 @@ contract(
                 value: ether('1'),
               })
 
-              clientBalanceAfter = await balance.current(client)
-              starbaseBalanceAfter = await balance.current(starbase)
-              tokenSaleBalance = await balance.current(crowdsale.address)
+              clientEthBalanceAfter = await balance.current(client)
+              starbaseEthBalanceAfter = await balance.current(starbase)
+              tokenSaleEthBalance = await balance.current(crowdsale.address)
 
-              const clientBalanceDifference = clientBalanceAfter.sub(
+              const clientEthBalanceDifference = clientEthBalanceAfter.sub(
                 clientBalanceBefore
               )
-              const starbaseBalanceDifference = starbaseBalanceAfter.sub(
+              const starbaseEthBalanceDifference = starbaseEthBalanceAfter.sub(
                 starbaseBalanceBefore
               )
 
-              expect(starbaseBalanceDifference).to.be.bignumber.equal(
+              expect(starbaseEthBalanceDifference).to.be.bignumber.equal(
                 ether('0.1')
               )
-              expect(clientBalanceDifference).to.be.bignumber.equal(
+              expect(clientEthBalanceDifference).to.be.bignumber.equal(
                 ether('0.9')
               )
-              expect(tokenSaleBalance).to.be.bignumber.equal(new BN(0))
+              expect(tokenSaleEthBalance).to.be.bignumber.equal(new BN(0))
             })
 
             itSellsTokensUpToCrowdsaleCapInWeiWithRefund()
