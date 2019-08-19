@@ -297,11 +297,7 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
         if (softCap == 0 || hasReachedSoftCap()) {
             if (_weiRefund > 0) msg.sender.transfer(_weiRefund);
 
-            // when there is still balance left send to wallet contract
-            if (address(this).balance > 0) {
-                address(wallet).transfer(address(this).balance);
-                wallet.splitFunds();
-            }
+            _forwardAnyFunds();
         }
     }
 
@@ -312,13 +308,9 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
         if (softCap > 0 && !hasReachedSoftCap()) {
             starToken.transferFrom(msg.sender, address(this), _value);
         } else {
-            // forward funds
             starToken.transferFrom(msg.sender, address(wallet), _value);
-            // transfer STAR from previous purchases to wallet once soft cap is reached
-            uint256 starBalance = starToken.balanceOf(address(this));
-            if (starBalance > 0) starToken.transfer(address(wallet), starBalance);
 
-            wallet.splitStarFunds();
+            _forwardAnyFunds();
         }
     }
 
@@ -473,5 +465,30 @@ contract TokenSale is FinalizableCrowdsale, Pausable {
      */
     function getTokenOnSaleAddress() external view returns (address) {
         return address(tokenOnSale);
+    }
+
+    function _forwardAnyFunds() private {
+        // when there is still balance left send to wallet contract
+        uint256 ethBalance = address(this).balance;
+        uint256 starBalance = starToken.balanceOf(address(this));
+
+        if (ethBalance > 0) {
+            address(wallet).transfer(ethBalance);
+        }
+
+        if (starBalance > 0) {
+            starToken.transfer(address(wallet), starBalance);
+        }
+
+        uint256 ethBalanceWallet = address(wallet).balance;
+        uint256 starBalanceWallet = starToken.balanceOf(address(wallet));
+
+        if (ethBalanceWallet > 0) {
+            wallet.splitFunds();
+        }
+
+        if (starBalanceWallet > 0) {
+            wallet.splitStarFunds();
+        }
     }
 }
